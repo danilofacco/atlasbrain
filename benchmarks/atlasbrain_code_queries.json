@@ -1,0 +1,242 @@
+[
+  {
+    "id": "code01",
+    "query": "Como o início do MCP evita criar outro processo quando já existe um daemon?",
+    "expected": [
+      "atlasbrain/service.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code02",
+    "query": "Como encontrar a pasta do projeto a partir do diretório atual?",
+    "expected": [
+      "atlasbrain/config.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code03",
+    "query": "Onde é extraído o texto de documentos PDF?",
+    "expected": [
+      "atlasbrain/extract.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code04",
+    "query": "Como a busca combina BM25 e vetores de significado?",
+    "expected": [
+      "atlasbrain/search.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code05",
+    "query": "Como impedir que uma edição sobrescreva uma nota alterada por outro programa?",
+    "expected": [
+      "atlasbrain/editor.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code06",
+    "query": "Como o histórico evita registrar uma comparação nova quando nada mudou?",
+    "expected": [
+      "atlasbrain/inteligencia.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code07",
+    "query": "Onde são bloqueados endereços IP privados na importação por URL?",
+    "expected": [
+      "atlasbrain/importacao.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code08",
+    "query": "Como são identificados os arquivos sem vínculos no grafo?",
+    "expected": [
+      "atlasbrain/graph.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code09",
+    "query": "Como atualizar os módulos Python sem fechar a sessão MCP?",
+    "expected": [
+      "atlasbrain/recarga.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code10",
+    "query": "Como o índice resolve links de Markdown para os arquivos de destino?",
+    "expected": [
+      "atlasbrain/indexer.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code11",
+    "query": "Como extrair símbolos e importações de código usando tree-sitter?",
+    "expected": [
+      "atlasbrain/codigo.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code12",
+    "query": "Como dividir uma nota Markdown em trechos com sobreposição?",
+    "expected": [
+      "atlasbrain/parse.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code13",
+    "query": "Onde converter vetores numpy em blobs para armazenar no SQLite?",
+    "expected": [
+      "atlasbrain/db.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code14",
+    "query": "Como a classificação local decide descartar respostas com pouca confiança?",
+    "expected": [
+      "atlasbrain/classify.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code15",
+    "query": "Como percorrer dependências para calcular o impacto de mudar um arquivo?",
+    "expected": [
+      "atlasbrain/topologia.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code16",
+    "query": "Como impedir registros duplicados de decisões semelhantes?",
+    "expected": [
+      "atlasbrain/registro.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code17",
+    "query": "Como ler uma conversa do transcript para capturar aprendizados?",
+    "expected": [
+      "atlasbrain/captura.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code18",
+    "query": "Como gerar o relatório de comunidades e arquivos importantes?",
+    "expected": [
+      "atlasbrain/relatorio.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code19",
+    "query": "Onde configurar os hooks de descoberta para Claude e Codex?",
+    "expected": [
+      "atlasbrain/cli.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code20",
+    "query": "Como verificar a origem de requisições que gravam arquivos pela interface?",
+    "expected": [
+      "atlasbrain/web.py"
+    ],
+    "split": "test",
+    "lang": "pt",
+    "kind": "code"
+  },
+  {
+    "id": "code21",
+    "query": "Where is the embedding model loaded and cached?",
+    "expected": [
+      "atlasbrain/embed.py"
+    ],
+    "split": "test",
+    "lang": "en",
+    "kind": "code"
+  },
+  {
+    "id": "code22",
+    "query": "Where is the save function that checks base_revision?",
+    "expected": [
+      "atlasbrain/editor.py"
+    ],
+    "split": "test",
+    "lang": "en",
+    "kind": "code"
+  },
+  {
+    "id": "code23",
+    "query": "Where are search filters such as folder and exact phrase parsed?",
+    "expected": [
+      "atlasbrain/search.py"
+    ],
+    "split": "test",
+    "lang": "en",
+    "kind": "code"
+  },
+  {
+    "id": "code24",
+    "query": "Where does the local server authenticate its own process before stopping it?",
+    "expected": [
+      "atlasbrain/service.py"
+    ],
+    "split": "test",
+    "lang": "en",
+    "kind": "code"
+  }
+]

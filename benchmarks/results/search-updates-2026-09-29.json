@@ -1,0 +1,660 @@
+{
+  "previous": {
+    "top1": 0.95,
+    "mrr": 0.975,
+    "cases": [
+      {
+        "id": "t01",
+        "rank": 1,
+        "paths": [
+          "notas/Retenção de cópias.md",
+          "notas/Decisão desfeita.md",
+          "notas/Tempo de conexão.md",
+          "notas/Service health.md",
+          "notas/Recuperação de cópias.md",
+          "notas/Reembolso aprovado.md",
+          "notas/Reembolso antigo.md",
+          "notas/Fila de entrega.md",
+          "notas/Database rollback.md",
+          "notas/Sessões vigentes.md"
+        ],
+        "ms": 4.503584001213312
+      },
+      {
+        "id": "t02",
+        "rank": 1,
+        "paths": [
+          "notas/Fila de entrega.md",
+          "notas/Fila de ideias.md",
+          "notas/Retenção de cópias.md",
+          "notas/Rotação de logs.md",
+          "notas/Sessões vigentes.md",
+          "notas/Proposta antiga de sessões.md",
+          "notas/Exportação CSV.md",
+          "notas/Token de demonstração.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Reunião pagamentos.md"
+        ],
+        "ms": 4.540709000139032
+      },
+      {
+        "id": "t03",
+        "rank": 2,
+        "paths": [
+          "notas/Reunião pagamentos.md",
+          "notas/Cobrança duplicada.md",
+          "notas/Reembolso aprovado.md",
+          "notas/Cancelamento de sessão.md",
+          "notas/Reembolso antigo.md",
+          "notas/Treino semanal.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Recuperação de cópias.md",
+          "notas/Fila de entrega.md",
+          "notas/Decisão desfeita.md"
+        ],
+        "ms": 4.1185000009136274
+      },
+      {
+        "id": "t04",
+        "rank": 1,
+        "paths": [
+          "notas/Privacidade dos preços.md",
+          "notas/Cache do catálogo.md",
+          "notas/Acesso de convidados.md",
+          "notas/Reunião pagamentos.md"
+        ],
+        "ms": 3.605791996960761
+      },
+      {
+        "id": "t05",
+        "rank": 1,
+        "paths": [
+          "notas/Cache do catálogo.md",
+          "notas/Sessões vigentes.md",
+          "notas/Cancelamento de sessão.md",
+          "notas/Retenção de cópias.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Decisão desfeita.md",
+          "notas/Recuperação de cópias.md",
+          "notas/Reembolso antigo.md",
+          "notas/Reembolso aprovado.md",
+          "notas/Rotação de logs.md"
+        ],
+        "ms": 3.7892079999437556
+      },
+      {
+        "id": "t06",
+        "rank": 1,
+        "paths": [
+          "notas/Acesso de convidados.md",
+          "notas/Rotação de logs.md",
+          "notas/Busca por arquivos.md",
+          "notas/Agenda de pesquisa.md",
+          "notas/Privacidade dos preços.md",
+          "notas/Ata do editor.md",
+          "notas/Fila de ideias.md",
+          "notas/Exportação CSV.md",
+          "notas/Proposta antiga de sessões.md",
+          "notas/Night shift meeting.md"
+        ],
+        "ms": 3.864999998768326
+      },
+      {
+        "id": "t07",
+        "rank": 1,
+        "paths": [
+          "notas/Agenda de pesquisa.md",
+          "notas/Ata do editor.md",
+          "notas/Manutenção concluída.md",
+          "notas/Acesso de convidados.md",
+          "notas/Treino semanal.md",
+          "notas/Privacidade dos preços.md",
+          "notas/Busca por arquivos.md"
+        ],
+        "ms": 4.100916001334554
+      },
+      {
+        "id": "t08",
+        "rank": 1,
+        "paths": [
+          "notas/Ata do editor.md",
+          "notas/Reunião pagamentos.md",
+          "notas/Agenda de pesquisa.md",
+          "notas/Decisão desfeita.md",
+          "notas/Ideia de etiquetas.md",
+          "notas/Reembolso antigo.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Proposta antiga de sessões.md",
+          "notas/Night shift meeting.md",
+          "notas/Fila de ideias.md"
+        ],
+        "ms": 3.6309580027591437
+      },
+      {
+        "id": "t09",
+        "rank": 1,
+        "paths": [
+          "notas/Receita de pão.md",
+          "notas/Tempo de conexão.md",
+          "notas/Sessões vigentes.md",
+          "notas/Cache do catálogo.md",
+          "notas/Rotação de logs.md",
+          "notas/Token de demonstração.md"
+        ],
+        "ms": 3.337000001920387
+      },
+      {
+        "id": "t10",
+        "rank": 1,
+        "paths": [
+          "notas/Rotação de logs.md",
+          "notas/Decisão desfeita.md",
+          "notas/Recuperação de cópias.md",
+          "notas/Retenção de cópias.md",
+          "notas/Cancelamento de sessão.md",
+          "notas/Sessões vigentes.md",
+          "notas/Fila de entrega.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Tempo de conexão.md",
+          "notas/Manutenção concluída.md"
+        ],
+        "ms": 3.1059579996508546
+      },
+      {
+        "id": "t11",
+        "rank": 1,
+        "paths": [
+          "notas/Build pipeline.md",
+          "notas/Night shift meeting.md",
+          "notas/Proposta antiga de sessões.md",
+          "notas/Sessões vigentes.md",
+          "notas/Manutenção concluída.md",
+          "notas/Decisão desfeita.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Treino semanal.md",
+          "notas/Reembolso aprovado.md",
+          "notas/Ideia de etiquetas.md"
+        ],
+        "ms": 2.6090829996974207
+      },
+      {
+        "id": "t12",
+        "rank": 1,
+        "paths": [
+          "notas/Database rollback.md",
+          "notas/Database alternatives.md",
+          "notas/Service health.md",
+          "notas/Approved database.md",
+          "notas/Decisão desfeita.md",
+          "notas/Recuperação de cópias.md",
+          "notas/Retenção de cópias.md",
+          "notas/Exportação CSV.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Cache do catálogo.md"
+        ],
+        "ms": 2.7277919980406296
+      },
+      {
+        "id": "t13",
+        "rank": 1,
+        "paths": [
+          "notas/Service health.md",
+          "notas/Cobrança duplicada.md",
+          "notas/Reembolso aprovado.md",
+          "notas/Reunião pagamentos.md",
+          "notas/Privacidade dos preços.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Reembolso antigo.md",
+          "notas/Approved database.md",
+          "notas/Recuperação de cópias.md",
+          "notas/Database alternatives.md"
+        ],
+        "ms": 2.885374997276813
+      },
+      {
+        "id": "t14",
+        "rank": 1,
+        "paths": [
+          "notas/Night shift meeting.md",
+          "notas/Build pipeline.md",
+          "notas/Proposta antiga de sessões.md",
+          "notas/Decisão desfeita.md",
+          "notas/Manutenção concluída.md",
+          "notas/Sessões vigentes.md",
+          "notas/Reunião pagamentos.md",
+          "notas/Fila de entrega.md",
+          "notas/Treino semanal.md",
+          "notas/Ata do editor.md"
+        ],
+        "ms": 3.0391670006792992
+      },
+      {
+        "id": "t15",
+        "rank": 1,
+        "paths": [
+          "notas/Imagem de perfil.md",
+          "notas/Token de demonstração.md",
+          "notas/Rotação de logs.md",
+          "notas/Ideia de etiquetas.md",
+          "notas/Retenção de cópias.md",
+          "notas/Exportação CSV.md"
+        ],
+        "ms": 4.153958998358576
+      },
+      {
+        "id": "t16",
+        "rank": 1,
+        "paths": [
+          "notas/Cancelamento de sessão.md",
+          "notas/Sessões vigentes.md",
+          "notas/Rotação de logs.md",
+          "notas/Retenção de cópias.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Token de demonstração.md",
+          "notas/Decisão desfeita.md",
+          "notas/Proposta antiga de sessões.md",
+          "notas/Exportação CSV.md",
+          "notas/Manutenção concluída.md"
+        ],
+        "ms": 4.53087500136462
+      },
+      {
+        "id": "t17",
+        "rank": 1,
+        "paths": [
+          "notas/Cancelamento de assinatura.md",
+          "notas/Sessões vigentes.md",
+          "notas/Proposta antiga de sessões.md",
+          "notas/Tempo de conexão.md",
+          "notas/Acesso de convidados.md",
+          "notas/Cancelamento de sessão.md",
+          "notas/Ata do editor.md",
+          "notas/Decisão desfeita.md",
+          "notas/Manutenção concluída.md",
+          "notas/Reembolso aprovado.md"
+        ],
+        "ms": 4.167167000559857
+      },
+      {
+        "id": "t18",
+        "rank": 1,
+        "paths": [
+          "notas/Busca por arquivos.md",
+          "notas/Privacidade dos preços.md",
+          "notas/Cache do catálogo.md",
+          "notas/Ideia de etiquetas.md",
+          "notas/Treino semanal.md",
+          "notas/Proposta antiga de sessões.md",
+          "notas/Recuperação de cópias.md",
+          "notas/API request limit.md",
+          "notas/Acesso de convidados.md",
+          "notas/Fila de ideias.md"
+        ],
+        "ms": 3.78366600125446
+      },
+      {
+        "id": "t19",
+        "rank": 1,
+        "paths": [
+          "notas/Função de soma.md",
+          "notas/Recuperação de cópias.md",
+          "notas/Reembolso aprovado.md",
+          "notas/Fila de entrega.md",
+          "notas/Reembolso antigo.md",
+          "notas/Decisão desfeita.md",
+          "notas/Reunião pagamentos.md",
+          "notas/Retenção de cópias.md",
+          "notas/Cancelamento de sessão.md",
+          "notas/Database rollback.md"
+        ],
+        "ms": 3.792542000155663
+      },
+      {
+        "id": "t20",
+        "rank": 1,
+        "paths": [
+          "notas/Approved database.md",
+          "notas/Database alternatives.md",
+          "notas/Database rollback.md",
+          "notas/Service health.md",
+          "notas/Reunião pagamentos.md",
+          "notas/Privacidade dos preços.md",
+          "notas/Agenda de pesquisa.md",
+          "notas/Decisão desfeita.md",
+          "notas/Build pipeline.md",
+          "notas/Manutenção concluída.md"
+        ],
+        "ms": 3.2893749994400423
+      }
+    ]
+  },
+  "updated": {
+    "top1": 0.95,
+    "mrr": 0.975,
+    "cases": [
+      {
+        "id": "t01",
+        "rank": 1,
+        "paths": [
+          "notas/Retenção de cópias.md",
+          "notas/Decisão desfeita.md",
+          "notas/Tempo de conexão.md",
+          "notas/Service health.md",
+          "notas/Recuperação de cópias.md",
+          "notas/Reembolso aprovado.md",
+          "notas/Reembolso antigo.md",
+          "notas/Fila de entrega.md",
+          "notas/Database rollback.md",
+          "notas/Sessões vigentes.md"
+        ],
+        "ms": 3.9670830010436475
+      },
+      {
+        "id": "t02",
+        "rank": 1,
+        "paths": [
+          "notas/Fila de entrega.md",
+          "notas/Fila de ideias.md",
+          "notas/Retenção de cópias.md",
+          "notas/Rotação de logs.md",
+          "notas/Sessões vigentes.md",
+          "notas/Proposta antiga de sessões.md",
+          "notas/Exportação CSV.md",
+          "notas/Token de demonstração.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Reunião pagamentos.md"
+        ],
+        "ms": 4.722541001683567
+      },
+      {
+        "id": "t03",
+        "rank": 2,
+        "paths": [
+          "notas/Reunião pagamentos.md",
+          "notas/Cobrança duplicada.md",
+          "notas/Reembolso aprovado.md",
+          "notas/Cancelamento de sessão.md",
+          "notas/Reembolso antigo.md",
+          "notas/Treino semanal.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Recuperação de cópias.md",
+          "notas/Fila de entrega.md",
+          "notas/Decisão desfeita.md"
+        ],
+        "ms": 3.812457998719765
+      },
+      {
+        "id": "t04",
+        "rank": 1,
+        "paths": [
+          "notas/Privacidade dos preços.md",
+          "notas/Cache do catálogo.md",
+          "notas/Acesso de convidados.md",
+          "notas/Reunião pagamentos.md"
+        ],
+        "ms": 3.0978750000940636
+      },
+      {
+        "id": "t05",
+        "rank": 1,
+        "paths": [
+          "notas/Cache do catálogo.md",
+          "notas/Sessões vigentes.md",
+          "notas/Cancelamento de sessão.md",
+          "notas/Retenção de cópias.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Decisão desfeita.md",
+          "notas/Recuperação de cópias.md",
+          "notas/Reembolso antigo.md",
+          "notas/Reembolso aprovado.md",
+          "notas/Rotação de logs.md"
+        ],
+        "ms": 3.103125000052387
+      },
+      {
+        "id": "t06",
+        "rank": 1,
+        "paths": [
+          "notas/Acesso de convidados.md",
+          "notas/Rotação de logs.md",
+          "notas/Busca por arquivos.md",
+          "notas/Agenda de pesquisa.md",
+          "notas/Privacidade dos preços.md",
+          "notas/Ata do editor.md",
+          "notas/Fila de ideias.md",
+          "notas/Exportação CSV.md",
+          "notas/Proposta antiga de sessões.md",
+          "notas/Night shift meeting.md"
+        ],
+        "ms": 4.363249998277752
+      },
+      {
+        "id": "t07",
+        "rank": 1,
+        "paths": [
+          "notas/Agenda de pesquisa.md",
+          "notas/Ata do editor.md",
+          "notas/Manutenção concluída.md",
+          "notas/Acesso de convidados.md",
+          "notas/Treino semanal.md",
+          "notas/Privacidade dos preços.md",
+          "notas/Busca por arquivos.md"
+        ],
+        "ms": 4.006958999525523
+      },
+      {
+        "id": "t08",
+        "rank": 1,
+        "paths": [
+          "notas/Ata do editor.md",
+          "notas/Reunião pagamentos.md",
+          "notas/Agenda de pesquisa.md",
+          "notas/Decisão desfeita.md",
+          "notas/Ideia de etiquetas.md",
+          "notas/Reembolso antigo.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Proposta antiga de sessões.md",
+          "notas/Night shift meeting.md",
+          "notas/Fila de ideias.md"
+        ],
+        "ms": 2.8385840014379937
+      },
+      {
+        "id": "t09",
+        "rank": 1,
+        "paths": [
+          "notas/Receita de pão.md",
+          "notas/Tempo de conexão.md",
+          "notas/Sessões vigentes.md",
+          "notas/Cache do catálogo.md",
+          "notas/Rotação de logs.md",
+          "notas/Token de demonstração.md"
+        ],
+        "ms": 2.56854100007331
+      },
+      {
+        "id": "t10",
+        "rank": 1,
+        "paths": [
+          "notas/Rotação de logs.md",
+          "notas/Decisão desfeita.md",
+          "notas/Recuperação de cópias.md",
+          "notas/Retenção de cópias.md",
+          "notas/Cancelamento de sessão.md",
+          "notas/Sessões vigentes.md",
+          "notas/Fila de entrega.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Tempo de conexão.md",
+          "notas/Manutenção concluída.md"
+        ],
+        "ms": 2.9419589991448447
+      },
+      {
+        "id": "t11",
+        "rank": 1,
+        "paths": [
+          "notas/Build pipeline.md",
+          "notas/Night shift meeting.md",
+          "notas/Proposta antiga de sessões.md",
+          "notas/Sessões vigentes.md",
+          "notas/Manutenção concluída.md",
+          "notas/Decisão desfeita.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Treino semanal.md",
+          "notas/Reembolso aprovado.md",
+          "notas/Ideia de etiquetas.md"
+        ],
+        "ms": 2.8882499973406084
+      },
+      {
+        "id": "t12",
+        "rank": 1,
+        "paths": [
+          "notas/Database rollback.md",
+          "notas/Database alternatives.md",
+          "notas/Service health.md",
+          "notas/Approved database.md",
+          "notas/Decisão desfeita.md",
+          "notas/Recuperação de cópias.md",
+          "notas/Retenção de cópias.md",
+          "notas/Exportação CSV.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Cache do catálogo.md"
+        ],
+        "ms": 2.884375000576256
+      },
+      {
+        "id": "t13",
+        "rank": 1,
+        "paths": [
+          "notas/Service health.md",
+          "notas/Cobrança duplicada.md",
+          "notas/Reembolso aprovado.md",
+          "notas/Reunião pagamentos.md",
+          "notas/Privacidade dos preços.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Reembolso antigo.md",
+          "notas/Approved database.md",
+          "notas/Recuperação de cópias.md",
+          "notas/Database alternatives.md"
+        ],
+        "ms": 3.4524170005170163
+      },
+      {
+        "id": "t14",
+        "rank": 1,
+        "paths": [
+          "notas/Night shift meeting.md",
+          "notas/Build pipeline.md",
+          "notas/Proposta antiga de sessões.md",
+          "notas/Decisão desfeita.md",
+          "notas/Manutenção concluída.md",
+          "notas/Sessões vigentes.md",
+          "notas/Reunião pagamentos.md",
+          "notas/Fila de entrega.md",
+          "notas/Treino semanal.md",
+          "notas/Ata do editor.md"
+        ],
+        "ms": 4.188791001070058
+      },
+      {
+        "id": "t15",
+        "rank": 1,
+        "paths": [
+          "notas/Imagem de perfil.md",
+          "notas/Token de demonstração.md",
+          "notas/Rotação de logs.md",
+          "notas/Ideia de etiquetas.md",
+          "notas/Retenção de cópias.md",
+          "notas/Exportação CSV.md"
+        ],
+        "ms": 4.267000000254484
+      },
+      {
+        "id": "t16",
+        "rank": 1,
+        "paths": [
+          "notas/Cancelamento de sessão.md",
+          "notas/Sessões vigentes.md",
+          "notas/Rotação de logs.md",
+          "notas/Retenção de cópias.md",
+          "notas/Cancelamento de assinatura.md",
+          "notas/Token de demonstração.md",
+          "notas/Decisão desfeita.md",
+          "notas/Proposta antiga de sessões.md",
+          "notas/Exportação CSV.md",
+          "notas/Manutenção concluída.md"
+        ],
+        "ms": 3.7006250022386666
+      },
+      {
+        "id": "t17",
+        "rank": 1,
+        "paths": [
+          "notas/Cancelamento de assinatura.md",
+          "notas/Sessões vigentes.md",
+          "notas/Proposta antiga de sessões.md",
+          "notas/Tempo de conexão.md",
+          "notas/Acesso de convidados.md",
+          "notas/Cancelamento de sessão.md",
+          "notas/Ata do editor.md",
+          "notas/Decisão desfeita.md",
+          "notas/Manutenção concluída.md",
+          "notas/Reembolso aprovado.md"
+        ],
+        "ms": 2.8617499992833473
+      },
+      {
+        "id": "t18",
+        "rank": 1,
+        "paths": [
+          "notas/Busca por arquivos.md",
+          "notas/Privacidade dos preços.md",
+          "notas/Cache do catálogo.md",
+          "notas/Ideia de etiquetas.md",
+          "notas/Treino semanal.md",
+          "notas/Proposta antiga de sessões.md",
+          "notas/Recuperação de cópias.md",
+          "notas/API request limit.md",
+          "notas/Acesso de convidados.md",
+          "notas/Fila de ideias.md"
+        ],
+        "ms": 3.0987500031187665
+      },
+      {
+        "id": "t19",
+        "rank": 1,
+        "paths": [
+          "notas/Função de soma.md",
+          "notas/Recuperação de cópias.md",
+          "notas/Reembolso aprovado.md",
+          "notas/Fila de entrega.md",
+          "notas/Reembolso antigo.md",
+          "notas/Decisão desfeita.md",
+          "notas/Reunião pagamentos.md",
+          "notas/Retenção de cópias.md",
+          "notas/Cancelamento de sessão.md",
+          "notas/Database rollback.md"
+        ],
+        "ms": 2.4856249983713496
+      },
+      {
+        "id": "t20",
+        "rank": 1,
+        "paths": [
+          "notas/Approved database.md",
+          "notas/Database alternatives.md",
+          "notas/Database rollback.md",
+          "notas/Service health.md",
+          "notas/Reunião pagamentos.md",
+          "notas/Privacidade dos preços.md",
+          "notas/Agenda de pesquisa.md",
+          "notas/Decisão desfeita.md",
+          "notas/Build pipeline.md",
+          "notas/Manutenção concluída.md"
+        ],
+        "ms": 2.243292001367081
+      }
+    ]
+  }
+}

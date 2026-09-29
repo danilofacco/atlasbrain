@@ -1,0 +1,679 @@
+{
+  "description": "Synthetic authored fixture, not human-labelled production data. Fixed before model inference. Dev selects a prompt; test is held out.",
+  "documents": [
+    {
+      "path": "notas/Sessões vigentes.md",
+      "title": "Sessões vigentes",
+      "text": "Decidimos que os tokens de acesso expiram em 30 minutos. As sessões revogadas ficam no Redis. Esta é a política vigente, aprovada em setembro.",
+      "labels": {
+        "tipo": "projeto",
+        "tem_decisao": "sim",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Proposta antiga de sessões.md",
+      "title": "Proposta antiga de sessões",
+      "text": "Rascunho abandonado: a proposta era usar tokens de acesso válidos por 24 horas. A proposta foi rejeitada e não descreve a política vigente.",
+      "labels": {
+        "tipo": "ideia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Tempo de conexão.md",
+      "title": "Tempo de conexão",
+      "text": "O cliente HTTP interrompe a conexão após 5 segundos sem resposta. Esse timeout não é o prazo de validade de tokens de acesso.",
+      "labels": {
+        "tipo": "referencia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Retenção de cópias.md",
+      "title": "Retenção de cópias",
+      "text": "Os backups são executados às 02h UTC todos os dias. Cada cópia é mantida por 30 dias e depois eliminada automaticamente.",
+      "labels": {
+        "tipo": "referencia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Recuperação de cópias.md",
+      "title": "Recuperação de cópias",
+      "text": "Para restaurar um backup, valide o checksum, importe o dump em um banco vazio e execute o teste de integridade. Esse procedimento não define o prazo de retenção.",
+      "labels": {
+        "tipo": "referencia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Fila de entrega.md",
+      "title": "Fila de entrega",
+      "text": "Decidimos repetir notificações que falham no máximo quatro vezes, com espera exponencial de 10, 20, 40 e 80 segundos. Depois, o item vai para a fila de falhas.",
+      "labels": {
+        "tipo": "projeto",
+        "tem_decisao": "sim",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Fila de ideias.md",
+      "title": "Fila de ideias",
+      "text": "Ideia arquivada: substituir a fila de notificações por chamadas síncronas. A ideia foi descartada sem ações pendentes.",
+      "labels": {
+        "tipo": "ideia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Reembolso aprovado.md",
+      "title": "Reembolso aprovado",
+      "text": "Decidimos permitir reembolso integral até sete dias depois da compra, solicitado pelo painel de cobrança. Esta regra foi aprovada.",
+      "labels": {
+        "tipo": "projeto",
+        "tem_decisao": "sim",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Reembolso antigo.md",
+      "title": "Reembolso antigo",
+      "text": "O material obsoleto mencionava 30 dias para reembolso. Foi substituído pela decisão aprovada e não deve orientar solicitações atuais.",
+      "labels": {
+        "tipo": "referencia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Cobrança duplicada.md",
+      "title": "Cobrança duplicada",
+      "text": "Uma cobrança duplicada usa a chave de idempotência payment_id. A segunda transação é ignorada; não basta comparar nome ou valor.",
+      "labels": {
+        "tipo": "referencia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Reunião pagamentos.md",
+      "title": "Reunião pagamentos",
+      "text": "Ata da reunião de pagamentos: Ana ficou de investigar cobranças duplicadas até sexta-feira. A investigação permanece pendente.",
+      "labels": {
+        "tipo": "reuniao",
+        "tem_decisao": "nao",
+        "tem_pendencia": "sim"
+      }
+    },
+    {
+      "path": "notas/Cache do catálogo.md",
+      "title": "Cache do catálogo",
+      "text": "O catálogo público fica em cache por 300 segundos. A chave inclui o idioma e o identificador da loja. Preços privados não entram nesse cache.",
+      "labels": {
+        "tipo": "referencia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Privacidade dos preços.md",
+      "title": "Privacidade dos preços",
+      "text": "Decidimos exigir autenticação para consultar preços privados de atacado. Apenas vendedores autorizados podem consultar a tabela.",
+      "labels": {
+        "tipo": "projeto",
+        "tem_decisao": "sim",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Rotação de logs.md",
+      "title": "Rotação de logs",
+      "text": "Os arquivos de log giram a cada 100 MB. São mantidos sete arquivos comprimidos. Senhas e tokens são removidos antes da gravação.",
+      "labels": {
+        "tipo": "referencia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Exportação CSV.md",
+      "title": "Exportação CSV",
+      "text": "O exportador gera arquivos CSV em UTF-8 com BOM e usa ponto e vírgula como separador. Campos com quebra de linha são colocados entre aspas.",
+      "labels": {
+        "tipo": "referencia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Acesso de convidados.md",
+      "title": "Acesso de convidados",
+      "text": "Contas de convidados podem ler projetos públicos. Elas não podem criar projetos, editar arquivos ou consultar projetos privados.",
+      "labels": {
+        "tipo": "referencia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Agenda de pesquisa.md",
+      "title": "Agenda de pesquisa",
+      "text": "Precisamos entrevistar cinco usuários sobre o editor. A tarefa ainda está aberta; o objetivo é entender como criam conexões entre notas.",
+      "labels": {
+        "tipo": "projeto",
+        "tem_decisao": "nao",
+        "tem_pendencia": "sim"
+      }
+    },
+    {
+      "path": "notas/Ata do editor.md",
+      "title": "Ata do editor",
+      "text": "Ata: discutimos a criação de notas e encerramos a reunião sem decisões e sem ações atribuídas. O encontro durou 20 minutos.",
+      "labels": {
+        "tipo": "reuniao",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Ideia de etiquetas.md",
+      "title": "Ideia de etiquetas",
+      "text": "Proposta inicial: explorar etiquetas hierárquicas nas notas. Ainda precisamos prototipar a navegação. Nenhuma decisão foi tomada.",
+      "labels": {
+        "tipo": "ideia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "sim"
+      }
+    },
+    {
+      "path": "notas/Receita de pão.md",
+      "title": "Receita de pão",
+      "text": "Receita pessoal: misturar 500 g de farinha, 300 ml de água e 10 g de sal. Assar o pão por 35 minutos.",
+      "labels": {
+        "tipo": "pessoal",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Treino semanal.md",
+      "title": "Treino semanal",
+      "text": "Plano pessoal: caminhar três vezes por semana. A caminhada de segunda já foi concluída e não restam tarefas nesta nota.",
+      "labels": {
+        "tipo": "pessoal",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Função de soma.md",
+      "title": "Função de soma",
+      "text": "```python\ndef soma(a, b):\n    return a + b\n```\nA função soma recebe dois argumentos e retorna sua soma.",
+      "labels": {
+        "tipo": "codigo",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Token de demonstração.md",
+      "title": "Token de demonstração",
+      "text": "Exemplo de código: `token = random_bytes(32)`. O tamanho da chave é 32 bytes; isso não informa a duração de uma sessão.",
+      "labels": {
+        "tipo": "codigo",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Database rollback.md",
+      "title": "Database rollback",
+      "text": "To roll back the database migration, run the down migration in a maintenance window, then verify row counts against the snapshot.",
+      "labels": {
+        "tipo": "referencia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Service health.md",
+      "title": "Service health",
+      "text": "The /health endpoint returns status ok only after the database connection succeeds. It does not validate backups or payment providers.",
+      "labels": {
+        "tipo": "referencia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/API request limit.md",
+      "title": "API request limit",
+      "text": "The public API accepts 120 requests per minute per account. Requests beyond that limit receive HTTP 429 and a Retry-After header.",
+      "labels": {
+        "tipo": "referencia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Build pipeline.md",
+      "title": "Build pipeline",
+      "text": "The build pipeline runs unit tests before packaging. Deployment is allowed only if all required checks pass.",
+      "labels": {
+        "tipo": "referencia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Night shift meeting.md",
+      "title": "Night shift meeting",
+      "text": "Meeting notes: Liam must investigate the nightly deployment failure tomorrow. This action is still open. No decision was made.",
+      "labels": {
+        "tipo": "reuniao",
+        "tem_decisao": "nao",
+        "tem_pendencia": "sim"
+      }
+    },
+    {
+      "path": "notas/Approved database.md",
+      "title": "Approved database",
+      "text": "We decided to use PostgreSQL for the production database because transactions are required. This decision is active.",
+      "labels": {
+        "tipo": "projeto",
+        "tem_decisao": "sim",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Database alternatives.md",
+      "title": "Database alternatives",
+      "text": "Rejected draft: use SQLite in production. This draft was superseded by the approved database decision.",
+      "labels": {
+        "tipo": "ideia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Imagem de perfil.md",
+      "title": "Imagem de perfil",
+      "text": "Imagens de perfil aceitam PNG e JPEG, com limite de 2 MB. SVG não é aceito nesse campo.",
+      "labels": {
+        "tipo": "referencia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Busca por arquivos.md",
+      "title": "Busca por arquivos",
+      "text": "A busca combina palavras-chave com vetores de significado. Um filtro de pasta deve restringir todos os resultados à pasta solicitada.",
+      "labels": {
+        "tipo": "referencia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Cancelamento de sessão.md",
+      "title": "Cancelamento de sessão",
+      "text": "Ao sair, o usuário revoga a sessão atual. Outras sessões do mesmo usuário continuam válidas até sua própria expiração.",
+      "labels": {
+        "tipo": "referencia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Cancelamento de assinatura.md",
+      "title": "Cancelamento de assinatura",
+      "text": "O cancelamento de assinatura encerra a renovação futura. O acesso contratado continua até o fim do período pago.",
+      "labels": {
+        "tipo": "referencia",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Decisão desfeita.md",
+      "title": "Decisão desfeita",
+      "text": "A decisão de apagar backups após sete dias foi revogada. Consulte a referência de retenção para conhecer o período atual.",
+      "labels": {
+        "tipo": "projeto",
+        "tem_decisao": "sim",
+        "tem_pendencia": "nao"
+      }
+    },
+    {
+      "path": "notas/Manutenção concluída.md",
+      "title": "Manutenção concluída",
+      "text": "A manutenção foi concluída ontem. Todos os testes passaram, os tickets foram fechados e não há ações pendentes.",
+      "labels": {
+        "tipo": "projeto",
+        "tem_decisao": "nao",
+        "tem_pendencia": "nao"
+      }
+    }
+  ],
+  "queries": [
+    {
+      "id": "d01",
+      "query": "Qual é a validade atual dos tokens de acesso?",
+      "expected": [
+        "notas/Sessões vigentes.md"
+      ],
+      "split": "dev",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "d02",
+      "query": "Como restaurar uma cópia de segurança?",
+      "expected": [
+        "notas/Recuperação de cópias.md"
+      ],
+      "split": "dev",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "d03",
+      "query": "Qual é o prazo de reembolso aprovado?",
+      "expected": [
+        "notas/Reembolso aprovado.md"
+      ],
+      "split": "dev",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "d04",
+      "query": "O que falta investigar sobre cobranças duplicadas?",
+      "expected": [
+        "notas/Reunião pagamentos.md"
+      ],
+      "split": "dev",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "d05",
+      "query": "Como o CSV trata acentos e separadores?",
+      "expected": [
+        "notas/Exportação CSV.md"
+      ],
+      "split": "dev",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "d06",
+      "query": "Which database did we approve for production?",
+      "expected": [
+        "notas/Approved database.md"
+      ],
+      "split": "dev",
+      "lang": "en",
+      "kind": "concept"
+    },
+    {
+      "id": "d07",
+      "query": "What happens when API requests exceed the limit?",
+      "expected": [
+        "notas/API request limit.md"
+      ],
+      "split": "dev",
+      "lang": "en",
+      "kind": "concept"
+    },
+    {
+      "id": "d08",
+      "query": "Ainda precisamos fazer algo depois da manutenção?",
+      "expected": [
+        "notas/Manutenção concluída.md"
+      ],
+      "split": "dev",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "t01",
+      "query": "Por quanto tempo mantemos os backups?",
+      "expected": [
+        "notas/Retenção de cópias.md"
+      ],
+      "split": "test",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "t02",
+      "query": "Quais são os intervalos das novas tentativas de notificações?",
+      "expected": [
+        "notas/Fila de entrega.md"
+      ],
+      "split": "test",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "t03",
+      "query": "Como impedir uma segunda cobrança pelo mesmo pagamento?",
+      "expected": [
+        "notas/Cobrança duplicada.md"
+      ],
+      "split": "test",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "t04",
+      "query": "Quem pode consultar os preços privados?",
+      "expected": [
+        "notas/Privacidade dos preços.md"
+      ],
+      "split": "test",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "t05",
+      "query": "Quando o cache do catálogo expira?",
+      "expected": [
+        "notas/Cache do catálogo.md"
+      ],
+      "split": "test",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "t06",
+      "query": "O convidado pode editar arquivos de um projeto?",
+      "expected": [
+        "notas/Acesso de convidados.md"
+      ],
+      "split": "test",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "t07",
+      "query": "Há uma tarefa aberta de entrevistar usuários sobre o editor?",
+      "expected": [
+        "notas/Agenda de pesquisa.md"
+      ],
+      "split": "test",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "t08",
+      "query": "A reunião do editor tomou alguma decisão?",
+      "expected": [
+        "notas/Ata do editor.md"
+      ],
+      "split": "test",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "t09",
+      "query": "Quanto tempo o pão fica no forno?",
+      "expected": [
+        "notas/Receita de pão.md"
+      ],
+      "split": "test",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "t10",
+      "query": "Como funcionam a rotação e a retenção dos logs?",
+      "expected": [
+        "notas/Rotação de logs.md"
+      ],
+      "split": "test",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "t11",
+      "query": "What must pass before deployment is allowed?",
+      "expected": [
+        "notas/Build pipeline.md"
+      ],
+      "split": "test",
+      "lang": "en",
+      "kind": "concept"
+    },
+    {
+      "id": "t12",
+      "query": "How do I roll back a database migration?",
+      "expected": [
+        "notas/Database rollback.md"
+      ],
+      "split": "test",
+      "lang": "en",
+      "kind": "concept"
+    },
+    {
+      "id": "t13",
+      "query": "Does the health endpoint validate payment providers?",
+      "expected": [
+        "notas/Service health.md"
+      ],
+      "split": "test",
+      "lang": "en",
+      "kind": "concept"
+    },
+    {
+      "id": "t14",
+      "query": "Who needs to investigate the nightly deployment failure?",
+      "expected": [
+        "notas/Night shift meeting.md"
+      ],
+      "split": "test",
+      "lang": "en",
+      "kind": "concept"
+    },
+    {
+      "id": "t15",
+      "query": "Quais formatos e tamanho são aceitos na foto de perfil?",
+      "expected": [
+        "notas/Imagem de perfil.md"
+      ],
+      "split": "test",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "t16",
+      "query": "Ao sair de uma sessão as outras também são revogadas?",
+      "expected": [
+        "notas/Cancelamento de sessão.md"
+      ],
+      "split": "test",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "t17",
+      "query": "Perco o acesso imediatamente ao cancelar a assinatura?",
+      "expected": [
+        "notas/Cancelamento de assinatura.md"
+      ],
+      "split": "test",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "t18",
+      "query": "Como restringir a busca a uma pasta?",
+      "expected": [
+        "notas/Busca por arquivos.md"
+      ],
+      "split": "test",
+      "lang": "pt",
+      "kind": "concept"
+    },
+    {
+      "id": "t19",
+      "query": "O que a função soma retorna?",
+      "expected": [
+        "notas/Função de soma.md"
+      ],
+      "split": "test",
+      "lang": "pt",
+      "kind": "symbol"
+    },
+    {
+      "id": "t20",
+      "query": "What is the currently approved production database?",
+      "expected": [
+        "notas/Approved database.md"
+      ],
+      "split": "test",
+      "lang": "en",
+      "kind": "concept"
+    },
+    {
+      "id": "n01",
+      "query": "Qual provedor de SMS foi contratado?",
+      "expected": [],
+      "split": "test",
+      "lang": "pt",
+      "kind": "unanswerable"
+    },
+    {
+      "id": "n02",
+      "query": "Quanto custa o plano empresarial por ano?",
+      "expected": [],
+      "split": "test",
+      "lang": "pt",
+      "kind": "unanswerable"
+    },
+    {
+      "id": "n03",
+      "query": "What is the password rotation interval?",
+      "expected": [],
+      "split": "test",
+      "lang": "en",
+      "kind": "unanswerable"
+    },
+    {
+      "id": "n04",
+      "query": "Qual é a taxa de juros do parcelamento?",
+      "expected": [],
+      "split": "test",
+      "lang": "pt",
+      "kind": "unanswerable"
+    }
+  ]
+}

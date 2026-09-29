@@ -1,0 +1,37 @@
+[project]
+name = "atlasbrain"
+version = "0.2.0"
+description = "A local, open-source second brain that maps your code, connects your knowledge, and preserves project memory through MCP."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "mcp>=1.26,<3",
+    "uvicorn>=0.30",
+    "starlette>=0.37",
+    "fastembed>=0.4",
+    "numpy>=1.26",
+    "networkx>=3.2",
+    "pypdf>=4.0",
+    "python-docx>=1.1",
+    "pyyaml>=6.0",
+    "tree-sitter-language-pack>=0.9",
+]
+
+[project.scripts]
+atlasbrain = "atlasbrain.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["atlasbrain"]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["embeddings: usa o modelo de embeddings local (mais lento)"]
