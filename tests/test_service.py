@@ -6,7 +6,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from urllib.request import urlopen
 
-from atlasbrain import service
+from atlasbrain import config, indexer, service
 
 
 def test_configs(projeto):
@@ -22,7 +22,7 @@ def test_shared_daemon_and_http_sessions(projeto, tmp_path, monkeypatch):
     monkeypatch.setenv('ATLASBRAIN_NO_EMBED', '1')
     # The child uses its own HOME registry, while config was already imported here.
     from atlasbrain import config
-    config.REGISTRY = tmp_path / 'home' / '.config' / 'atlasbrain' / 'projetos.json'
+    monkeypatch.setattr(config, 'REGISTRY', tmp_path / 'home' / '.config' / 'atlasbrain' / 'projetos.json')
     with socket.socket() as s:
         s.bind(('127.0.0.1', 0))
         port = s.getsockname()[1]
@@ -94,3 +94,46 @@ def test_occupied_port_never_spawns(projeto, tmp_path, monkeypatch):
         with pytest.raises(RuntimeError, match='occupied'):
             service.start(projeto, occupied.getsockname()[1], False)
     assert not (service.state_dir() / 'server.json').exists()
+
+
+def test_global_mcp_requires_project_folder_and_routes_to_it(tmp_path, monkeypatch):
+    monkeypatch.setenv('ATLASBRAIN_SERVICE_DIR', str(tmp_path / 'service'))
+    monkeypatch.setenv('ATLASBRAIN_NO_EMBED', '1')
+    monkeypatch.setattr(config, 'REGISTRY', tmp_path / 'home' / '.config' / 'atlasbrain' / 'projetos.json')
+    global_brain = config.GLOBAL_BRAIN
+    global_brain.mkdir(parents=True)
+    project = tmp_path / 'adsivos'
+    project.mkdir()
+    (project / 'README.md').write_text('# Adsivos\nBiblioteca de stickers para Stories.\n')
+    with socket.socket() as s:
+        s.bind(('127.0.0.1', 0))
+        port = s.getsockname()[1]
+    try:
+        service.start(global_brain, port, False)
+        service.start(project, port, False)
+        indexer.index_vault(project, quiet=True)
+
+        async def run():
+            from mcp import ClientSession
+            from mcp.client.streamable_http import streamable_http_client
+            url = json.loads(service.client_config(global_brain, 'claude', port))['mcpServers']['atlasbrain']['url']
+            async with streamable_http_client(url) as transport:
+                async with ClientSession(transport[0], transport[1]) as session:
+                    await session.initialize()
+                    tools = {tool.name: tool for tool in (await session.list_tools()).tools}
+                    assert 'projetos' in tools
+                    assert 'pasta_projeto' in tools['relatorio'].input_schema['properties']
+                    missing = await session.call_tool('relatorio', {})
+                    assert 'Informe `pasta_projeto`' in missing.content[0].text
+                    assert 'relatório de SegundoCerebro' not in missing.content[0].text
+                    selected = await session.call_tool('relatorio', {'pasta_projeto': str(project)})
+                    assert 'relatório de adsivos' in selected.content[0].text
+                    orphans = await session.call_tool('soltos', {'pasta_projeto': 'adsivos'})
+                    report = json.loads(orphans.content[0].text)
+                    assert report['total'] == 1
+                    assert report['itens'][0]['path'] == 'README.md'
+                    all_orphans = await session.call_tool('soltos', {})
+                    assert json.loads(all_orphans.content[0].text)['total'] >= 1
+        asyncio.run(run())
+    finally:
+        service.stop()

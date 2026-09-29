@@ -34,3 +34,5 @@ Claude Code can connect directly to AtlasBrain's local HTTP endpoint. Claude Des
 3. Fully quit and reopen Claude Desktop. Check **Settings → Developer** or the chat's **+ → Connectors** menu for AtlasBrain. After a computer restart, run `uv run atlasbrain start --vault /absolute/path/to/my-project` if the service is not running.
 
 The Claude Desktop chat entry points to one specific project. Claude Code can instead use a local-scoped `atlasbrain` entry for each project, so it automatically selects the correct project while you work there.
+
+For one fixed project, the URL above needs no extra tool arguments. If you connect Claude Desktop to the global brain instead, AtlasBrain exposes `projetos`; pass `pasta_projeto` with the project folder on each project tool call. AtlasBrain will ask for a folder when it is missing, avoiding results from the wrong project. `soltos` without a folder lists isolated files across registered projects.

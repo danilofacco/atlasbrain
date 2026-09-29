@@ -1,4 +1,8 @@
-from atlasbrain import graph, indexer
+import json
+import threading
+from types import SimpleNamespace
+
+from atlasbrain import config, ferramentas, graph, indexer
 from atlasbrain.db import connect
 
 
@@ -38,3 +42,35 @@ def test_isolation_uses_full_index_and_ignores_self_links(projeto):
             assert next(n for n in view['nodes'] if n['path'] == 'cases/free.md')['isolated']
     finally:
         con.close()
+
+
+def test_global_mcp_soltos_lists_registered_projects_with_stable_pagination(tmp_path):
+    global_brain = config.GLOBAL_BRAIN
+    global_brain.mkdir()
+    global_con = connect(global_brain)
+    try:
+        for name, paths in [('alpha', ['notes/a.md', 'notes/b.md']),
+                            ('beta', ['notes/c.md'])]:
+            vault = tmp_path / name
+            vault.mkdir()
+            con = connect(vault)
+            try:
+                for path in paths:
+                    con.execute('INSERT INTO notes(path,title,kind) VALUES(?,?,?)',
+                                (path, path, 'nota'))
+                con.commit()
+            finally:
+                con.close()
+        ctx = SimpleNamespace(vault=global_brain, con=global_con, db_lock=threading.Lock())
+        first = json.loads(ferramentas.soltos(ctx, pasta='notes', limite=2))
+        second = json.loads(ferramentas.soltos(ctx, pasta='notes', limite=2, offset=2))
+        assert first['escopo'] == 'todos_projetos'
+        assert first['total'] == second['total'] == 3
+        assert first['mais'] and not second['mais']
+        assert [(r['projeto'], r['path']) for r in first['itens'] + second['itens']] == [
+            ('alpha', 'notes/a.md'), ('alpha', 'notes/b.md'), ('beta', 'notes/c.md')]
+        assert {r['projeto']: r['total'] for r in first['projetos']} == {
+            'alpha': 2, 'beta': 1, global_brain.name: 0}
+        assert first['avisos'] == []
+    finally:
+        global_con.close()

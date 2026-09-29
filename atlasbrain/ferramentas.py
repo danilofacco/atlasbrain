@@ -8,7 +8,10 @@ versão nova. `ctx` traz vault, con, searcher, db_lock e reindex().
 import datetime as dt
 import json
 import re
+import sqlite3
+from pathlib import Path
 
+from . import config
 from . import graph as g
 from .config import notes_dir
 from .consultas import achar_arquivos, extrair_secao
@@ -234,11 +237,47 @@ def mapa(ctx, comunidades: int = 10, por_comunidade: int = 6) -> str:
     return "\n".join(out)
 
 def soltos(ctx, pasta: str = "", limite: int = 50, offset: int = 0) -> str:
-    """Lista arquivos sem vínculos no índice completo, com paginação e sugestões de revisão.
-    Inclui links, backlinks, tags, similaridade e wikilinks pendentes no critério.
-    Não classifica arquivos como código morto e não cria conexões automaticamente."""
-    with ctx.db_lock:
-        return json.dumps(g.isolated_report(ctx.con, pasta, limite, offset), ensure_ascii=False)
+    """Lista arquivos sem vínculos, com paginação e sugestões de revisão.
+    No MCP de um projeto, consulta apenas esse projeto. No cérebro global, reúne os
+    projetos registrados e identifica o projeto de cada arquivo. Inclui links,
+    backlinks, tags, similaridade e wikilinks pendentes no critério."""
+    if not config.is_global(ctx.vault) or getattr(ctx, 'soltos_local', False):
+        with ctx.db_lock:
+            return json.dumps(g.isolated_report(ctx.con, pasta, limite, offset), ensure_ascii=False)
+
+    limit, start = max(1, min(int(limite), 100)), max(0, int(offset))
+    total, items, projects, warnings = 0, [], [], []
+    # Stable order makes offset pagination consistent across registered projects.
+    brains = sorted(config.registered(), key=lambda b: (b['nome'].casefold(), b['path']))
+    for brain in brains:
+        vault = Path(brain['path'])
+        db_path = vault / config.BRAIN / 'index.db'
+        if not db_path.is_file():
+            warnings.append(f"{brain['nome']}: índice ausente")
+            continue
+        try:
+            con = sqlite3.connect(db_path.as_uri() + '?mode=ro', uri=True, timeout=5)
+            con.row_factory = sqlite3.Row
+            try:
+                con.execute('BEGIN')
+                count = g.isolated_report(con, pasta, 1, 0)['total']
+                projects.append({'projeto': brain['nome'], 'vault': str(vault), 'total': count})
+                local_offset = max(0, start - total)
+                if local_offset < count and len(items) < limit:
+                    page = g.isolated_report(con, pasta, limit - len(items), local_offset)
+                    items.extend({**item, 'projeto': brain['nome'], 'vault': str(vault)}
+                                 for item in page['itens'])
+                total += count
+            finally:
+                con.close()
+        except sqlite3.Error as exc:
+            warnings.append(f"{brain['nome']}: índice indisponível ({exc})")
+    return json.dumps({
+        'escopo': 'todos_projetos', 'total': total, 'offset': start, 'limite': limit,
+        'mais': start + len(items) < total, 'itens': items, 'projetos': projects,
+        'avisos': warnings,
+        'criterio': 'Sem links, backlinks, similaridade, tags ou wikilinks pendentes no índice completo; não significa arquivo sem uso.',
+    }, ensure_ascii=False)
 
 
 def tags(ctx, tag: str | None = None, limite: int = 50) -> str:

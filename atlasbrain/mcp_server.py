@@ -1,6 +1,7 @@
 """Servidor MCP (stdio) — conecta o segundo cérebro ao Claude Code, Claude Desktop e Codex."""
 
 import inspect
+import json
 import threading
 import time
 import typing
@@ -70,6 +71,15 @@ As tools de registro já fazem isso sozinhas quando a nota nova é do mesmo assu
 uma nota (vago, passo de execução, sem escolha fechada), dizendo o porquê."""
 
 
+GLOBAL_ROUTING = """Este endpoint MCP é global e NÃO sabe qual pasta está aberta no cliente.
+Antes de ler ou escrever dados de um projeto, passe `pasta_projeto` com o caminho absoluto da pasta
+em que o usuário está trabalhando. Se souber apenas o nome, use `projetos` para obter o caminho.
+Sem `pasta_projeto`, as ferramentas de projeto recusam a consulta em vez de usar SegundoCerebro
+por engano; somente `soltos` pode listar todos os projetos registrados. O argumento `projeto`
+de decisões/aprendizados é um rótulo da nota, não seleciona a pasta do índice.
+Em MCPs configurados diretamente para um projeto, o endpoint já fixa a pasta."""
+
+
 def build_server(vault: Path, auto_index: bool = True, interval: int = 60) -> FastMCP:
     """O servidor é só a casca: as ferramentas moram em ferramentas.py e são chamadas pela versão ATUAL do
     módulo a cada chamada, então código novo no disco passa a valer sem reabrir a sessão (recarga.py)."""
@@ -98,7 +108,8 @@ def build_server(vault: Path, auto_index: bool = True, interval: int = 60) -> Fa
             return {"erro": str(e)}
 
     ctx.reindex = reindex
-    mcp = FastMCP("AtlasBrain", instructions=INSTRUCTIONS)
+    routed = modulo("config").is_global(vault)
+    mcp = FastMCP("AtlasBrain", instructions=(GLOBAL_ROUTING + "\n\n" + INSTRUCTIONS if routed else INSTRUCTIONS))
 
     if auto_index:
         def loop():
@@ -111,7 +122,13 @@ def build_server(vault: Path, auto_index: bool = True, interval: int = 60) -> Fa
     f = modulo("ferramentas")
     anot = {n: LEITURA for n in f.LEITURA} | {n: ESCRITA for n in f.ESCRITA}
     for nome, a in anot.items():
-        mcp.tool(annotations=a)(_casca(nome, getattr(f, nome), ctx))
+        mcp.tool(annotations=a)(_casca(nome, getattr(f, nome), ctx, routed=routed))
+    if routed:
+        def projetos() -> str:
+            """Lista as pastas de projetos registradas para usar como `pasta_projeto` nas ferramentas."""
+            brains = modulo("config").registered()
+            return json.dumps({'projetos': [{'nome': b['nome'], 'pasta': b['path']} for b in brains]}, ensure_ascii=False)
+        mcp.tool(annotations=LEITURA)(projetos)
     return mcp
 
 
@@ -119,27 +136,78 @@ LEITURA = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=
 ESCRITA = ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False)
 
 
-def _casca(nome: str, original, ctx):
-    """Função com a MESMA assinatura e docstring da ferramenta (é disso que o cliente monta o schema), mas
-    que resolve a implementação na hora da chamada, depois de checar se há código novo."""
+def _registered_project(raw: str) -> tuple[Path | None, str | None]:
+    """Resolve nome ou pasta absoluta para o projeto registrado mais específico."""
+    brains = modulo("config").registered()
+    path = Path(raw).expanduser()
+    if path.is_absolute():
+        path = path.resolve()
+        matches = [Path(b['path']) for b in brains if path == Path(b['path']) or Path(b['path']) in path.parents]
+        if matches:
+            return max(matches, key=lambda p: len(p.parts)), None
+    else:
+        matches = [Path(b['path']) for b in brains if b['nome'].casefold() == raw.casefold()]
+        if len(matches) == 1:
+            return matches[0], None
+        if len(matches) > 1:
+            return None, f"Nome de projeto ambíguo: {raw}. Informe a pasta absoluta."
+    options = ', '.join(f"{b['nome']}: {b['path']}" for b in brains)
+    return None, f"Projeto não registrado: {raw}. Execute atlasbrain setup --vault /pasta/do/projeto. Projetos disponíveis: {options or 'nenhum'}."
+
+
+def _casca(nome: str, original, ctx, *, routed: bool = False):
+    """Preserva a assinatura MCP e roteia explicitamente quando o endpoint é global."""
     def chamar(**kw):
         ctx.recarregador.fresco()
-        result = getattr(modulo("ferramentas"), nome)(ctx, **kw)
-        if nome in ('criar_nota', 'anexar', 'registrar_decisao', 'registrar_aprendizado', 'atualizar_nota', 'editar_secao'):
-            try:
-                with ctx.db_lock:
-                    maintenance = modulo('consolidacao').automatic(ctx.vault)
-                if maintenance.get('consolidado'):
-                    result += '\nSíntese automática: `' + maintenance['path'] + '` (fontes preservadas).'
-            except Exception as exc:
-                result += '\nCompactação pendente: ' + str(exc)
-        return result
+        selected, temporary = ctx, False
+        if routed:
+            requested = kw.pop('pasta_projeto', '')
+            if not requested and nome != 'soltos':
+                brains = modulo('config').registered()
+                options = ', '.join(f"{b['nome']}: {b['path']}" for b in brains)
+                return ('Informe `pasta_projeto` com a pasta do projeto onde você está trabalhando. '
+                        f'Use `projetos` se necessário. Projetos disponíveis: {options or "nenhum"}.')
+            if requested:
+                vault, error = _registered_project(requested)
+                if error:
+                    return error
+                if vault == ctx.vault:
+                    if nome == 'soltos':
+                        selected = SimpleNamespace(**vars(ctx), soltos_local=True)
+                else:
+                    selected = SimpleNamespace(vault=vault, db_lock=threading.Lock(), recarregador=ctx.recarregador)
+                    selected.con = modulo('db').connect(vault)
+                    selected.searcher = modulo('search').Searcher(selected.con)
+                    selected.reindex = lambda: modulo('indexer').index_vault(vault)
+                    temporary = True
+        try:
+            result = getattr(modulo("ferramentas"), nome)(selected, **kw)
+            if nome in ('criar_nota', 'anexar', 'registrar_decisao', 'registrar_aprendizado', 'atualizar_nota', 'editar_secao'):
+                try:
+                    with selected.db_lock:
+                        maintenance = modulo("consolidacao").automatic(selected.vault)
+                    if maintenance.get('consolidado'):
+                        result += '\nSíntese automática: `' + maintenance['path'] + '` (fontes preservadas).'
+                except Exception as exc:
+                    result += '\nCompactação pendente: ' + str(exc)
+            return result
+        finally:
+            if temporary:
+                selected.con.close()
 
     sig = inspect.signature(original)
-    chamar.__signature__ = sig.replace(parameters=list(sig.parameters.values())[1:])
+    params = list(sig.parameters.values())[1:]
+    if routed:
+        params.append(inspect.Parameter('pasta_projeto', kind=inspect.Parameter.KEYWORD_ONLY,
+                                        default='', annotation=str))
+    chamar.__signature__ = sig.replace(parameters=params)
     chamar.__name__ = nome
-    chamar.__doc__ = original.__doc__
+    chamar.__doc__ = (original.__doc__ or '') + (
+        '\nNo endpoint global, informe `pasta_projeto` (caminho absoluto ou nome único registrado).'
+        if routed else '')
     chamar.__annotations__ = {k: v for k, v in typing.get_type_hints(original).items() if k != "ctx"}
+    if routed:
+        chamar.__annotations__['pasta_projeto'] = str
     return chamar
 
 
