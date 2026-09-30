@@ -98,6 +98,8 @@ a Git repository, AtlasBrain uses its built-in exclusions and `.atlasbrainignore
 
 ## Get started
 
+For installation with automatic startup at login on macOS or Windows (WSL), follow the [automated installation guide](docs/automatic-installation.md). It installs Python and dependencies and configures HTTP clients. The manual steps below remain available.
+
 Requirements: Git and [uv](https://docs.astral.sh/uv/getting-started/installation/), on macOS or Linux. Windows users can run the service in WSL, with clients able to reach its localhost port. Native Windows is currently unsupported. `uv` downloads Python 3.12 and installs the project's dependencies automatically.
 
 ### 1. Clone

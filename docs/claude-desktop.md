@@ -1,6 +1,16 @@
-# Claude Desktop chat
+# Claude Desktop
 
-Claude Code can connect directly to AtlasBrain's local HTTP endpoint. Claude Desktop's local MCP configuration launches stdio commands, so its chat needs a small stdio-to-HTTP bridge. The bridge connects to the existing AtlasBrain service; it does not launch another AtlasBrain server or use a second AtlasBrain port. Claude's cloud custom connectors cannot reach `127.0.0.1` on your computer. See the [Claude Desktop local MCP guide](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop) and [remote connector network requirements](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp).
+For dependency installation and automatic startup after login, see the [automated installation guide](automatic-installation.md).
+
+## Connect by HTTP URL
+
+Use the [automated installer](automatic-installation.md) with `--clients codex,claude-code,claude-desktop` (or `-Clients` on Windows). It installs the shared background service and prints a project URL such as `http://127.0.0.1:8765/projects/PROJECT_ID/mcp`. In your Desktop version's Connectors settings, add that URL, then verify a `find_files` call. The installer does not write a binary-launch entry for this mode.
+
+Check where your connector makes requests: the [published custom connector documentation](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp) describes cloud-originating connections, which cannot reach your computer's localhost. Use the local connector route your Desktop installation supports; a background service alone does not make a local URL reachable from a cloud connector. AtlasBrain's installer verifies the local HTTP server, while Desktop connector support must be checked in the application.
+
+## Optional local configuration bridge
+
+For Desktop installations using command-based `claude_desktop_config.json`, use the installer's explicit `claude-desktop-bridge` client, or configure the existing bridge below. This client forwards requests to the same HTTP service; it does not create a second AtlasBrain instance. Claude Code connects over HTTP directly. See the [local MCP guide](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop).
 
 1. Start or reuse AtlasBrain and copy the URL printed by `setup`:
 

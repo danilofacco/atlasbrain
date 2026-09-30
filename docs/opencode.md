@@ -1,5 +1,7 @@
 # OpenCode
 
+For dependency installation and automatic startup after login, see the [automated installation guide](automatic-installation.md).
+
 OpenCode can connect directly to AtlasBrain over HTTP. See the official [MCP server guide](https://opencode.ai/docs/mcp-servers/) and [configuration locations](https://opencode.ai/docs/config/).
 
 ## Before you start

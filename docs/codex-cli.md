@@ -1,5 +1,7 @@
 # Codex CLI
 
+For dependency installation and automatic startup after login, see the [automated installation guide](automatic-installation.md).
+
 Codex CLI connects directly to the existing AtlasBrain HTTP service. See the [official Codex MCP documentation](https://developers.openai.com/codex/mcp/).
 
 ## Before you start

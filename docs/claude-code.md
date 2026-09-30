@@ -1,5 +1,7 @@
 # Claude Code CLI
 
+For dependency installation and automatic startup after login, see the [automated installation guide](automatic-installation.md).
+
 Claude Code connects directly to AtlasBrain over HTTP. Claude Desktop chat has a different configuration; follow the [Desktop bridge guide](claude-desktop.md) for that surface. See the [official Claude Code MCP documentation](https://code.claude.com/docs/en/mcp).
 
 ## Before you start

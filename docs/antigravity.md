@@ -1,5 +1,7 @@
 # Antigravity
 
+For dependency installation and automatic startup after login, see the [automated installation guide](automatic-installation.md).
+
 Antigravity connects directly to AtlasBrain's shared HTTP service. See the [official Antigravity MCP documentation](https://antigravity.google/docs/mcp) for IDE and CLI configuration.
 
 ## Before you start

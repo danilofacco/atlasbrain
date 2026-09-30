@@ -1,5 +1,7 @@
 # Codex Desktop
 
+For dependency installation and automatic startup after login, see the [automated installation guide](automatic-installation.md).
+
 Codex Desktop connects directly to AtlasBrain over HTTP using the same MCP configuration as Codex CLI. See the [official Codex MCP documentation](https://developers.openai.com/codex/mcp/).
 
 ## Before you start
