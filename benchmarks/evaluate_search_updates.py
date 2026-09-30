@@ -25,7 +25,7 @@ def main():
     for name,signals in [('previous',('fts','vec','struct','demote')),('updated',('fts','vec','struct','demote','exact','status'))]:
         cases=[]
         for q in queries:
-            t=time.perf_counter(); paths=[r['path'] for r in searcher.search(q['query'], sinais=signals)]
+            t=time.perf_counter(); paths=[r['path'] for r in searcher.search(q['query'], signals=signals)]
             rank=next((i+1 for i,p in enumerate(paths) if p in q['expected']),0)
             cases.append(dict(id=q['id'],rank=rank,paths=paths,ms=(time.perf_counter()-t)*1000))
         results[name]={'top1':sum(c['rank']==1 for c in cases)/len(cases),

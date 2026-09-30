@@ -49,13 +49,13 @@ def isolated_paths(con) -> set[str]:
     return {r[0] for r in con.execute(f"SELECT n.path FROM notes n WHERE {_ISOLATED}")}
 
 
-def isolated_report(con, pasta: str = "", limite: int = 50, offset: int = 0) -> dict:
+def isolated_report(con, folder: str = "", limit: int = 50, offset: int = 0) -> dict:
     """Indexed files with no links, incoming links, similarity, tags or pending wikilinks."""
-    prefix = pasta.strip("/")
+    prefix = folder.strip("/")
     prefix = prefix + "/" if prefix else ""
     where = _ISOLATED + " AND substr(n.path,1,length(?))=?"
     total = con.execute(f"SELECT count(*) FROM notes n WHERE {where}", (prefix, prefix)).fetchone()[0]
-    limit, offset = max(1, min(int(limite), 100)), max(0, int(offset))
+    limit, offset = max(1, min(int(limit), 100)), max(0, int(offset))
     rows = con.execute(f"SELECT n.path,n.title,n.kind FROM notes n WHERE {where} ORDER BY n.path LIMIT ? OFFSET ?",
                        (prefix, prefix, limit, offset)).fetchall()
     items = []
@@ -68,13 +68,13 @@ def isolated_report(con, pasta: str = "", limite: int = 50, offset: int = 0) -> 
                 criterio="Sem links, backlinks, similaridade, tags ou wikilinks pendentes no índice completo; não significa arquivo sem uso.")
 
 
-def build_graph(con, similar: bool = True, tags: bool = False, ghosts: bool = True, origem: str = "", relacao: str = "") -> nx.Graph:
+def build_graph(con, similar: bool = True, tags: bool = False, ghosts: bool = True, origin: str = "", relation: str = "") -> nx.Graph:
     """Projeção sem direção para comunidades e desenho. Para consultas use build_relations."""
     G = nx.Graph()
     isolated = isolated_paths(con)
     for n in con.execute("SELECT id, path, title, kind, frontmatter FROM notes"):
-        tipo = json.loads(n["frontmatter"] or "{}").get("tipo")
-        G.add_node(n["id"], label=n["title"], path=n["path"], kind=n["kind"], tipo=tipo if isinstance(tipo, str) else None, isolated=n["path"] in isolated)
+        kind = json.loads(n["frontmatter"] or "{}").get("tipo")
+        G.add_node(n["id"], label=n["title"], path=n["path"], kind=n["kind"], tipo=kind if isinstance(kind, str) else None, isolated=n["path"] in isolated)
 
     def add(a, b, kind, w, conf=None):
         if G.has_edge(a, b):
@@ -88,7 +88,7 @@ def build_graph(con, similar: bool = True, tags: bool = False, ghosts: bool = Tr
             G.add_edge(a, b, kind=kind, weight=w, conf=conf, src=a)
 
     for l in con.execute("SELECT src, target, dst, kind, weight, conf FROM links"):
-        if (origem and l["conf"] != origem) or (relacao and l["kind"] != relacao):
+        if (origin and l["conf"] != origin) or (relation and l["kind"] != relation):
             continue
         if l["kind"] == "similar" and not similar:
             continue
@@ -101,7 +101,7 @@ def build_graph(con, similar: bool = True, tags: bool = False, ghosts: bool = Tr
             if gid not in G:
                 G.add_node(gid, label=l["target"], path=None, kind="fantasma")
             add(l["src"], gid, "wikilink", 1.0)
-    if tags and not origem and relacao in ("", "tag"):
+    if tags and not origin and relation in ("", "tag"):
         for t in con.execute("SELECT note_id, tag FROM tags"):
             tid = "tag:" + t["tag"]
             if tid not in G:
@@ -176,17 +176,17 @@ def neighbors(con, note_id: int) -> dict:
     return out
 
 
-def vista(G: nx.Graph, prefixo: str = "", limite: int = 500, max_arestas: int = 2500,
-          pagina: int = 0, foco: str = "") -> dict:
+def view(G: nx.Graph, prefix: str = "", limit: int = 500, max_edges: int = 2500,
+          page: int = 0, focus: str = "") -> dict:
     """Exibe arquivos reais em páginas limitadas e distribuídas entre as áreas do projeto."""
-    prefixo = prefixo.strip("/")
-    limite = max(1, int(limite))
-    pre = prefixo + "/" if prefixo else ""
+    prefix = prefix.strip("/")
+    limit = max(1, int(limit))
+    pre = prefix + "/" if prefix else ""
     total = sum(1 for _, d in G.nodes(data=True) if d.get("path"))
-    if not prefixo and G.number_of_nodes() <= limite:
+    if not prefix and G.number_of_nodes() <= limit:
         V = G
-        pagina, paginas, itens = 0, 1, total
-        inicio, fim = (1, total) if total else (0, 0)
+        page, pages, items = 0, 1, total
+        start, end = (1, total) if total else (0, 0)
     else:
         # Dentro de cada área, decisões e hubs aparecem primeiro. A intercalação
         # ponderada representa também áreas pequenas na primeira página, sem
@@ -209,28 +209,28 @@ def vista(G: nx.Graph, prefixo: str = "", limite: int = 500, max_arestas: int = 
             ordered.append(buckets[name][offset])
             if offset + 1 < len(buckets[name]):
                 heapq.heappush(queue, (finish + 1 / math.sqrt(len(buckets[name])), name, offset + 1))
-        itens = len(ordered)
-        paginas = max(1, (itens + limite - 1) // limite)
-        if foco:
-            focused = next((i for i, n in enumerate(ordered) if G.nodes[n]["path"] == foco), None)
+        items = len(ordered)
+        pages = max(1, (items + limit - 1) // limit)
+        if focus:
+            focused = next((i for i, n in enumerate(ordered) if G.nodes[n]["path"] == focus), None)
             if focused is not None:
-                pagina = focused // limite
-        pagina = min(max(0, int(pagina)), paginas - 1)
-        inicio = pagina * limite + 1 if itens else 0
-        fim = min(itens, (pagina + 1) * limite)
-        V = G.subgraph(ordered[pagina * limite:fim])
-    arestas = sorted(V.edges(data=True), key=lambda e: -e[2]["weight"])[:max_arestas]
+                page = focused // limit
+        page = min(max(0, int(page)), pages - 1)
+        start = page * limit + 1 if items else 0
+        end = min(items, (page + 1) * limit)
+        V = G.subgraph(ordered[page * limit:end])
+    edges = sorted(V.edges(data=True), key=lambda e: -e[2]["weight"])[:max_edges]
     comm = communities(V)
     ids = {n: i for i, n in enumerate(V.nodes)}
-    maxw = max((e[2]["weight"] for e in arestas), default=1) or 1
+    maxw = max((e[2]["weight"] for e in edges), default=1) or 1
     return {
-        "modo": "arquivos", "prefixo": prefixo, "total": total,
-        "limite": limite, "pagina": pagina, "paginas": paginas, "itens": itens, "inicio": inicio, "fim": fim,
+        "modo": "arquivos", "prefixo": prefix, "total": total,
+        "limite": limit, "pagina": page, "paginas": pages, "itens": items, "inicio": start, "fim": end,
         "visiveis": V.number_of_nodes(),
-        "ocultos": max(0, V.number_of_edges() - len(arestas)),
+        "ocultos": max(0, V.number_of_edges() - len(edges)),
         "nodes": [{"i": ids[n], "id": str(n), "label": d["label"], "path": d.get("path"), "kind": d["kind"],
                    "isolated": d.get("isolated", False), "tipo": d.get("tipo"), "c": comm.get(n, 0), "deg": V.degree(n)}
                   for n, d in V.nodes(data=True)],
         "edges": [[ids[a], ids[b], d["kind"], round(d["weight"], 3), d.get("conf")]
-                  for a, b, d in arestas],
+                  for a, b, d in edges],
     }

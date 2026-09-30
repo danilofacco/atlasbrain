@@ -14,7 +14,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from atlasbrain import config, db, embed
-from atlasbrain.search import Searcher, parse_filtros
+from atlasbrain.search import Searcher, parse_filters
 from benchmarks.evaluate_filters import baseline
 
 
@@ -30,7 +30,7 @@ def load_cases(file):
             raise ValueError('Invalid case metadata')
         if not isinstance(row['pergunta'], str) or not row['pergunta'].strip() or not isinstance(row['esperado'], list):
             raise ValueError('Invalid question or labels')
-        if set(parse_filtros(row['pergunta'])[1]) - {'pasta', 'tipo', 'tag', 'status'}:
+        if set(parse_filters(row['pergunta'])[1]) - {'pasta', 'tipo', 'tag', 'status'}:
             raise ValueError('This evaluator supports folder/type/tag/status scopes only')
         if row['id'] in ids or (row['projeto'], row['pergunta']) in queries:
             raise ValueError('Duplicate case or question')
@@ -41,7 +41,7 @@ def load_cases(file):
             key, value = negative.get('filtro'), negative.get('valor')
             if row['esperado'] or key not in ('pasta', 'tag') or not value:
                 raise ValueError('A negative case must declare an empty folder/tag scope')
-            if parse_filtros(row['pergunta'])[1] != {key: value}:
+            if parse_filters(row['pergunta'])[1] != {key: value}:
                 raise ValueError('Negative query and declared scope differ')
         else:
             evidence = row.get('evidencias', [])
@@ -100,7 +100,7 @@ def validate_sources(con, vault, cases):
 
 def metadata_violation(con, query, path):
     """Check returned file metadata independently of the search candidate SQL."""
-    _, filters = parse_filtros(query)
+    _, filters = parse_filters(query)
     scope = filters.get('pasta', '').strip('/').lower()
     if scope and not path.lower().startswith(scope+'/'):
         return True

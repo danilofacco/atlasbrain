@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from atlasbrain.codigo import extrair
+from atlasbrain.code import extract_code
 from atlasbrain.parse import chunk_markdown, parse, split_frontmatter
 
 
@@ -49,15 +49,15 @@ def test_extrai_python():
         "class Loja(Base):\n    def comprar(self):\n        return connect()\n\n"
         "def f():\n    # NOTE: explica o porquê\n    os.path.join('a')\n"
     )
-    e = extrair(src, ".py")
-    nomes = {(n, t, pai) for n, t, _, pai in e.simbolos}
-    assert ("Loja", "classe", None) in nomes and ("comprar", "funcao", "Loja") in nomes and ("f", "funcao", None) in nomes
+    e = extract_code(src, ".py")
+    names = {(n, t, parent) for n, t, _, parent in e.symbols}
+    assert ("Loja", "classe", None) in names and ("comprar", "funcao", "Loja") in names and ("f", "funcao", None) in names
     mods = [m for m, _ in e.imports]
     assert "os" in mods and ".db" in mods and ".embed" in mods and ".util" in mods
-    assert ("Loja", "Base") in [(c, b) for c, b, _ in e.herancas]
-    chamadas = {n for _, n, _ in e.chamadas}
-    assert "connect" in chamadas and "path.join" in chamadas  # receptor guardado: não é o join() do projeto
-    assert e.porques and e.porques[0][0] == "NOTE"
+    assert ("Loja", "Base") in [(c, b) for c, b, _ in e.inheritances]
+    calls = {n for _, n, _ in e.calls}
+    assert "connect" in calls and "path.join" in calls  # receptor guardado: não é o join() do projeto
+    assert e.rationales and e.rationales[0][0] == "NOTE"
 
 
 def test_extrai_typescript():
@@ -66,14 +66,14 @@ def test_extrai_typescript():
         "export const soma = (x) => x + 1;\n"
         "export class Tela extends Base { mostrar() { this.log(); ajuda(); } }\n"
     )
-    e = extrair(src, ".ts")
+    e = extract_code(src, ".ts")
     assert {"@/lib/a", "fs"} <= {m for m, _ in e.imports}
-    nomes = {n for n, *_ in e.simbolos}
-    assert {"soma", "Tela", "mostrar"} <= nomes
-    assert ("Tela", "Base") in [(c, b) for c, b, _ in e.herancas]
-    chamadas = {n for _, n, _ in e.chamadas}
-    assert "ajuda" in chamadas and "this.log" in chamadas
+    names = {n for n, *_ in e.symbols}
+    assert {"soma", "Tela", "mostrar"} <= names
+    assert ("Tela", "Base") in [(c, b) for c, b, _ in e.inheritances]
+    calls = {n for _, n, _ in e.calls}
+    assert "ajuda" in calls and "this.log" in calls
 
 
 def test_linguagem_desconhecida():
-    assert extrair("qualquer coisa", ".xyz") is None
+    assert extract_code("qualquer coisa", ".xyz") is None

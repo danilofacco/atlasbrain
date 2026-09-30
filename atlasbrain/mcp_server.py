@@ -14,7 +14,7 @@ except ImportError:  # mcp 1.x
     from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
-from .recarga import Recarregador, modulo
+from .reload import ModuleReloader, current_module
 
 INSTRUCTIONS = """AtlasBrain is the local second brain of this project: indexed code, notes, decisions,
 learnings and documents, with keyword + semantic search and a provenance-aware knowledge graph.
@@ -61,62 +61,63 @@ one folder and do not require project_folder."""
 
 
 def build_server(vault: Path, auto_index: bool = True, interval: int = 60) -> FastMCP:
-    """O servidor é só a casca: as ferramentas moram em ferramentas.py e são chamadas pela versão ATUAL do
-    módulo a cada chamada, então código novo no disco passa a valer sem reabrir a sessão (recarga.py)."""
-    log = modulo("indexer")._log
+    """O servidor é só a casca: as ferramentas moram em tools.py e são chamadas pela versão ATUAL do
+    módulo a cada chamada, então código novo no disco passa a valer sem reabrir a sessão (reload.py)."""
+    log = current_module("indexer")._log
     ctx = SimpleNamespace(vault=vault, db_lock=threading.Lock())
 
-    def abrir():
-        ctx.con = modulo("db").connect(vault)
-        ctx.searcher = modulo("search").Searcher(ctx.con)
+    def open_database():
+        ctx.con = current_module("db").connect(vault)
+        ctx.searcher = current_module("search").Searcher(ctx.con)
 
-    def ao_recarregar():
+    def on_reload():
         with ctx.db_lock:
-            antiga = ctx.con
-            abrir()
-            antiga.close()
+            previous = ctx.con
+            open_database()
+            previous.close()
 
-    abrir()
-    rec = Recarregador(ao_recarregar, log=log)
-    ctx.recarregador = rec
+    open_database()
+    rec = ModuleReloader(on_reload, log=log)
+    ctx.reloader = rec
 
     def reindex():
         try:
-            return modulo("indexer").index_vault(vault)
+            return current_module("indexer").index_vault(vault)
         except Exception as e:
             log(f"[atlasbrain] falha ao indexar: {e}")
             return {"erro": str(e)}
 
     ctx.reindex = reindex
-    routed = modulo("config").is_global(vault)
+    routed = current_module("config").is_global(vault)
     mcp = FastMCP("AtlasBrain", instructions=(GLOBAL_ROUTING + "\n\n" + INSTRUCTIONS if routed else INSTRUCTIONS))
 
     if auto_index:
         def loop():
             while True:
-                rec.fresco()  # nunca indexa com código velho
+                rec.refresh()  # nunca indexa com código velho
                 reindex()
                 time.sleep(interval)
         threading.Thread(target=loop, daemon=True).start()
 
-    f = modulo("ferramentas")
-    from .mcp_api import TOOLS
-    anot = {n: LEITURA for n in f.LEITURA} | {n: ESCRITA for n in f.ESCRITA}
-    for nome, a in anot.items():
-        mcp.tool(annotations=a)(_casca(nome, getattr(f, nome), ctx, routed=routed, english=True))
-        if TOOLS[nome][0] != nome:
-            mcp.tool(annotations=a)(_casca(nome, getattr(f, nome), ctx, routed=routed))
+    f = current_module("tools")
+    from .mcp_api import TOOLS, legacy_function
+    annotations = {n: READ_TOOLS for n in f.READ_TOOLS} | {n: WRITE_TOOLS for n in f.WRITE_TOOLS}
+    for name, a in annotations.items():
+        mcp.tool(annotations=a)(_tool_wrapper(name, legacy_function(f, name), ctx, routed=routed, english=True))
+        if TOOLS[name][0] != name:
+            mcp.tool(annotations=a)(_tool_wrapper(name, legacy_function(f, name), ctx, routed=routed))
     if routed:
         def projects() -> str:
             """List registered project folders for the project_folder argument."""
-            brains = modulo("config").registered()
+            brains = current_module("config").registered()
             return json.dumps({'projects': [{'name': b['nome'], 'folder': b['path']} for b in brains]}, ensure_ascii=False)
-        mcp.tool(annotations=LEITURA)(projects)
-        def projetos() -> str:
+        mcp.tool(annotations=READ_TOOLS)(projects)
+        def legacy_projects() -> str:
             """Compatibility alias for projects."""
-            brains = modulo("config").registered()
+            brains = current_module("config").registered()
             return json.dumps({'projetos': [{'nome': b['nome'], 'pasta': b['path']} for b in brains]}, ensure_ascii=False)
-        mcp.tool(annotations=LEITURA)(projetos)
+        legacy_projects.__name__ = 'projetos'
+        mcp.tool(annotations=READ_TOOLS)(legacy_projects)
     # Hide compatibility aliases from discovery, while preserving call_tool for cached clients.
     public_names = {spec[0] for spec in TOOLS.values()} | {'projects'}
     original_list = mcp.list_tools
@@ -126,13 +127,13 @@ def build_server(vault: Path, auto_index: bool = True, interval: int = 60) -> Fa
     return mcp
 
 
-LEITURA = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=False)
-ESCRITA = ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False)
+READ_TOOLS = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=False)
+WRITE_TOOLS = ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False)
 
 
 def _registered_project(raw: str) -> tuple[Path | None, str | None]:
     """Resolve nome ou pasta absoluta para o projeto registrado mais específico."""
-    brains = modulo("config").registered()
+    brains = current_module("config").registered()
     path = Path(raw).expanduser()
     if path.is_absolute():
         path = path.resolve()
@@ -149,20 +150,20 @@ def _registered_project(raw: str) -> tuple[Path | None, str | None]:
     return None, f"Projeto não registrado: {raw}. Execute atlasbrain setup --vault /pasta/do/projeto. Projetos disponíveis: {options or 'nenhum'}."
 
 
-def _casca(nome: str, original, ctx, *, routed: bool = False, english: bool = False):
+def _tool_wrapper(name: str, original, ctx, *, routed: bool = False, english: bool = False):
     """Preserva a assinatura MCP e roteia explicitamente quando o endpoint é global."""
     from .mcp_api import TOOLS, PARAMETERS, internal_arguments, public_default
-    def chamar(**kw):
-        ctx.recarregador.fresco()
+    def invoke(**kw):
+        ctx.reloader.refresh()
         if english:
             if routed:
                 kw['pasta_projeto'] = kw.pop('project_folder', '')
-            kw = internal_arguments(nome, kw, {PARAMETERS.get(p.name,p.name):p.name for p in inspect.signature(original).parameters.values() if p.name != "ctx"})
+            kw = internal_arguments(name, kw, {PARAMETERS.get(p.name,p.name):p.name for p in inspect.signature(original).parameters.values() if p.name != "ctx"})
         selected, temporary = ctx, False
         if routed:
             requested = kw.pop('pasta_projeto', '')
-            if not requested and nome != 'soltos':
-                brains = modulo('config').registered()
+            if not requested and name != 'soltos':
+                brains = current_module('config').registered()
                 options = ', '.join(f"{b['nome']}: {b['path']}" for b in brains)
                 return (('Supply `project_folder` with the absolute folder where you are working. Use `projects` to discover registered folders. Available projects: ' + (options or 'none')) if english else ('Informe `pasta_projeto` com a pasta do projeto onde você está trabalhando. '
                         f'Use `projetos` se necessário. Projetos disponíveis: {options or "nenhum"}.'))
@@ -171,27 +172,27 @@ def _casca(nome: str, original, ctx, *, routed: bool = False, english: bool = Fa
                 if error:
                     return ('Project not registered or ambiguous: ' + requested + '. Use projects to choose an absolute folder, or register it with atlasbrain setup --vault /path/to/project.') if english else error
                 if vault == ctx.vault:
-                    if nome == 'soltos':
-                        selected = SimpleNamespace(**vars(ctx), soltos_local=True)
+                    if name == 'soltos':
+                        selected = SimpleNamespace(**vars(ctx), local_isolated_files=True)
                 else:
-                    selected = SimpleNamespace(vault=vault, db_lock=threading.Lock(), recarregador=ctx.recarregador)
-                    selected.con = modulo('db').connect(vault)
-                    selected.searcher = modulo('search').Searcher(selected.con)
-                    selected.reindex = lambda: modulo('indexer').index_vault(vault)
+                    selected = SimpleNamespace(vault=vault, db_lock=threading.Lock(), reloader=ctx.reloader)
+                    selected.con = current_module('db').connect(vault)
+                    selected.searcher = current_module('search').Searcher(selected.con)
+                    selected.reindex = lambda: current_module('indexer').index_vault(vault)
                     temporary = True
-        locale_context = modulo("localization").language("en" if english else "pt-BR")
+        locale_context = current_module("localization").language("en" if english else "pt-BR")
         locale_context.__enter__()
         try:
-            result = getattr(modulo("ferramentas"), nome)(selected, **kw)
-            if nome in ('criar_nota', 'anexar', 'registrar_decisao', 'registrar_aprendizado', 'atualizar_nota', 'editar_secao'):
+            result = current_module("mcp_api").legacy_function(current_module("tools"), name)(selected, **kw)
+            if name in ('criar_nota', 'anexar', 'registrar_decisao', 'registrar_aprendizado', 'atualizar_nota', 'editar_secao'):
                 try:
                     with selected.db_lock:
-                        maintenance = modulo("consolidacao").automatic(selected.vault)
+                        maintenance = current_module("consolidation").automatic(selected.vault)
                     if maintenance.get('consolidado'):
                         result += ('\nAutomatic summary: `' if english else '\nSíntese automática: `') + maintenance['path'] + ('` (sources preserved).' if english else '` (fontes preservadas).')
                 except Exception as exc:
                     result += ('\nConsolidation pending: ' if english else '\nCompactação pendente: ') + str(exc)
-            return modulo("mcp_api").public_result(result) if english else result
+            return current_module("mcp_api").public_result(result) if english else result
         finally:
             locale_context.__exit__(None, None, None)
             if temporary:
@@ -204,15 +205,15 @@ def _casca(nome: str, original, ctx, *, routed: bool = False, english: bool = Fa
     if routed:
         params.append(inspect.Parameter('project_folder' if english else 'pasta_projeto', kind=inspect.Parameter.KEYWORD_ONLY,
                                         default='', annotation=str))
-    chamar.__signature__ = sig.replace(parameters=params)
-    chamar.__name__ = TOOLS[nome][0] if english else nome
-    chamar.__doc__ = (TOOLS[nome][1] if english else original.__doc__ or '') + (
+    invoke.__signature__ = sig.replace(parameters=params)
+    invoke.__name__ = TOOLS[name][0] if english else name
+    invoke.__doc__ = (TOOLS[name][1] if english else original.__doc__ or '') + (
         ('\nOn the global endpoint, supply project_folder (absolute path or unique registered name).' if english else '\nNo endpoint global, informe `pasta_projeto` (caminho absoluto ou nome único registrado).')
         if routed else '')
-    chamar.__annotations__ = {(PARAMETERS.get(k,k) if english else k): v for k, v in typing.get_type_hints(original).items() if k != "ctx"}
+    invoke.__annotations__ = {(PARAMETERS.get(k,k) if english else k): v for k, v in typing.get_type_hints(original).items() if k != "ctx"}
     if routed:
-        chamar.__annotations__['project_folder' if english else 'pasta_projeto'] = str
-    return chamar
+        invoke.__annotations__['project_folder' if english else 'pasta_projeto'] = str
+    return invoke
 
 
 def run(vault: Path, auto_index: bool = True) -> None:

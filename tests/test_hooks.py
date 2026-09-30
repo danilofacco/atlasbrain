@@ -19,16 +19,16 @@ def test_guard_discriminates_tool_intent(tool, command, relevant):
     assert _guard_relevant({'tool_name': tool, 'tool_input': {'command': command}}) is relevant
 
 
-def test_guard_project_scope_cooldown_and_invalid_input(projeto, tmp_path, monkeypatch, capsys):
-    (projeto / '.atlasbrain').mkdir()
+def test_guard_project_scope_cooldown_and_invalid_input(project, tmp_path, monkeypatch, capsys):
+    (project / '.atlasbrain').mkdir()
     def run(cwd, tool='Read'):
         monkeypatch.setattr('sys.stdin', io.StringIO(json.dumps({'cwd': str(cwd), 'session_id': 'same', 'tool_name': tool})))
         cmd_guard(None)
         return capsys.readouterr().out
-    first = json.loads(run(projeto))['hookSpecificOutput']
+    first = json.loads(run(project))['hookSpecificOutput']
     assert first['hookEventName'] == 'PreToolUse' and 'additionalContext' in first
     assert 'permissionDecision' not in first
-    assert run(projeto) == ''
+    assert run(project) == ''
     other = tmp_path / 'other'
     (other / '.atlasbrain').mkdir(parents=True)
     assert run(other)
@@ -59,7 +59,7 @@ def test_installer_covers_both_clients(tmp_path, monkeypatch):
     for name in ('.claude', '.codex'):
         (home / name).mkdir()
     monkeypatch.setattr('atlasbrain.cli.shutil.which', lambda _: '/installed/atlasbrain')
-    cmd_hooks(SimpleNamespace(vault=None, remover=False))
+    cmd_hooks(SimpleNamespace(vault=None, remove=False))
     for p in (home / '.claude/settings.json', home / '.codex/hooks.json'):
         guard = json.loads(p.read_text())['hooks']['PreToolUse'][0]
         assert 'Bash' in guard['matcher'] and guard['hooks'][0]['command'] == '"/installed/atlasbrain" guard'

@@ -93,11 +93,14 @@ def fetch(url):
         return raw, response.headers.get_content_type(), response.headers.get_content_charset() or 'utf-8', response.url
 
 
-def importar(vault, url, titulo=None, atualizar=False):
-    folder = notes_dir(vault) / 'Importações'
+def import_url(vault, url, title=None, update=False):
+    folder = notes_dir(vault) / 'Imports'
     key = hashlib.sha256(url.encode()).hexdigest()[:20]
     path = folder / f'{key}.md'
-    if path.exists() and not atualizar:
+    legacy = notes_dir(vault) / 'Importações' / f'{key}.md'
+    if not path.exists() and legacy.exists():
+        path = legacy
+    if path.exists() and not update:
         return {'path': str(path.relative_to(vault)), 'importada': False, 'motivo': 'URL already imported; use atualizar=true to refresh.'}
     from . import editor
     expected = editor.revision(path.read_bytes()) if path.exists() else None
@@ -110,7 +113,7 @@ def importar(vault, url, titulo=None, atualizar=False):
         text = '\n\n'.join(f'## Page {i}\n\n{page.extract_text() or ""}' for i, page in enumerate(reader.pages, 1))
         if not any((page.extract_text() or '').strip() for page in reader.pages):
             raise ValueError('PDF contains no extractable text; scanned PDFs require OCR.')
-        title = titulo or (reader.metadata.title if reader.metadata else None) or urlsplit(final_url).path.rsplit('/', 1)[-1] or 'Imported PDF'
+        title = title or (reader.metadata.title if reader.metadata else None) or urlsplit(final_url).path.rsplit('/', 1)[-1] or 'Imported PDF'
     elif content_type in ('text/html', 'application/xhtml+xml'):
         html = raw.decode(charset, errors='replace')
         parser = _HTMLText()
@@ -118,7 +121,7 @@ def importar(vault, url, titulo=None, atualizar=False):
         text = ''.join(parser.parts).strip()
         match = re.search(r'<title[^>]*>(.*?)</title>', html, re.I | re.S)
         from html import unescape
-        title = titulo or (unescape(re.sub('<[^>]+>', '', match[1])).strip() if match else urlsplit(final_url).hostname)
+        title = title or (unescape(re.sub('<[^>]+>', '', match[1])).strip() if match else urlsplit(final_url).hostname)
     else:
         raise ValueError('Unsupported source: use an HTML web page or PDF.')
     if not text.strip():

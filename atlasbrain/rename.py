@@ -139,7 +139,7 @@ def apply(vault, con, old, new, expected):
         except Exception as exc:
             raise editor.EditError('Renomeação interrompida; confira os arquivos antes de repetir. Registro de recuperação: '+str(journal)+'; '+str(exc),409) from exc
     result=public_plan(prepared)
-    result.update(renomeado=True,indice=index_vault(vault,quiet=True,esperar=5))
+    result.update(renomeado=True,indice=index_vault(vault,quiet=True,wait_timeout=5))
     return result
 
 
@@ -213,4 +213,4 @@ def recovery(vault, con, operation_id=None, action=None, expected=None):
             remove(new)
         data['estado']='concluido' if action=='concluir' else 'revertido'
         editor._atomic(file,json.dumps(data,ensure_ascii=False).encode(),mode=0o600)
-    return {**report,'estado':data['estado'],'indice':index_vault(vault,quiet=True,esperar=5)}
+    return {**report,'estado':data['estado'],'indice':index_vault(vault,quiet=True,wait_timeout=5)}

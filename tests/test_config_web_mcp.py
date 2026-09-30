@@ -12,12 +12,12 @@ from atlasbrain import config
 
 # ------------------------------------------------------------------ descoberta do projeto
 
-def test_acha_raiz_do_git_a_partir_de_subpasta(projeto):
-    assert config.resolve_vault(cwd=str(projeto / "src")) == projeto
+def test_acha_raiz_do_git_a_partir_de_subpasta(project):
+    assert config.resolve_vault(cwd=str(project / "src")) == project
 
 
-def test_atlasbrain_existente_vence_o_git(projeto):
-    sub = projeto / "web"
+def test_atlasbrain_existente_vence_o_git(project):
+    sub = project / "web"
     (sub / ".atlasbrain").mkdir()
     assert config.resolve_vault(cwd=str(sub)) == sub.resolve()
 
@@ -28,45 +28,45 @@ def test_fora_de_projeto_usa_global(tmp_path):
     assert config.resolve_vault(cwd=str(solta)) == config.GLOBAL_BRAIN.resolve()
 
 
-def test_notas_no_global_ficam_na_raiz(projeto):
-    assert config.notes_dir(projeto) == projeto / ".atlasbrain"
+def test_notas_no_global_ficam_na_raiz(project):
+    assert config.notes_dir(project) == project / ".atlasbrain"
     g = config.resolve_vault(cwd=str(Path.home()))
     assert config.notes_dir(g) == g
 
 
 def test_pastas_recusadas(tmp_path):
     home = Path.home().resolve()
-    assert config.pasta_invalida(home)
-    assert config.pasta_invalida(home.parent)
-    assert config.pasta_invalida(Path("/"))
-    assert config.pasta_invalida(Path("/System/Library"))
-    assert config.pasta_invalida(tmp_path / "nao-existe")
+    assert config.invalid_folder_reason(home)
+    assert config.invalid_folder_reason(home.parent)
+    assert config.invalid_folder_reason(Path("/"))
+    assert config.invalid_folder_reason(Path("/System/Library"))
+    assert config.invalid_folder_reason(tmp_path / "nao-existe")
     ok = tmp_path / "proj"
     ok.mkdir()
-    assert config.pasta_invalida(ok) is None
+    assert config.invalid_folder_reason(ok) is None
 
 
-def test_registro(projeto):
-    config.data_dir(projeto)
-    assert str(projeto) in {b["path"] for b in config.registered()}
-    config.unregister(projeto)
-    assert str(projeto) not in {b["path"] for b in config.registered()}
+def test_registro(project):
+    config.data_dir(project)
+    assert str(project) in {b["path"] for b in config.registered()}
+    config.unregister(project)
+    assert str(project) not in {b["path"] for b in config.registered()}
 
 
 # ------------------------------------------------------------------ servidor web
 
 @pytest.fixture
 def servidor(indexado):
-    from atlasbrain.web import criar_servidor
-    projeto, _ = indexado
-    srv = criar_servidor(projeto, port=0, auto_index=False)
+    from atlasbrain.web import create_server
+    project, _ = indexado
+    srv = create_server(project, port=0, auto_index=False)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
-    yield f"http://127.0.0.1:{srv.server_address[1]}", projeto
+    yield f"http://127.0.0.1:{srv.server_address[1]}", project
     srv.shutdown()
 
 
-def req(url, metodo="GET", corpo=None, headers=None):
-    r = urllib.request.Request(url, method=metodo, data=json.dumps(corpo).encode() if corpo is not None else None,
+def req(url, metodo="GET", body=None, headers=None):
+    r = urllib.request.Request(url, method=metodo, data=json.dumps(body).encode() if body is not None else None,
                                headers={"Content-Type": "application/json", **(headers or {})})
     try:
         with urllib.request.urlopen(r, timeout=10) as resp:
@@ -90,10 +90,10 @@ def test_web_grafo_e_busca(servidor):
 
 def test_web_bloqueia_outro_site(servidor, tmp_path):
     url, _ = servidor
-    alvo = tmp_path / "alvo"
-    alvo.mkdir()
-    assert req(url + "/api/cerebros", "POST", {"path": str(alvo)})[0] == 403  # sem cabeçalho
-    assert req(url + "/api/cerebros", "POST", {"path": str(alvo)},
+    target = tmp_path / "alvo"
+    target.mkdir()
+    assert req(url + "/api/cerebros", "POST", {"path": str(target)})[0] == 403  # sem cabeçalho
+    assert req(url + "/api/cerebros", "POST", {"path": str(target)},
                {"X-atlasbrain": "1", "Origin": "http://evil.com"})[0] == 403
     assert req(url + "/api/open?path=src/app.py")[0] == 403
     assert req(url + "/api/pastas?p=/")[0] == 403
@@ -122,28 +122,28 @@ def test_web_abre_pasta_valida_e_recusa_home(servidor, tmp_path):
 def test_mcp_stdio(indexado):
     from mcp import ClientSession, StdioServerParameters
     from mcp.client.stdio import stdio_client
-    projeto, _ = indexado
+    project, _ = indexado
 
-    async def rodar():
+    async def run_benchmark():
         p = StdioServerParameters(command=sys.executable, args=["-m", "atlasbrain.cli", "mcp", "--sem-auto"],
-                                  cwd=str(projeto / "src"), env={"ATLASBRAIN_NO_EMBED": "1", "HOME": str(Path.home()),
+                                  cwd=str(project / "src"), env={"ATLASBRAIN_NO_EMBED": "1", "HOME": str(Path.home()),
                                                                  "PATH": "/usr/bin:/bin:/opt/homebrew/bin"})
         async with stdio_client(p) as (r, w):
             async with ClientSession(r, w) as s:
                 await s.initialize()
                 tools = (await s.list_tools()).tools
                 leitura = {t.name for t in tools if t.annotations and t.annotations.read_only_hint}
-                onde = (await s.call_tool("onde", {"simbolo": "soma"})).content[0].text
+                symbol_location = (await s.call_tool("onde", {"simbolo": "soma"})).content[0].text
                 exp = (await s.call_tool("explicar", {"alvo": "src/app.py"})).content[0].text
                 graph = (await s.call_tool("consultar_grafo", {"consulta": "src/app.py::main", "relacoes": ["chama"]})).content[0].text
                 impact = (await s.call_tool("impacto", {"alvo": "src/util.py::soma"})).content[0].text
                 graph_tool = next(t for t in tools if t.name == "query_graph")
                 schema = getattr(graph_tool, "input_schema", None) or getattr(graph_tool, "inputSchema")
-                return leitura, onde, exp, graph, impact, schema
+                return leitura, symbol_location, exp, graph, impact, schema
 
-    leitura, onde, exp, graph, impact, schema = asyncio.run(rodar())
+    leitura, symbol_location, exp, graph, impact, schema = asyncio.run(run_benchmark())
     assert {"search", "find_files", "symbol_location", "explain", "query_graph", "impact"} <= leitura and "record_decision" not in leitura
-    assert "src/util.py" in onde and "src/app.py" in onde  # definição e uso
+    assert "src/util.py" in symbol_location and "src/app.py" in symbol_location  # definição e uso
     assert "src/util.py" in exp and "EXTRACTED" in exp
     assert "src/util.py" in graph and "EXTRACTED" in graph
     assert "src/app.py" in impact and "evidência L9" in impact

@@ -85,7 +85,7 @@ def prepare(vault, con, group):
     if not candidate:
         if not isinstance(group,str) or not re.fullmatch(r'[0-9a-f]{20}',group):
             raise editor.EditError('Grupo inválido')
-        path=(notes_dir(vault)/'Sinteses'/(group+'.md')).relative_to(vault).as_posix()
+        path=_summary_path(vault, group)
         try:
             existing=editor.read(vault,path)
         except editor.EditError:
@@ -136,7 +136,7 @@ def consolidate(vault, group, summary=None, revisions=None):
         if summary is None:
             summary='\n\n'.join('### '+s['title']+'\n\n'+extract(s['content']) for s in sources)
         title='Síntese · '+bundle['tema'].split(':',1)[-1]
-        path=(notes_dir(vault)/'Sinteses'/(group+'.md')).relative_to(vault).as_posix()
+        path=_summary_path(vault, group)
         source_meta=[{'path':s['path'],'hash':hashlib.sha1(s['content'].encode()).hexdigest(),
                       'revision':s['revision']} for s in sources]
         fm={'title':title,'tipo':'consolidacao','modo':mode,'projeto':bundle['projeto'],'tema':bundle['tema'],
@@ -159,7 +159,7 @@ def consolidate(vault, group, summary=None, revisions=None):
             saved=editor.save(vault,path,content,current['revision'])
         else:
             saved=editor.save(vault,path,content,create=True)
-    stats=index_vault(vault,quiet=True,esperar=5)
+    stats=index_vault(vault,quiet=True,wait_timeout=5)
     return {'path':saved['path'],'modo':mode,'fontes':len(sources),'originais_preservados':True,'indice':stats}
 
 
@@ -216,3 +216,9 @@ def refresh_queue(vault, execute=False):
                     item['estado']='bloqueado';item['erro']=str(exc)
                 break
     return {'fila':items,'atualizado':updated,'aviso':'Sínteses do agente exigem revisão; nunca são substituídas por extração automática.'}
+
+
+def _summary_path(vault, group):
+    current = notes_dir(vault) / 'Summaries' / (group + '.md')
+    legacy = notes_dir(vault) / 'Sinteses' / (group + '.md')
+    return (legacy if not current.exists() and legacy.exists() else current).relative_to(vault).as_posix()

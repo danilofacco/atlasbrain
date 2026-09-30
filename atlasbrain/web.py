@@ -10,8 +10,8 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from . import graph as g
-from .consultas import conexoes, dependencias
-from .config import pasta_invalida, register, registered, unregister
+from .queries import connections, dependencies
+from .config import invalid_folder_reason, register, registered, unregister
 from .db import connect, get_meta
 from .indexer import _log, index_vault, scan
 from .search import Searcher
@@ -30,7 +30,7 @@ def serve(vault: Path, port: int = 8765, auto_index: bool = True, open_browser: 
         webbrowser.open(url)
 
 
-def criar_servidor(vault: Path, port: int = 8765, auto_index: bool = True, *, handler_only=False) -> ThreadingHTTPServer:
+def create_server(vault: Path, port: int = 8765, auto_index: bool = True, *, handler_only=False) -> ThreadingHTTPServer:
     """Um servidor para todos os cérebros: `?v=<pasta>` escolhe o projeto (padrão: o de onde foi aberto).
     port=0 escolhe uma porta livre (testes)."""
     default = str(vault.resolve())
@@ -49,25 +49,25 @@ def criar_servidor(vault: Path, port: int = 8765, auto_index: bool = True, *, ha
             return brains[key]
 
     get_brain(None)
-    LIMITE_ARQUIVOS = 25000
-    trabalhos: dict[str, dict] = {}  # pastas abertas pela interface: contando → indexando → pronto | erro
+    FILE_LIMIT = 25000
+    workspaces: dict[str, dict] = {}  # pastas abertas pela interface: contando → indexando → pronto | erro
 
-    def abrir_pasta(path: Path) -> None:
+    def open_folder(path: Path) -> None:
         key = str(path)
         try:
-            trabalhos[key] = {"estado": "contando", "arquivos": 0}
+            workspaces[key] = {"estado": "contando", "arquivos": 0}
             n = len(scan(path))  # só lista (git ls-files ou os.walk); ainda não cria nada na pasta
-            if n > LIMITE_ARQUIVOS:
-                trabalhos[key] = {"estado": "erro", "arquivos": n,
+            if n > FILE_LIMIT:
+                workspaces[key] = {"estado": "erro", "arquivos": n,
                                   "msg": f"{n} arquivos: grande demais para um cérebro. Escolha uma subpasta "
                                          f"ou liste o que ignorar em .atlasbrainignore."}
                 return
-            trabalhos[key] = {"estado": "indexando", "arquivos": n}
+            workspaces[key] = {"estado": "indexando", "arquivos": n}
             register(path)
             index_vault(path)
-            trabalhos[key] = {"estado": "pronto", "arquivos": n}
+            workspaces[key] = {"estado": "pronto", "arquivos": n}
         except Exception as e:
-            trabalhos[key] = {"estado": "erro", "msg": str(e)}
+            workspaces[key] = {"estado": "erro", "msg": str(e)}
 
     if auto_index:
         def loop():
@@ -121,7 +121,7 @@ def criar_servidor(vault: Path, port: int = 8765, auto_index: bool = True, *, ha
                         raise editor.EditError('Corpo inválido')
                     result = editor.restore(vault, body.get('path'), body.get('version'), body.get('revision'))
                     try:
-                        result['indice'] = index_vault(vault, quiet=True, esperar=5)
+                        result['indice'] = index_vault(vault, quiet=True, wait_timeout=5)
                     except Exception:
                         result['aviso'] = 'Restauração concluída; índice pendente.'
                     return self._json(result)
@@ -143,7 +143,7 @@ def criar_servidor(vault: Path, port: int = 8765, auto_index: bool = True, *, ha
                             raise editor.EditError('Arquivo não encontrado no índice', 404)
                         result = editor.delete(vault, row['path'])
                     try:
-                        result['indice'] = index_vault(vault, quiet=True, esperar=5)
+                        result['indice'] = index_vault(vault, quiet=True, wait_timeout=5)
                     except Exception:
                         result['aviso'] = 'Arquivo removido; atualização do índice pendente.'
                     return self._json(result)
@@ -160,21 +160,21 @@ def criar_servidor(vault: Path, port: int = 8765, auto_index: bool = True, *, ha
                     if not isinstance(body, dict) or not isinstance(body.get('create',False),bool):
                         raise editor.EditError('Corpo inválido')
                     result=editor.save(vault, body.get('path'), body.get('content'), body.get('revision'), body.get('create',False))
-                    result['indice']=index_vault(vault,quiet=True,esperar=5)
+                    result['indice']=index_vault(vault,quiet=True,wait_timeout=5)
                     return self._json(result)
                 except editor.EditError as e:
                     return self._json({'erro':str(e)}, e.status)
                 except OSError as e:
                     return self._json({'erro':'Não consegui salvar o arquivo: '+str(e)},400)
             if u.path == "/api/vinculo":
-                from . import inteligencia as intelligence
+                from . import intelligence as intelligence
                 from .indexer import index_vault
                 q = {k:v[0] for k,v in parse_qs(u.query).items()}
                 vault, con, searcher, lock = get_brain(q.get('v'))
                 try:
                     with lock:
                         result = intelligence.register_link(con, vault, body.get('de',''), body.get('para',''), body.get('motivo',''))
-                    result['indice'] = index_vault(vault, quiet=True, esperar=5)
+                    result['indice'] = index_vault(vault, quiet=True, wait_timeout=5)
                     return self._json(result)
                 except (ValueError, OSError) as e:
                     return self._json({'erro':str(e)},400)
@@ -191,12 +191,12 @@ def criar_servidor(vault: Path, port: int = 8765, auto_index: bool = True, *, ha
                     path = path.resolve()
                 except OSError:
                     return self._json({"erro": "Caminho inválido."}, 400)
-                motivo = pasta_invalida(path)
-                if motivo:
-                    return self._json({"erro": motivo}, 400)
-                if trabalhos.get(str(path), {}).get("estado") not in ("contando", "indexando"):
-                    threading.Thread(target=abrir_pasta, args=(path,), daemon=True).start()
-                    trabalhos[str(path)] = {"estado": "contando", "arquivos": 0}
+                reason = invalid_folder_reason(path)
+                if reason:
+                    return self._json({"erro": reason}, 400)
+                if workspaces.get(str(path), {}).get("estado") not in ("contando", "indexando"):
+                    threading.Thread(target=open_folder, args=(path,), daemon=True).start()
+                    workspaces[str(path)] = {"estado": "contando", "arquivos": 0}
                 return self._json({"ok": True, "path": str(path)})
             if u.path == "/api/esquecer":  # tira da lista (não apaga nada do disco)
                 path = Path(str(body.get("path", ""))).expanduser().resolve()
@@ -212,12 +212,12 @@ def criar_servidor(vault: Path, port: int = 8765, auto_index: bool = True, *, ha
             vault, con, searcher, lock = get_brain(q.get("v"))
             try:
                 if u.path == "/api/versao":  # a página recarrega sozinha quando a interface muda
-                    from .recarga import versao
-                    return self._json({"versao": "%d-%d" % (versao(True)[0] * 1000, versao(True)[1])})
+                    from .reload import version
+                    return self._json({"versao": "%d-%d" % (version(True)[0] * 1000, version(True)[1])})
                 if u.path == "/api/brains":
-                    atual = q.get("v") and str(Path(q["v"]).expanduser().resolve())
-                    return self._json({"atual": atual if atual in trabalhos else str(vault),
-                                       "cerebros": registered(), "trabalhos": trabalhos})
+                    current = q.get("v") and str(Path(q["v"]).expanduser().resolve())
+                    return self._json({"atual": current if current in workspaces else str(vault),
+                                       "cerebros": registered(), "trabalhos": workspaces})
                 if u.path == "/api/pastas":  # sugestões para quem digita o caminho
                     if not self._seguro():
                         return self._json([], 403)
@@ -225,12 +225,12 @@ def criar_servidor(vault: Path, port: int = 8765, auto_index: bool = True, *, ha
                     p = Path(raw).expanduser()
                     base, pref = (p, "") if raw.endswith("/") else (p.parent, p.name.lower())
                     try:
-                        itens = sorted(x for x in base.iterdir() if x.is_dir() and not x.name.startswith(".")
+                        items = sorted(x for x in base.iterdir() if x.is_dir() and not x.name.startswith(".")
                                        and x.name.lower().startswith(pref))[:30]
                     except OSError:
-                        itens = []
+                        items = []
                     return self._json([{"path": str(x), "projeto": (x / ".git").exists() or (x / ".atlasbrain").exists()}
-                                       for x in itens])
+                                       for x in items])
                 if u.path in ("/", "/index.html"):
                     body = (STATIC / "index.html").read_bytes()
                     self.send_response(200)
@@ -239,7 +239,7 @@ def criar_servidor(vault: Path, port: int = 8765, auto_index: bool = True, *, ha
                     self.end_headers()
                     self.wfile.write(body)
                 elif u.path in ('/api/estado', '/api/mudancas', '/api/sugestoes', '/api/filtros'):
-                    from . import inteligencia as intelligence
+                    from . import intelligence as intelligence
                     with lock:
                         if u.path == '/api/estado':
                             return self._json(intelligence.status(con, vault, int(q.get('limite',30)), int(q.get('offset',0))))
@@ -278,7 +278,7 @@ def criar_servidor(vault: Path, port: int = 8765, auto_index: bool = True, *, ha
                     with lock:
                         G = g.build_graph(con, similar=q.get("similar", "1") == "1",
                                           tags=q.get("tags") == "1", ghosts=q.get("ghosts", "1") == "1",
-                                          origem=q.get("origem", ""), relacao=q.get("relacao", ""))
+                                          origin=q.get("origem", ""), relation=q.get("relacao", ""))
                     folder=q.get('pasta','').strip('/')
                     ext=q.get('ext','')
                     kind=q.get('kind','')
@@ -294,8 +294,8 @@ def criar_servidor(vault: Path, port: int = 8765, auto_index: bool = True, *, ha
                         page = int(q.get("pagina", 0))
                     except ValueError:
                         return self._json({"erro": "Page size and page must be integers."}, 400)
-                    v = g.vista(G, q.get("prefixo", ""), limite=limit,
-                                pagina=page, foco=q.get("foco", ""))
+                    v = g.view(G, q.get("prefixo", ""), limit=limit,
+                                page=page, focus=q.get("foco", ""))
                     self._json({"vault": vault.name, **v})
                 elif u.path in ("/api/conexoes", "/api/dependencias"):
                     with lock:
@@ -303,8 +303,8 @@ def criar_servidor(vault: Path, port: int = 8765, auto_index: bool = True, *, ha
                         if not row:
                             return self._json({"erro": "não encontrada"}, 404)
                         if u.path == "/api/conexoes":
-                            return self._json(conexoes(con, row["id"], limite=min(int(q.get("limite", 12)), 30)))
-                        return self._json({"centro": row["id"], **dependencias(con, row["id"], min(int(q.get("prof", 2)), 3))})
+                            return self._json(connections(con, row["id"], limit=min(int(q.get("limite", 12)), 30)))
+                        return self._json({"centro": row["id"], **dependencies(con, row["id"], min(int(q.get("prof", 2)), 3))})
                 elif u.path == "/api/search":
                     with lock:
                         self._json(searcher.search(q.get("q", ""), limit=int(q.get("limit", 20)), tag=q.get("tag")))
@@ -328,27 +328,27 @@ def criar_servidor(vault: Path, port: int = 8765, auto_index: bool = True, *, ha
                         fm = json.loads(r["frontmatter"] or "{}")
                         if fm.get("tipo") not in ("decisao", "aprendizado"):
                             continue
-                        resumo = r["preview"] or ""
-                        m = re.search(r"## (?:Decisão|Decision)\s+(.+?)(?:\s+## |$)", resumo)
+                        summary = r["preview"] or ""
+                        m = re.search(r"## (?:Decisão|Decision)\s+(.+?)(?:\s+## |$)", summary)
                         out.append({"path": r["path"], "title": r["title"], "tipo": fm["tipo"],
                                     "data": str(fm.get("data") or ""), "projeto": (fm.get("projeto") or "").strip("[]"),
                                     "status": fm.get("status"), "origem": fm.get("origem"),
                                     "tags": [t for t in (fm.get("tags") or []) if t not in ("decisao", "aprendizado")],
-                                    "resumo": (m.group(1) if m else re.sub(r"^#\s+" + re.escape(r["title"]) + r"\s*", "", resumo))[:260],
+                                    "resumo": (m.group(1) if m else re.sub(r"^#\s+" + re.escape(r["title"]) + r"\s*", "", summary))[:260],
                                     "mtime": r["mtime"]})
                     out.sort(key=lambda x: (x["data"], x["mtime"]), reverse=True)
                     self._json(out)
                 elif u.path == "/api/overview":
                     with lock:
                         q1 = lambda sql: con.execute(sql).fetchone()[0]
-                        tipos = {r[0]: r[1] for r in con.execute(
+                        kinds = {r[0]: r[1] for r in con.execute(
                             "SELECT json_extract(frontmatter, '$.tipo') t, COUNT(*) FROM notes WHERE t IS NOT NULL GROUP BY t")}
                         recent = [dict(path=r["path"], title=r["title"], kind=r["kind"], mtime=r["mtime"],
-                                       tipo=json.loads(r["frontmatter"] or "{}").get("tipo"))
+                                       **{"tipo": json.loads(r["frontmatter"] or "{}").get("tipo")} )
                                   for r in con.execute("SELECT path, title, kind, mtime, frontmatter FROM notes ORDER BY mtime DESC LIMIT 40")]
                         self._json({"vault": vault.name, "path": str(vault), "arquivos": q1("SELECT COUNT(*) FROM notes"),
                                     "ligacoes": q1("SELECT COUNT(*) FROM links WHERE dst IS NOT NULL"),
-                                    "decisoes": tipos.get("decisao", 0), "aprendizados": tipos.get("aprendizado", 0),
+                                    "decisoes": kinds.get("decisao", 0), "aprendizados": kinds.get("aprendizado", 0),
                                     "tags": q1("SELECT COUNT(DISTINCT tag) FROM tags"),
                                     "indexado": float(get_meta(con, "last_indexed", "0")), "recentes": recent})
                 elif u.path == "/api/open":

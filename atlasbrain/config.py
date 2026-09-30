@@ -4,11 +4,13 @@ import subprocess
 import time
 from pathlib import Path
 
-from .codigo import LANGS
+from .code import LANGS
 
 BRAIN = ".atlasbrain"  # pasta do cérebro dentro de cada projeto (como .git ou .claude)
-GLOBAL_BRAIN = Path(os.environ.get("ATLASBRAIN_GLOBAL", "~/SegundoCerebro")).expanduser()
-REGISTRY = Path.home() / ".config" / "atlasbrain" / "projetos.json"
+# Reuse existing global memory without moving user documents or breaking links.
+_default_global = "~/SegundoCerebro" if Path("~/SegundoCerebro").expanduser().is_dir() else "~/AtlasBrain"
+GLOBAL_BRAIN = Path(os.environ.get("ATLASBRAIN_GLOBAL", _default_global)).expanduser()
+REGISTRY = Path.home() / ".config" / "atlasbrain" / "projects.json"
 
 IGNORE_DIRS = {
     ".git", ".obsidian", ".cerebro", ".trash", "node_modules", ".venv", "venv",
@@ -38,7 +40,7 @@ MODEL_CACHE = Path.home() / ".cache" / "atlasbrain" / "models"
 SIMILAR_K = int(os.environ.get("ATLASBRAIN_SIMILAR_K", "3"))
 SIMILAR_MIN = float(os.environ.get("ATLASBRAIN_SIMILAR_MIN", "0.6"))
 
-_GITIGNORE = "# índice local do atlasbrain (as notas em markdown são versionadas)\nindex.db*\n.editor-backups/\n*.lock\ncaptura.*\nRELATORIO.md\n"
+_GITIGNORE = "# índice local do atlasbrain (as notas em markdown são versionadas)\nindex.db*\n.editor-backups/\n*.lock\ncapture.*\ncaptura.*\nRELATORIO.md\nREPORT.md\n"
 
 
 def kind_of(path: Path) -> str | None:
@@ -81,9 +83,9 @@ def resolve_vault(arg: str | None = None, cwd: str | None = None) -> Path:
         if not p.is_dir():
             raise SystemExit(f"Pasta não encontrada: {p}")
         return p
-    proj = find_project(Path(cwd or os.getcwd()))
-    if proj:
-        return proj
+    project_root = find_project(Path(cwd or os.getcwd()))
+    if project_root:
+        return project_root
     GLOBAL_BRAIN.mkdir(parents=True, exist_ok=True)
     return GLOBAL_BRAIN.resolve()
 
@@ -96,10 +98,10 @@ def data_dir(vault: Path) -> Path:
     d = vault / BRAIN
     d.mkdir(exist_ok=True)
     gi = d / ".gitignore"
-    atual = gi.read_text() if gi.exists() else ""
-    faltam = [l for l in _GITIGNORE.splitlines() if l and not l.startswith("#") and l not in atual.splitlines()]
-    if faltam:  # cérebros antigos ganham as regras novas
-        gi.write_text((atual or _GITIGNORE.splitlines()[0] + "\n") + "".join(l + "\n" for l in faltam))
+    current = gi.read_text() if gi.exists() else ""
+    missing = [l for l in _GITIGNORE.splitlines() if l and not l.startswith("#") and l not in current.splitlines()]
+    if missing:  # cérebros antigos ganham as regras novas
+        gi.write_text((current or _GITIGNORE.splitlines()[0] + "\n") + "".join(l + "\n" for l in missing))
     register(vault)
     return d
 
@@ -112,6 +114,14 @@ def notes_dir(vault: Path) -> Path:
 _registered: set[str] = set()
 
 
+def _read_registry() -> dict:
+    path = REGISTRY
+    legacy = path.with_name("projetos.json")
+    if not path.exists() and legacy.exists():
+        path = legacy
+    return json.loads(path.read_text()) if path.exists() else {}
+
+
 def register(vault: Path) -> None:
     key = str(vault.resolve())
     if key in _registered:
@@ -119,7 +129,7 @@ def register(vault: Path) -> None:
     _registered.add(key)
     try:
         REGISTRY.parent.mkdir(parents=True, exist_ok=True)
-        reg = json.loads(REGISTRY.read_text()) if REGISTRY.exists() else {}
+        reg = _read_registry()
         reg[key] = {"nome": vault.name, "visto": time.time(), "global": is_global(vault)}
         REGISTRY.write_text(json.dumps(reg, ensure_ascii=False, indent=2))
     except (OSError, ValueError):
@@ -128,7 +138,7 @@ def register(vault: Path) -> None:
 
 def registered() -> list[dict]:
     try:
-        reg = json.loads(REGISTRY.read_text())
+        reg = _read_registry()
     except (OSError, ValueError):
         return []
     out = [{"path": k, **v} for k, v in reg.items() if Path(k, BRAIN).is_dir()]
@@ -139,25 +149,25 @@ def unregister(vault: Path) -> None:
     key = str(vault.resolve())
     _registered.discard(key)
     try:
-        reg = json.loads(REGISTRY.read_text())
+        reg = _read_registry()
         reg.pop(key, None)
         REGISTRY.write_text(json.dumps(reg, ensure_ascii=False, indent=2))
     except (OSError, ValueError):
         pass
 
 
-PROIBIDAS = [Path("/"), Path("/System"), Path("/Library"), Path("/Applications"), Path("/usr"), Path("/private"),
+FORBIDDEN_PATHS = [Path("/"), Path("/System"), Path("/Library"), Path("/Applications"), Path("/usr"), Path("/private"),
              Path("/Volumes"), Path("/Users")]
 
 
-def pasta_invalida(p: Path) -> str | None:
+def invalid_folder_reason(p: Path) -> str | None:
     """Motivo para recusar uma pasta escolhida à mão (ou None se ela pode virar cérebro)."""
     if not p.exists():
         return "Essa pasta não existe."
     if not p.is_dir():
         return "Isso é um arquivo, não uma pasta."
     home = Path.home().resolve()
-    if p == home or p in home.parents or p in PROIBIDAS:
+    if p == home or p in home.parents or p in FORBIDDEN_PATHS:
         return "Pasta ampla demais (home, raiz ou pasta do sistema). Escolha a pasta de um projeto."
     if any(p == x or x in p.parents for x in (Path("/System"), Path("/usr"), home / "Library")):
         return "Pasta de sistema: escolha a pasta de um projeto."

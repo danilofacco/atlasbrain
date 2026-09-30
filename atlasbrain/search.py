@@ -33,19 +33,19 @@ def _rerank_top_three(results: list[dict], note_ids: np.ndarray, similarities: n
     results[:3] = sorted(first, key=lambda e: (e['exato'], e['score']), reverse=True)
 
 
-_SECUNDARIO = re.compile(r"(^|/)(__tests__|tests?|spec|__mocks__|fixtures|docs|scripts|pesquisas|examples?)/"
+_SECONDARY = re.compile(r"(^|/)(__tests__|tests?|spec|__mocks__|fixtures|docs|scripts|pesquisas|examples?)/"
                          r"|\.(test|spec)\.[jt]sx?$|_test\.(py|go)$|(^|/)test_[^/]*\.py$")
 
 
-_FILTRO = re.compile(r'(?:^|\s)(pasta|path|folder|tipo|type|tag|desde|since|status):("[^"]+"|\S+)', re.I)
-_EXCLUI = re.compile(r'(?:^|\s)-(\w[\w-]*)')
-_FRASE = re.compile(r'"([^"]{3,})"')
+_FILTER = re.compile(r'(?:^|\s)(pasta|path|folder|tipo|type|tag|desde|since|status):("[^"]+"|\S+)', re.I)
+_EXCLUDE = re.compile(r'(?:^|\s)-(\w[\w-]*)')
+_PHRASE = re.compile(r'"([^"]{3,})"')
 
 
-def parse_filtros(q: str) -> tuple[str, dict]:
+def parse_filters(q: str) -> tuple[str, dict]:
     """Tira da consulta os filtros (pasta:, tipo:, tag:, desde:, -excluir, "frase exata") e devolve o resto."""
     f: dict = {}
-    for k, v in _FILTRO.findall(q):
+    for k, v in _FILTER.findall(q):
         key = {"path":"pasta", "folder":"pasta", "type":"tipo", "since":"desde"}.get(k.lower(), k.lower())
         value = v.strip('"')
         if key == 'tipo':
@@ -53,10 +53,10 @@ def parse_filtros(q: str) -> tuple[str, dict]:
         elif key == 'status':
             value = {'active':'ativa', 'superseded':'substituída', 'revoked':'revogada', 'cancelled':'cancelada'}.get(value.lower(), value)
         f[key] = value
-    q = _FILTRO.sub(" ", q)
-    f["excluir"] = [w.lower() for w in _EXCLUI.findall(q)]
-    q = _EXCLUI.sub(" ", q)
-    f["frases"] = [x.lower() for x in _FRASE.findall(q)]
+    q = _FILTER.sub(" ", q)
+    f["excluir"] = [w.lower() for w in _EXCLUDE.findall(q)]
+    q = _EXCLUDE.sub(" ", q)
+    f["frases"] = [x.lower() for x in _PHRASE.findall(q)]
     q = q.replace('"', " ")
     return " ".join(q.split()), {k: v for k, v in f.items() if v}
 
@@ -94,8 +94,8 @@ def _candidate_filter_sql(tag, folder, filters):
         params.append(tag.lstrip("#").lower())
     if filters.get("tipo"):
         clauses.append("(n.kind=? OR json_extract(n.frontmatter, '$.tipo')=?)")
-        tipo = _filter_type(filters["tipo"])
-        params.extend((tipo, tipo))
+        kind = _filter_type(filters["tipo"])
+        params.extend((kind, kind))
     if filters.get("status"):
         clauses.append("atlasbrain_casefold(COALESCE(NULLIF(json_extract(n.frontmatter, '$.status'), ''), 'ativa'))=?")
         params.append(filters["status"].casefold())
@@ -113,7 +113,7 @@ def _candidate_filter_sql(tag, folder, filters):
     return " AND ".join(clauses), params
 
 
-def _procura_implementacao(q: str) -> bool:
+def _is_implementation_query(q: str) -> bool:
     """Perguntas sobre execução/localização tendem a pedir o arquivo que implementa a resposta."""
     text = q.casefold().strip()
     if re.search(r'\b(decidimos|decisão tomada|foi decidid[ao]|foi escolhida|aprendemos|por que escolhemos|'
@@ -166,24 +166,24 @@ class Searcher:
         self._rev = rev
 
     def search(self, q: str, limit: int = 10, tag: str | None = None, folder: str | None = None,
-               sinais: tuple = ("fts", "vec", "struct", "demote", "exact", "status"),
+               signals: tuple = ("fts", "vec", "struct", "demote", "exact", "status"),
                rerank: bool = True) -> list[dict]:
         """`sinais` liga/desliga cada fonte (palavra, significado, símbolo/caminho): o benchmark mede cada uma.
         A consulta aceita filtros: pasta:lib/ai tipo:decisao tag:x desde:2026-09 -excluir "frase exata"."""
-        q, filtros = parse_filtros(q)
-        tag = tag or filtros.get("tag")
-        folder = folder or filtros.get("pasta")
-        if not q and filtros.get("frases"):
-            q = " ".join(filtros["frases"])
+        q, filters = parse_filters(q)
+        tag = tag or filters.get("tag")
+        folder = folder or filters.get("pasta")
+        if not q and filters.get("frases"):
+            q = " ".join(filters["frases"])
         with self.lock:
-            return self._search(q, limit, tag, folder, set(sinais), filtros, rerank)
+            return self._search(q, limit, tag, folder, set(signals), filters, rerank)
 
-    def _search(self, q, limit, tag, folder, sinais, filtros=None, rerank=True):
-        filtros = filtros or {}
-        code_intent = (not filtros.get('tipo') and _procura_implementacao(q)
+    def _search(self, q, limit, tag, folder, signals, filters=None, rerank=True):
+        filters = filters or {}
+        code_intent = (not filters.get('tipo') and _is_implementation_query(q)
                        and self.con.execute("SELECT 1 FROM notes WHERE kind='codigo' LIMIT 1").fetchone() is not None)
         pool = 200
-        where, scope_params = _candidate_filter_sql(tag, folder, filtros)
+        where, scope_params = _candidate_filter_sql(tag, folder, filters)
         scope_rows = self.con.execute(
             "SELECT c.id, c.note_id FROM notes n CROSS JOIN chunks c ON c.note_id=n.id WHERE " + where,
             scope_params).fetchall() if where else None
@@ -207,7 +207,7 @@ class Searcher:
         sources = {}
         exact_notes = set()
         target = q.strip().strip('`').casefold()
-        if target and 'exact' in sinais:
+        if target and 'exact' in signals:
             for row in self.con.execute('SELECT id, path, title FROM notes'):
                 if target in (row['path'].casefold(), row['path'].split('/')[-1].casefold(), row['title'].casefold()):
                     exact_notes.add(row['id'])
@@ -219,7 +219,7 @@ class Searcher:
                     rrf[row[0]] = .1
                     sources.setdefault(row[0], set()).add('correspondência exata')
 
-        match = _fts_query(q) if "fts" in sinais else None
+        match = _fts_query(q) if "fts" in signals else None
         if match:
             try:
                 if eligible is None:
@@ -257,7 +257,7 @@ class Searcher:
         # 3º sinal: nome de símbolo ou de arquivo bate com a consulta
         struct = []
         idents = [t for t in re.findall(r"[A-Za-z_][\w]{2,}", q) if t.lower() not in STOPWORDS]
-        if idents and "struct" in sinais:
+        if idents and "struct" in signals:
             marks = ",".join("?" * len(idents))
             for r in self.con.execute(
                 f"SELECT s.note_id, s.linha, (SELECT c.id FROM chunks c WHERE c.note_id=s.note_id AND c.heading LIKE '%'||s.nome||'%' "
@@ -266,14 +266,14 @@ class Searcher:
                 + ("AND cid IS NOT NULL " if eligible is not None else "") + "LIMIT 30", [*scope_args, *idents]):
                 if r["cid"]:
                     struct.append(r["cid"])
-            # caminho: só quando a palavra É o nome de um arquivo ou pasta (registro → registro.py). Trecho de
+            # caminho: só quando a palavra É o nome de um arquivo ou pasta (registro → memory.py). Trecho de
             # nome casava palavra comum ("projeto") com qualquer nota que a tivesse no título — medido no bench.
-            alvo = {t.lower() for t in idents if len(t) >= 4}
-            if alvo:
+            target = {t.lower() for t in idents if len(t) >= 4}
+            if target:
                 for r in self.con.execute("SELECT id, path FROM notes WHERE kind='codigo' OR kind='documento'"):
-                    partes = r["path"].lower().split("/")
-                    nomes = {re.sub(r"\.[^.]+$", "", partes[-1]), *partes[:-1]}
-                    if alvo & nomes:
+                    parts = r["path"].lower().split("/")
+                    names = {re.sub(r"\.[^.]+$", "", parts[-1]), *parts[:-1]}
+                    if target & names:
                         c = first_chunk(r["id"])
                         if c:
                             struct.append(c[0])
@@ -282,7 +282,7 @@ class Searcher:
             sources.setdefault(cid, set()).add('símbolo ou caminho')
 
         semantic_scores = None
-        if q and embed.enabled() and "vec" in sinais:
+        if q and embed.enabled() and "vec" in signals:
             self._load_vectors()
             if self._M is not None:
                 weight = VEC_WEIGHT if code_intent else 1.0
@@ -350,16 +350,16 @@ class Searcher:
             if code_intent and e['kind'] == 'codigo' and not e['exato']:
                 e['score'] *= CODE_INTENT_BOOST
                 e['motivos'].append('consulta sobre implementação')
-        if "demote" in sinais:  # testes, docs e scripts competem com a implementação: pesam menos
+        if "demote" in signals:  # testes, docs e scripts competem com a implementação: pesam menos
             for e in by_note.values():
-                if not e["exato"] and _SECUNDARIO.search(e["path"]):
+                if not e["exato"] and _SECONDARY.search(e["path"]):
                     e["score"] *= 0.55
         for e in by_note.values():
             if e['status'] in ('substituída', 'substituida', 'revogada', 'cancelada'):
                 e['motivos'].append('decisão histórica: ' + e['status'])
-                if 'status' in sinais and not filtros.get('status'):
+                if 'status' in signals and not filters.get('status'):
                     e['score'] *= .35
-        from .consolidacao import coverage
+        from .consolidation import coverage
         coverage_rev = get_meta(self.con, 'rev')
         if coverage_rev != self._coverage_rev:
             self._coverage = coverage(self.con)

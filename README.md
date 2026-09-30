@@ -137,7 +137,7 @@ Step-by-step AtlasBrain guides: [Claude Code CLI](docs/claude-code.md), [Codex D
 
 Official instructions: [Claude Code](https://code.claude.com/docs/en/mcp), [Antigravity](https://antigravity.google/docs/mcp), [Codex](https://developers.openai.com/codex/mcp/).
 
-To connect another client to the same project, run `setup` again with its client name: it reuses the same PID and port. To connect another project, change `--vault`. For multiple project entries in one client, also use `--nome my-project` to give each entry a distinct name.
+To connect another client to the same project, run `setup` again with its client name: it reuses the same PID and port. To connect another project, change `--vault`. For multiple project entries in one client, also use `--name my-project` to give each entry a distinct name.
 
 A project-specific MCP URL already fixes the project folder. On a global AtlasBrain connection, use `projects` to list registered folders and pass the absolute folder as `project_folder` on each project tool call. Without it, project tools ask for a folder instead of returning data from the global brain by mistake; `isolated_files` alone can list isolated files across all registered projects.
 
@@ -205,14 +205,16 @@ Queries containing only filters, such as `type:decision`, can also list matches.
 ```text
 my-project/
 ├── .atlasbrain/
-│   ├── Decisões/          # recorded decisions
-│   ├── Aprendizados/     # learnings
-│   ├── Importações/      # imported references
-│   ├── Sinteses/         # linked summaries
-│   ├── RELATORIO.md      # generated architecture report
+│   ├── Decisions/          # recorded decisions
+│   ├── Learnings/     # learnings
+│   ├── Imports/      # imported references
+│   ├── Summaries/         # linked summaries
+│   ├── REPORT.md      # generated architecture report
 │   └── index.db          # local SQLite index
 └── your code, notes, and documents
 ```
+
+New memory folders use English names. Existing notes in Portuguese folders remain indexed in place, preserving their paths and links. Existing imports and summaries are reused; older MCP tool names and CLI flags remain compatibility aliases. Python modules, functions, and variables use English; persisted metadata and bilingual source content retain their original format.
 
 Indexing and embedding inference run locally. Project memory in `.atlasbrain/`
 is ignored by Git by default. Add paths to `.atlasbrainignore` to exclude them

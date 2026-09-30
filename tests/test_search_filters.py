@@ -55,7 +55,7 @@ def test_candidate_limits_apply_inside_scope(tmp_path, monkeypatch, source, scop
         con.commit()
         monkeypatch.setattr(embed, 'enabled', lambda: source=='vec')
         monkeypatch.setattr(embed, 'embed', lambda texts: np.array([[1.,0.]],dtype=np.float32))
-        hits = Searcher(con).search('needle '+scope, sinais=(source,))
+        hits = Searcher(con).search('needle '+scope, signals=(source,))
         assert [h['path'] for h in hits] == ['scope/answer.md']
     finally:
         con.close()
@@ -68,7 +68,7 @@ def test_exact_match_selects_an_eligible_passage(tmp_path):
         add(con,'scope/answer.md','approved answer needle',ord=0,note_id=nid)
         add(con,'outside/answer.md','approved answer needle')
         con.commit()
-        hits=Searcher(con).search('answer.md pasta:scope -legacy', sinais=('exact',))
+        hits=Searcher(con).search('answer.md pasta:scope -legacy', signals=('exact',))
         assert [h['path'] for h in hits]==['scope/answer.md']
         assert hits[0]['exato']
         assert 'approved answer' in hits[0]['snippet']

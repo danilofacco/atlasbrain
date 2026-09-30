@@ -9,20 +9,20 @@ from urllib.request import urlopen
 from atlasbrain import config, indexer, service
 
 
-def test_configs(projeto):
-    url = f'/projects/{service.project_id(projeto)}/mcp'
-    assert json.loads(service.client_config(projeto, 'antigravity'))['mcpServers']['atlasbrain']['serverUrl'].endswith(url)
-    assert json.loads(service.client_config(projeto, 'claude'))['mcpServers']['atlasbrain']['type'] == 'http'
+def test_configs(project):
+    url = f'/projects/{service.project_id(project)}/mcp'
+    assert json.loads(service.client_config(project, 'antigravity'))['mcpServers']['atlasbrain']['serverUrl'].endswith(url)
+    assert json.loads(service.client_config(project, 'claude'))['mcpServers']['atlasbrain']['type'] == 'http'
     import tomllib
-    assert tomllib.loads(service.client_config(projeto, 'codex'))['mcp_servers']['atlasbrain']['url'].endswith(url)
+    assert tomllib.loads(service.client_config(project, 'codex'))['mcp_servers']['atlasbrain']['url'].endswith(url)
 
 
-def test_shared_daemon_and_http_sessions(projeto, tmp_path, monkeypatch):
+def test_shared_daemon_and_http_sessions(project, tmp_path, monkeypatch):
     monkeypatch.setenv('ATLASBRAIN_SERVICE_DIR', str(tmp_path / 'service'))
     monkeypatch.setenv('ATLASBRAIN_NO_EMBED', '1')
     # The child uses its own HOME registry, while config was already imported here.
     from atlasbrain import config
-    monkeypatch.setattr(config, 'REGISTRY', tmp_path / 'home' / '.config' / 'atlasbrain' / 'projetos.json')
+    monkeypatch.setattr(config, 'REGISTRY', tmp_path / 'home' / '.config' / 'atlasbrain' / 'projects.json')
     with socket.socket() as s:
         s.bind(('127.0.0.1', 0))
         port = s.getsockname()[1]
@@ -30,7 +30,7 @@ def test_shared_daemon_and_http_sessions(projeto, tmp_path, monkeypatch):
     (service.state_dir() / 'server.json').write_text(json.dumps({'pid': 999999, 'port': port, 'instance': 'stale'}))
     try:
         with ThreadPoolExecutor(3) as pool:
-            results = list(pool.map(lambda _: service.start(projeto, port, False), range(3)))
+            results = list(pool.map(lambda _: service.start(project, port, False), range(3)))
         assert len({r['pid'] for r in results}) == 1
         with urlopen(f'http://127.0.0.1:{port}/') as r:
             assert b'<html' in r.read().lower()
@@ -41,7 +41,7 @@ def test_shared_daemon_and_http_sessions(projeto, tmp_path, monkeypatch):
             return None if attempts[0] == 1 else original_health()
         with monkeypatch.context() as scoped:
             scoped.setattr(service, 'owned_health', initially_busy)
-            assert service.start(projeto, port, False)['pid'] == results[0]['pid']
+            assert service.start(project, port, False)['pid'] == results[0]['pid']
         second = tmp_path / 'other'
         second.mkdir()
         service.start(second, port, False)
@@ -59,14 +59,14 @@ def test_shared_daemon_and_http_sessions(projeto, tmp_path, monkeypatch):
                             await session.call_tool('criar_nota', {'titulo': 'Isolation sentinel', 'conteudo': 'Only belongs to the second project.'})
                         result = await session.call_tool('recentes', {})
                         assert not getattr(result, 'is_error', getattr(result, 'isError', False))
-            await asyncio.gather(client(projeto), client(projeto), client(second))
+            await asyncio.gather(client(project), client(project), client(second))
         asyncio.run(run())
         assert (second / '.atlasbrain' / 'Inbox' / 'Isolation sentinel.md').exists()
-        assert not (projeto / '.atlasbrain' / 'Inbox' / 'Isolation sentinel.md').exists()
+        assert not (project / '.atlasbrain' / 'Inbox' / 'Isolation sentinel.md').exists()
         with socket.socket() as occupied:
             occupied.bind(('127.0.0.1', 0))
             try:
-                service.start(projeto, occupied.getsockname()[1], False)
+                service.start(project, occupied.getsockname()[1], False)
             except RuntimeError:
                 pass
             else:
@@ -76,7 +76,7 @@ def test_shared_daemon_and_http_sessions(projeto, tmp_path, monkeypatch):
             report=json.load(r)
             assert report['limite']==1 and len(report['itens'])<=1
         assert service.stop()
-        restarted=service.start(projeto,port,False)
+        restarted=service.start(project,port,False)
         assert restarted['pid']!=results[0]['pid'] and restarted['port']==port
     finally:
         service.stop()
@@ -86,20 +86,20 @@ def test_shared_daemon_and_http_sessions(projeto, tmp_path, monkeypatch):
     assert 'different task' not in log
 
 
-def test_occupied_port_never_spawns(projeto, tmp_path, monkeypatch):
+def test_occupied_port_never_spawns(project, tmp_path, monkeypatch):
     monkeypatch.setenv('ATLASBRAIN_SERVICE_DIR', str(tmp_path / 'service'))
     with socket.socket() as occupied:
         occupied.bind(('127.0.0.1', 0))
         import pytest
         with pytest.raises(RuntimeError, match='occupied'):
-            service.start(projeto, occupied.getsockname()[1], False)
+            service.start(project, occupied.getsockname()[1], False)
     assert not (service.state_dir() / 'server.json').exists()
 
 
 def test_global_mcp_requires_project_folder_and_routes_to_it(tmp_path, monkeypatch):
     monkeypatch.setenv('ATLASBRAIN_SERVICE_DIR', str(tmp_path / 'service'))
     monkeypatch.setenv('ATLASBRAIN_NO_EMBED', '1')
-    monkeypatch.setattr(config, 'REGISTRY', tmp_path / 'home' / '.config' / 'atlasbrain' / 'projetos.json')
+    monkeypatch.setattr(config, 'REGISTRY', tmp_path / 'home' / '.config' / 'atlasbrain' / 'projects.json')
     global_brain = config.GLOBAL_BRAIN
     global_brain.mkdir(parents=True)
     project = tmp_path / 'adsivos'

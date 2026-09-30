@@ -321,7 +321,7 @@ kbd{font:11px var(--mono);padding:2px 6px;border-radius:5px;border:1px solid var
 <section class="view" id="v-decisoes" hidden aria-label="Decisions">
   <div class="list"><div class="list-inner">
     <h1>What was <em>decided</em></h1>
-    <p class="lede">Decisions and learnings recorded in conversations with Claude and Codex, in chronological order. Each is a Markdown file in <code>.atlasbrain/Decisões/</code> or <code>.atlasbrain/Aprendizados/</code> in the project.</p>
+    <p class="lede">Decisions and learnings recorded in conversations with Claude and Codex, in chronological order. Each is a Markdown file in <code>.atlasbrain/Decisions/</code> or <code>.atlasbrain/Learnings/</code> in the project.</p>
     <div class="filters" role="group" aria-label="Filter">
       <button class="chip" data-f="todos" aria-pressed="true"><i></i>All</button>
       <button class="chip" data-f="decisao" aria-pressed="false"><i></i>Decisions</button>
@@ -1876,7 +1876,7 @@ $('#saveEditor').onclick=saveEditor;
 function openCreate(ref=null){if(typeof ref!=='string')ref=null;if(!canLeaveEditor())return;if(editorSession){$('#noteEditor').classList.remove('open');editorSession=null}editorReturnFocus=document.activeElement;if(ref){const target=ref.split('|')[0].split('#')[0].trim().replace(/\.(md|markdown)$/i,'');$('#noteTitle').value=target.split('/').pop();$('#noteFolder').value=target.includes('/')?target.split('/').slice(0,-1).join('/'):(current?.split('/').slice(0,-1).join('/')||'.atlasbrain/Inbox');$('#noteTemplate').value='nota';$('#noteTags').value=''}$('#createNote').classList.add('open');$('#noteTitle').focus();$('#noteTitle').select()}
 function closeCreate(){$('#createNote').classList.remove('open');editorReturnFocus?.focus?.()}
 $('#newNote').onclick=openCreate;$('#closeCreate').onclick=closeCreate;$('#cancelCreate').onclick=closeCreate;
-$('#noteTemplate').onchange=()=>{const folders={nota:'Inbox',decisao:'Decisões',aprendizado:'Aprendizados'};if(/^\.atlasbrain\/(Inbox|Decisões|Aprendizados)$/.test($('#noteFolder').value))$('#noteFolder').value='.atlasbrain/'+folders[$('#noteTemplate').value]};
+$('#noteTemplate').onchange=()=>{const folders={nota:'Inbox',decisao:'Decisions',aprendizado:'Learnings'};if(/^\.atlasbrain\/(Inbox|Decisions|Learnings)$/.test($('#noteFolder').value))$('#noteFolder').value='.atlasbrain/'+folders[$('#noteTemplate').value]};
 $('#createNoteForm').onsubmit=e=>{e.preventDefault();const title=$('#noteTitle').value.trim();if(!title)return;const kind=$('#noteTemplate').value;const filename=title.replace(/[\/\\:*?"<>|\x00-\x1f]/g,'-').replace(/^\.+|[. ]+$/g,'').slice(0,140)||t("Note");const folder=$('#noteFolder').value.trim().replace(/\/$/,'');const tags=$('#noteTags').value.split(',').map(t=>t.trim().replace(/^#/, '')).filter(Boolean);const today=new Date(),date=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
  const body=kind==='decisao'?t("## Context\n\n\n## Decision\n\n\n## Reason\n\n\n## Consequences\n\n"):kind==='aprendizado'?t("## Learning\n\n\n## Evidence\n\n\n## Application\n\n"):'';
  const content='---\ntitle: '+JSON.stringify(title)+'\ntipo: '+kind+'\ndata: '+date+(kind==='decisao'?'\nstatus: ativa':'')+'\ntags: '+JSON.stringify(tags)+'\n---\n# '+title+'\n\n'+body;
@@ -1915,7 +1915,7 @@ $('#editorPreview').onclick=e=>{const a=e.target.closest('[data-ref]');if(a){e.p
 
 /* ================= PALETA DE BUSCA ================= */
 let results=[],sel=0,qTimer,lastFocus=null;
-const icon=r=>r.kind==='documento'?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h8l4 4v14H6z"/></svg>':r.kind==='codigo'?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 8-5 4 5 4M15 8l5 4-5 4"/></svg>':r.path.startsWith('Decisões/')?`<svg viewBox="0 0 64 64"><path fill="#3FEEC5" d="${STAR}"/></svg>`:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h14v16H5zM9 9h6M9 13h6"/></svg>';
+const icon=r=>r.kind==='documento'?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h8l4 4v14H6z"/></svg>':r.kind==='codigo'?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 8-5 4 5 4M15 8l5 4-5 4"/></svg>':r.path.startsWith('Decisions/')?`<svg viewBox="0 0 64 64"><path fill="#3FEEC5" d="${STAR}"/></svg>`:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h14v16H5zM9 9h6M9 13h6"/></svg>';
 function openPal(){lastFocus=document.activeElement;$('#pal').classList.add('open');$('#q').focus();$('#q').select();if(!$('#q').value)renderPal()}
 function closePal(){$('#pal').classList.remove('open');(lastFocus||document.body).focus?.()}
 function renderPal(){const box=$('#pres');const q=$('#q').value.trim();
@@ -2047,10 +2047,10 @@ async function confirmar(p){if(!p){msg(t("Choose or enter a folder."),true);retu
 let acompanhando=null;
 function acompanhar(b){const t=(b.trabalhos||{})[b.atual];
   if(!t||t.estado==='pronto'){if(acompanhando){acompanhando=null;gStatus('');N=[];loadGraph();loadOverview()}return}
-  const nome=esc(b.atual.split('/').pop());
-  if(t.estado==='erro'){gStatus(tr`<svg viewBox="0 0 64 64"><path fill="#879DA6" d="${STAR}"/></svg><h2>Could not open ${nome}</h2><p>${esc(t.msg||'')}</p><button class="chip" onclick="abrirDialogo()">Choose another folder</button>`);acompanhando=null;return}
+  const name=esc(b.atual.split('/').pop());
+  if(t.estado==='erro'){gStatus(tr`<svg viewBox="0 0 64 64"><path fill="#879DA6" d="${STAR}"/></svg><h2>Could not open ${name}</h2><p>${esc(t.msg||'')}</p><button class="chip" onclick="abrirDialogo()">Choose another folder</button>`);acompanhando=null;return}
   N=[];E=[];needs=true;
-  gStatus(`<svg viewBox="0 0 64 64"><path fill="#1EB880" d="${STAR}"/></svg><h2>${t.estado==='contando'?t("Reading"):t("Indexing")} ${nome}</h2><p>${t.estado==='contando'?t("Listing folder files…"):tr`${t.arquivos} files in the initial index. Large projects take a few minutes; later updates are incremental.`}</p>`);
+  gStatus(`<svg viewBox="0 0 64 64"><path fill="#1EB880" d="${STAR}"/></svg><h2>${t.estado==='contando'?t("Reading"):t("Indexing")} ${name}</h2><p>${t.estado==='contando'?t("Listing folder files…"):tr`${t.arquivos} files in the initial index. Large projects take a few minutes; later updates are incremental.`}</p>`);
   acompanhando=setTimeout(async()=>{try{acompanhar(await api('/api/brains'))}catch{}},2500)}
 async function loadOverview(){try{const o=await api('/api/overview');
   $('#nDec').textContent=o.decisoes||'';

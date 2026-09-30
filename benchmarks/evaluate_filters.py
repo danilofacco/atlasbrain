@@ -103,13 +103,13 @@ def evaluate_project(vault, directory, Before, repeats):
                 scoped=[path for path in expected if path.startswith(parent+'/')]
                 cohorts['folder_scoped'].append(dict(query=query+' pasta:'+json.dumps(parent,ensure_ascii=False),expected=scoped))
             row=con.execute('SELECT kind,frontmatter FROM notes WHERE path=?',(expected[0],)).fetchone()
-            tipo=json.loads(row['frontmatter'] or '{}').get('tipo') or row['kind']
+            kind=json.loads(row['frontmatter'] or '{}').get('tipo') or row['kind']
             matching=[]
             for path in expected:
                 meta=con.execute('SELECT kind,frontmatter FROM notes WHERE path=?',(path,)).fetchone()
-                if tipo in (meta['kind'],json.loads(meta['frontmatter'] or '{}').get('tipo')):
+                if kind in (meta['kind'],json.loads(meta['frontmatter'] or '{}').get('tipo')):
                     matching.append(path)
-            cohorts['type_scoped'].append(dict(query=query+' tipo:'+str(tipo),expected=matching))
+            cohorts['type_scoped'].append(dict(query=query+' tipo:'+str(kind),expected=matching))
         results={}
         for name,cases in cohorts.items():
             if cases:

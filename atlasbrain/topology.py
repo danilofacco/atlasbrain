@@ -12,18 +12,18 @@ from collections import defaultdict, deque
 
 import networkx as nx
 
-from .codigo import resolver_modulos
+from .code import resolve_modules
 from .db import get_meta
 from .graph import build_relations
 
-RELACOES = {'manual', 'importa', 'chama', 'herda', 'contem', 'menciona', 'wikilink', 'mdlink', 'similar'}
-CODIGO = {'importa', 'chama', 'herda'}
+RELATIONS = {'manual', 'importa', 'chama', 'herda', 'contem', 'menciona', 'wikilink', 'mdlink', 'similar'}
+CODE = {'importa', 'chama', 'herda'}
 
 
-def construir(con, vault):
+def build(con, vault):
     G = build_relations(con, similar=True)
     paths = {n: d['path'] for n, d in G.nodes(data=True)}
-    mod_to_file = resolver_modulos(paths, vault)
+    mod_to_file = resolve_modules(paths, vault)
     by_name, by_qualified = defaultdict(list), defaultdict(list)
     for s in con.execute('SELECT note_id, nome, tipo, linha, pai FROM simbolos ORDER BY note_id, linha'):
         qualified = f"{s['pai']}.{s['nome']}" if s['pai'] else s['nome']
@@ -160,150 +160,150 @@ def snapshot(ctx):
         try:
             key = (id(con), get_meta(con, 'rev'), con.total_changes,
                    con.execute('PRAGMA data_version').fetchone()[0])
-            if getattr(ctx, '_topologia_key', None) != key:
-                ctx._topologia = construir(con, ctx.vault)
-                ctx._topologia_key = key
-            return ctx._topologia
+            if getattr(ctx, '_topology_key', None) != key:
+                ctx._topology = build(con, ctx.vault)
+                ctx._topology_key = key
+            return ctx._topology
         finally:
             con.execute('RELEASE topologia')
 
 
-def identificar(G, alvo):
+def identify(G, target):
     """Caminho exato, ID de símbolo, arquivo::Classe.metodo, arquivo:linha ou nome único."""
-    if alvo in G:
-        return [alvo]
-    if re.fullmatch(r'#\d+', alvo) and int(alvo[1:]) in G:
-        return [int(alvo[1:])]
-    exact = [n for n, d in G.nodes(data=True) if d['path'] == alvo and d['kind'] != 'simbolo']
+    if target in G:
+        return [target]
+    if re.fullmatch(r'#\d+', target) and int(target[1:]) in G:
+        return [int(target[1:])]
+    exact = [n for n, d in G.nodes(data=True) if d['path'] == target and d['kind'] != 'simbolo']
     if exact:
         return exact
     symbol = [n for n, d in G.nodes(data=True) if d['kind'] == 'simbolo' and
-              (alvo == f"{d['path']}::{d['label']}" or alvo == f"{d['path']}:{d['linha']}")]
+              (target == f"{d['path']}::{d['label']}" or target == f"{d['path']}:{d['linha']}")]
     if symbol:
         return symbol
     symbol = [n for n, d in G.nodes(data=True) if d['kind'] == 'simbolo' and
-              alvo.casefold() in (d['label'].casefold(), d['nome'].casefold())]
+              target.casefold() in (d['label'].casefold(), d['nome'].casefold())]
     if symbol:
         return symbol
-    return [n for n, d in G.nodes(data=True) if d['kind'] != 'simbolo' and d['label'].casefold() == alvo.casefold()]
+    return [n for n, d in G.nodes(data=True) if d['kind'] != 'simbolo' and d['label'].casefold() == target.casefold()]
 
 
-def referencia(G, n):
+def reference(G, n):
     d = G.nodes[n]
     if d['kind'] == 'simbolo':
         return f"{d['path']}:{d['linha']} `{d['label']}` [id: {n}]"
     return f"{d['path']}"
 
 
-def escolher(G, alvo):
-    nodes = identificar(G, alvo)
+def choose(G, target):
+    nodes = identify(G, target)
     if len(nodes) == 1:
         return nodes[0], None
     if not nodes:
-        return None, f"{_text('Não achei `')}{alvo}{_text('` no grafo. Use `arquivos`, `onde` ou `buscar`.')}"
-    return None, f"`{alvo}{_text('` é ambíguo; informe o caminho ou ID:\n')}" + '\n'.join(
-        '- ' + referencia(G, n) for n in nodes[:20]) + (f"\n… {len(nodes) - 20}{_text(' opções adicionais.')}" if len(nodes) > 20 else '')
+        return None, f"{_text('Não achei `')}{target}{_text('` no grafo. Use `arquivos`, `onde` ou `buscar`.')}"
+    return None, f"`{target}{_text('` é ambíguo; informe o caminho ou ID:\n')}" + '\n'.join(
+        '- ' + reference(G, n) for n in nodes[:20]) + (f"\n… {len(nodes) - 20}{_text(' opções adicionais.')}" if len(nodes) > 20 else '')
 
 
-def validar(profundidade, tokens, direcao, modo='bfs', relacoes=None):
-    if not 0 <= profundidade <= 6:
+def validate(depth, tokens, direction, mode='bfs', relations=None):
+    if not 0 <= depth <= 6:
         return _text('profundidade deve estar entre 0 e 6.')
     if not 128 <= tokens <= 16000:
         return _text('tokens deve estar entre 128 e 16000.')
-    if direcao not in ('entrada', 'saida', 'ambas'):
+    if direction not in ('entrada', 'saida', 'ambas'):
         return _text('direcao deve ser entrada, saida ou ambas.')
-    if modo not in ('bfs', 'dfs'):
+    if mode not in ('bfs', 'dfs'):
         return _text('modo deve ser bfs ou dfs.')
-    if relacoes is not None and set(relacoes) - RELACOES:
-        return _text('Relações válidas: ') + ', '.join(sorted(RELACOES)) + '.'
+    if relations is not None and set(relations) - RELATIONS:
+        return _text('Relações válidas: ') + ', '.join(sorted(RELATIONS)) + '.'
     return None
 
 
-def passos(G, node, direcao, relacoes, inferidas=True):
-    if direcao in ('saida', 'ambas'):
+def steps(G, node, direction, relations, inferred=True):
+    if direction in ('saida', 'ambas'):
         for a, b, key, d in G.out_edges(node, keys=True, data=True):
-            if d['kind'] in relacoes and (inferidas or d['conf'] == 'EXTRACTED'):
+            if d['kind'] in relations and (inferred or d['conf'] == 'EXTRACTED'):
                 yield b, (a, b, key), d
-    if direcao in ('entrada', 'ambas'):
+    if direction in ('entrada', 'ambas'):
         for a, b, key, d in G.in_edges(node, keys=True, data=True):
-            if d['kind'] in relacoes and (inferidas or d['conf'] == 'EXTRACTED'):
+            if d['kind'] in relations and (inferred or d['conf'] == 'EXTRACTED'):
                 yield a, (a, b, key), d
 
 
-def percorrer(G, seeds, profundidade, direcao, relacoes, modo='bfs', inferidas=True, limite=300):
+def traverse(G, seeds, depth, direction, relations, mode='bfs', inferred=True, limit=300):
     frontier = deque((n, 0) for n in seeds)
     depths = {n: 0 for n in seeds}
     edges, expanded = {}, {}
     order = {}
     cut = False
     while frontier:
-        n, depth = frontier.popleft() if modo == 'bfs' else frontier.pop()
+        n, current_depth = frontier.popleft() if mode == 'bfs' else frontier.pop()
         order.setdefault(n, None)
-        if depth >= profundidade or expanded.get(n, profundidade + 1) <= depth:
+        if current_depth >= depth or expanded.get(n, current_depth + 1) <= current_depth:
             continue
-        expanded[n] = depth
-        neighbors = list(passos(G, n, direcao, relacoes, inferidas))
+        expanded[n] = current_depth
+        neighbors = list(steps(G, n, direction, relations, inferred))
         # DFS usa ordem estável; caminhos mais curtos encontrados depois podem reexpandir o nó.
-        for dst, edge, attrs in (reversed(neighbors) if modo == 'dfs' else neighbors):
-            if len(edges) >= 1200 or (dst not in depths and len(depths) >= limite):
+        for dst, edge, attrs in (reversed(neighbors) if mode == 'dfs' else neighbors):
+            if len(edges) >= 1200 or (dst not in depths and len(depths) >= limit):
                 cut = True
                 continue
             edges[edge] = attrs
-            new_depth = depth + 1
+            new_depth = current_depth + 1
             if dst not in depths or new_depth < depths[dst]:
                 depths[dst] = new_depth
                 frontier.append((dst, new_depth))
     return {n: depths[n] for n in order}, edges, cut
 
 
-def limitar(lines, tokens, truncado=False):
+def limit_output(lines, tokens, truncated=False):
     # Estimativa explícita; UTF-8/4 evita que acentos escondam respostas grandes.
     budget = tokens * 4
-    aviso = _text('[TRUNCADO: limite de contexto atingido; reduza a consulta ou aumente tokens/profundidade.]')
-    reserve = len(aviso.encode()) + 1
+    warning = _text('[TRUNCADO: limite de contexto atingido; reduza a consulta ou aumente tokens/profundidade.]')
+    reserve = len(warning.encode()) + 1
     out, size = [], 0
     for line in (part for line in lines for part in line.splitlines()):
         cost = len(line.encode()) + 1
         if size + cost > budget - reserve:
-            truncado = True
+            truncated = True
             break
         out.append(line)
         size += cost
-    if truncado:
-        out.append(aviso)
+    if truncated:
+        out.append(warning)
     return '\n'.join(out)
 
 
-def consultar(ctx, consulta, modo='bfs', profundidade=2, tokens=2000, direcao='ambas', relacoes=None):
-    error = validar(profundidade, tokens, direcao, modo, relacoes)
+def query(ctx, query, mode='bfs', depth=2, tokens=2000, direction='ambas', relations=None):
+    error = validate(depth, tokens, direction, mode, relations)
     if error:
         return error
     G = snapshot(ctx)
-    seeds = identificar(G, consulta)
+    seeds = identify(G, query)
     if len(seeds) > 1:
-        return limitar([escolher(G, consulta)[1]], tokens)
+        return limit_output([choose(G, query)[1]], tokens)
     if not seeds:
         with ctx.db_lock:
-            hits = ctx.searcher.search(consulta, limit=3)
+            hits = ctx.searcher.search(query, limit=3)
         paths = {r['path'] for r in hits}
         seeds = [n for n, d in G.nodes(data=True) if d['kind'] != 'simbolo' and d['path'] in paths]
     if not seeds:
-        return f"{_text('Nenhum resultado para `')}{consulta}`."
-    kinds = RELACOES - {'similar'} if relacoes is None else set(relacoes)
-    depths, edges, cut = percorrer(G, seeds, profundidade, direcao, kinds, modo)
-    lines = [f"{_text('Grafo: ')}{modo.upper()}{_text(' · direção ')}{_value(direcao)}{_text(' · até ')}{profundidade}{_text(' salto(s).')}",
+        return f"{_text('Nenhum resultado para `')}{query}`."
+    kinds = RELATIONS - {'similar'} if relations is None else set(relations)
+    depths, edges, cut = traverse(G, seeds, depth, direction, kinds, mode)
+    lines = [f"{_text('Grafo: ')}{mode.upper()}{_text(' · direção ')}{_value(direction)}{_text(' · até ')}{depth}{_text(' salto(s).')}",
              _text('Setas seguem a relação original. INFERRED é hipótese. Tokens estimados por UTF-8/4.')]
     # Intercalar nós e evidências permite que mesmo uma resposta curta preserve relações.
     emitted, shown_edges = set(), set()
     for n in depths:
         if n not in emitted:
-            lines.append(_text('NÓ ') + referencia(G, n))
+            lines.append(_text('NÓ ') + reference(G, n))
             emitted.add(n)
         for edge, attrs in edges.items():
             if n not in edge[:2] or edge in shown_edges:
                 continue
             a, b, _ = edge
-            lines.append(f"{referencia(G, a)} → {referencia(G, b)} · {_value(attrs['kind'])} · {attrs['conf']}" +
+            lines.append(f"{reference(G, a)} → {reference(G, b)} · {_value(attrs['kind'])} · {attrs['conf']}" +
                          (f"{_text(' · evidência L')}{attrs['linha']}" if attrs.get('linha') else ''))
             emitted.update((a, b))
             shown_edges.add(edge)
@@ -311,38 +311,38 @@ def consultar(ctx, consulta, modo='bfs', profundidade=2, tokens=2000, direcao='a
     if ambiguous:
         lines.append(f"{len(ambiguous)}{_text(' referência(s) ambígua(s) nesses arquivos ficaram sem aresta:')}")
         lines.extend(f"- {a['path']}:{a['linha']} `{a['alvo']}`" for a in ambiguous[:10])
-    return limitar(lines, tokens, cut)
+    return limit_output(lines, tokens, cut)
 
 
-def impacto(ctx, alvo, profundidade=3, tokens=2000, incluir_inferidas=False):
-    error = validar(profundidade, tokens, 'entrada')
+def impact(ctx, target, depth=3, tokens=2000, include_inferred=False):
+    error = validate(depth, tokens, 'entrada')
     if error:
         return error
     G = snapshot(ctx)
-    node, error = escolher(G, alvo)
+    node, error = choose(G, target)
     if error:
-        return limitar([error], tokens)
+        return limit_output([error], tokens)
     seeds = [node]
     contained_cut = False
     if G.nodes[node]['kind'] != 'simbolo':
         seeds += [n for n in G.successors(node) if G.nodes[n]['kind'] == 'simbolo']
     elif G.nodes[node]['simbolo_tipo'] == 'classe':
-        contained, _, contained_cut = percorrer(G, seeds, 6, 'saida', {'contem'})
+        contained, _, contained_cut = traverse(G, seeds, 6, 'saida', {'contem'})
         seeds = list(contained)
     cut = contained_cut or len(seeds) > 300
-    depths, edges, overflow = percorrer(G, seeds[:300], profundidade, 'entrada', CODIGO,
-                                       inferidas=incluir_inferidas)
+    depths, edges, overflow = traverse(G, seeds[:300], depth, 'entrada', CODE,
+                                       inferred=include_inferred)
     impacted = [n for n in depths if n not in seeds]
-    lines = [f"{_text('Impacto potencial de ')}{referencia(G, node)}{_text(' · até ')}{profundidade}{_text(' salto(s).')}",
+    lines = [f"{_text('Impacto potencial de ')}{reference(G, node)}{_text(' · até ')}{depth}{_text(' salto(s).')}",
              _text('Dependências estáticas; não é garantia de quebra nem de cobertura completa.'),
-             _text('INFERRED incluídas.') if incluir_inferidas else _text('Somente relações EXTRACTED; INFERRED ficam de fora.')]
+             _text('INFERRED incluídas.') if include_inferred else _text('Somente relações EXTRACTED; INFERRED ficam de fora.')]
     if not impacted:
         lines.append(_text('Nenhum dependente encontrado dentro desses limites.'))
     for n in sorted(impacted, key=lambda x: depths[x]):
-        lines.append(f"- {depths[n]}{_text(' salto(s): ')}{referencia(G, n)}")
+        lines.append(f"- {depths[n]}{_text(' salto(s): ')}{reference(G, n)}")
         for (a, b, _), d in edges.items():
             if a == n:
-                lines.append(f"  {referencia(G, a)} → {referencia(G, b)} · {_value(d['kind'])} · {d['conf']}" +
+                lines.append(f"  {reference(G, a)} → {reference(G, b)} · {_value(d['kind'])} · {d['conf']}" +
                              (f"{_text(' · evidência L')}{d['linha']}" if d.get('linha') else ''))
     relevant_paths = {G.nodes[n]['path'] for n in depths}
     ambiguous = [a for a in G.graph['ambiguas'] if a['path'] in relevant_paths or
@@ -350,4 +350,4 @@ def impacto(ctx, alvo, profundidade=3, tokens=2000, incluir_inferidas=False):
     if ambiguous:
         lines.append(f"{len(ambiguous)}{_text(' referência(s) ambígua(s) podem ocultar dependentes:')}")
         lines.extend(f"- {a['path']}:{a['linha']} `{a['alvo']}`" for a in ambiguous[:10])
-    return limitar(lines, tokens, cut or overflow)
+    return limit_output(lines, tokens, cut or overflow)

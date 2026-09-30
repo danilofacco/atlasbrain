@@ -79,11 +79,11 @@ def connect(vault: Path) -> sqlite3.Connection:
     if "conf" not in cols:  # procedência de cada aresta
         con.execute("ALTER TABLE links ADD COLUMN conf TEXT")
         con.execute("ALTER TABLE links ADD COLUMN detalhe TEXT")
-    _migrar_armazenamento(con)
+    _migrate_storage(con)
     return con
 
 
-def _migrar_armazenamento(con) -> None:
+def _migrate_storage(con) -> None:
     """Índices antigos guardavam o texto duas vezes (tabela + FTS) e vetores em float32. Converte no lugar,
     sem reprocessar arquivos nem recalcular embeddings."""
     if "title" not in {r[1] for r in con.execute("PRAGMA table_info(chunks)")}:
@@ -96,9 +96,9 @@ def _migrar_armazenamento(con) -> None:
                     "content_rowid='id', tokenize='unicode61 remove_diacritics 2')")
         con.execute("INSERT INTO chunks_fts(chunks_fts) VALUES('rebuild')")
     if get_meta(con, "vetores") != "f16":
-        for tabela in ("chunks", "notes"):
-            rows = con.execute(f"SELECT id, embedding FROM {tabela} WHERE embedding IS NOT NULL").fetchall()
-            con.executemany(f"UPDATE {tabela} SET embedding=? WHERE id=?",
+        for table in ("chunks", "notes"):
+            rows = con.execute(f"SELECT id, embedding FROM {table} WHERE embedding IS NOT NULL").fetchall()
+            con.executemany(f"UPDATE {table} SET embedding=? WHERE id=?",
                             [(np.frombuffer(r[1], dtype=np.float32).astype(np.float16).tobytes(), r[0]) for r in rows])
         set_meta(con, "vetores", "f16")
         con.commit()

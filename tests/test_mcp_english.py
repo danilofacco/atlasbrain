@@ -4,15 +4,15 @@ import json
 
 import pytest
 
-from atlasbrain import ferramentas as f
+from atlasbrain import tools as f
 from atlasbrain.localization import is_english, language, text
-from atlasbrain.mcp_api import PARAMETERS, TOOLS, internal_arguments, public_result
+from atlasbrain.mcp_api import PARAMETERS, TOOLS, legacy_function, internal_arguments, public_result
 from atlasbrain.mcp_server import build_server
 
 
 @pytest.mark.parametrize('name', list(TOOLS))
 def test_each_english_parameter_maps_to_its_own_function(name):
-    parameters = list(inspect.signature(getattr(f, name)).parameters)[1:]
+    parameters = list(inspect.signature(legacy_function(f, name)).parameters)[1:]
     mapping = {PARAMETERS.get(p,p):p for p in parameters}
     public = {en:'sentinel' for en in mapping}
     # "target" means different internal parameters for path, explain and links.

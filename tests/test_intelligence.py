@@ -2,11 +2,11 @@ import json
 import threading
 from types import SimpleNamespace
 
-from atlasbrain import inteligencia as i
+from atlasbrain import intelligence as i
 from atlasbrain.db import get_meta
 from atlasbrain.indexer import index_vault
 from atlasbrain.search import Searcher
-from atlasbrain.registro import registrar_decisao, revisar_decisao
+from atlasbrain.memory import record_decision, review_decision
 
 
 def test_history_keeps_comparison_across_unchanged_scans(indexado):
@@ -23,7 +23,7 @@ def test_history_keeps_comparison_across_unchanged_scans(indexado):
     assert {'tipo':'arquivo','acao':'alterado','path':'src/util.py'} in report['itens']
     index_vault(vault, quiet=True)
     assert i.changes(con) == report
-    page = i.changes(con, limite=1)
+    page = i.changes(con, limit=1)
     assert len(page['itens']) == 1
 
 
@@ -32,9 +32,9 @@ def test_freshness_and_pending_pagination(indexado):
     assert i.status(con, vault)['atualizado']
     (vault / 'src/new.py').write_text('def added(): pass\n')
     (vault / 'src/util.py').unlink()
-    state = i.status(con, vault, limite=1)
+    state = i.status(con, vault, limit=1)
     assert not state['atualizado'] and state['pendentes']==2 and state['mais']
-    assert len(i.status(con, vault, limite=1, offset=1)['itens'])==1
+    assert len(i.status(con, vault, limit=1, offset=1)['itens'])==1
 
 
 def test_suggestions_do_not_mutate_and_declared_link_survives_reindex(indexado):
@@ -79,11 +79,11 @@ def test_context_budget_and_continuation(indexado):
 
 def test_context_uses_successor_instead_of_historical_decision(indexado):
     vault, con = indexado
-    old = registrar_decisao(vault, 'Preço antigo do plano Pro', 'O plano Pro custa R$ 97 por mês.', forcar=True)
-    new = registrar_decisao(vault, 'Preço vigente do plano Pro', 'O plano Pro custa R$ 147 por mês.', forcar=True)
-    revisar_decisao(vault, old['path'], 'substituir', 'Preço alterado após nova aprovação.', new['path'])
+    old = record_decision(vault, 'Preço antigo do plano Pro', 'O plano Pro custa R$ 97 por mês.', force=True)
+    new = record_decision(vault, 'Preço vigente do plano Pro', 'O plano Pro custa R$ 147 por mês.', force=True)
+    review_decision(vault, old['path'], 'substituir', 'Preço alterado após nova aprovação.', new['path'])
     ctx = SimpleNamespace(con=con, vault=vault, searcher=Searcher(con), db_lock=threading.Lock())
-    context = i.task_context(ctx, 'preço do plano Pro', foco=[old['path']])
+    context = i.task_context(ctx, 'preço do plano Pro', focus=[old['path']])
     assert new['path'] in {d['path'] for d in context['decisoes']}
     assert old['path'] not in {d['path'] for d in context['decisoes']}
     assert old['path'] not in {d['path'] for d in context['dependencias']}

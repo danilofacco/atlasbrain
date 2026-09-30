@@ -16,9 +16,9 @@ def _vault_arg(p):
 def cmd_index(a):
     from .indexer import index_vault
 
-    stats = index_vault(resolve_vault(a.vault), force=a.force, quiet=a.silencioso,
-                        esperar=0 if a.silencioso else 900)  # na mão: espera o ciclo automático; git hook: não
-    if not a.silencioso:
+    stats = index_vault(resolve_vault(a.vault), force=a.force, quiet=a.quiet,
+                        wait_timeout=0 if a.quiet else 900)  # na mão: espera o ciclo automático; git hook: não
+    if not a.quiet:
         print(json.dumps(stats, ensure_ascii=False, indent=2))
 
 
@@ -26,7 +26,7 @@ def cmd_search(a):
     from .db import connect
     from .search import Searcher
 
-    res = Searcher(connect(resolve_vault(a.vault))).search(" ".join(a.consulta), limit=a.limite, tag=a.tag)
+    res = Searcher(connect(resolve_vault(a.vault))).search(" ".join(a.query), limit=a.limit, tag=a.tag)
     for i, r in enumerate(res, 1):
         head = f" › {r['heading']}" if r["heading"] else ""
         print(f"{i:>2}. {r['title']}  [{r['path']}{head}]  ({r['score']})")
@@ -43,22 +43,22 @@ def cmd_service(a):
         elif a.cmd == 'stop':
             print('Stopped.' if service.stop() else 'Not running.')
         elif a.cmd == '_daemon':
-            service.run_daemon(resolve_vault(a.vault), a.porta, not a.sem_auto)
+            service.run_daemon(resolve_vault(a.vault), a.port, not a.no_auto)
         else:
             vault = resolve_vault(a.vault)
-            from .config import pasta_invalida, GLOBAL_BRAIN
-            if vault != GLOBAL_BRAIN.resolve() and (reason := pasta_invalida(vault)):
+            from .config import invalid_folder_reason, GLOBAL_BRAIN
+            if vault != GLOBAL_BRAIN.resolve() and (reason := invalid_folder_reason(vault)):
                 raise RuntimeError(reason)
-            live = service.start(vault, a.porta, not a.sem_auto)
+            live = service.start(vault, a.port, not a.no_auto)
             if a.cmd == 'setup':
-                print(service.client_config(vault, a.client, a.porta, a.nome), end='')
+                print(service.client_config(vault, a.client, a.port, a.name), end='')
                 print(f"Service ready: PID {live['pid']}, port {live['port']}. Paste the configuration into your client.", file=sys.stderr)
             else:
                 print(json.dumps(live, indent=2))
-                if a.cmd == 'serve' and not a.nao_abrir:
+                if a.cmd == 'serve' and not a.no_open:
                     import webbrowser
                     from urllib.parse import urlencode
-                    webbrowser.open(f"http://127.0.0.1:{a.porta}/?" + urlencode({'v': str(vault)}))
+                    webbrowser.open(f"http://127.0.0.1:{a.port}/?" + urlencode({'v': str(vault)}))
     except (RuntimeError, OSError) as e:
         raise SystemExit(str(e)) from e
 
@@ -84,25 +84,25 @@ def cmd_update(a):
         raise SystemExit(1)
 
 
-def cmd_grafo(a):
+def cmd_graph(a):
     import threading
     from types import SimpleNamespace
     from .db import connect
     from .search import Searcher
-    from . import ferramentas as f
+    from . import tools as f
 
     vault = resolve_vault(a.vault)
     con = connect(vault)
     ctx = SimpleNamespace(vault=vault, con=con, db_lock=threading.Lock(), searcher=Searcher(con))
     try:
-        if a.operacao == 'consultar':
-            result = f.consultar_grafo(ctx, ' '.join(a.consulta), modo=a.modo, profundidade=a.profundidade,
-                                      tokens=a.tokens, direcao=a.direcao, relacoes=a.relacao)
-        elif a.operacao == 'impacto':
-            result = f.impacto(ctx, a.alvo, profundidade=a.profundidade, tokens=a.tokens,
-                               incluir_inferidas=a.incluir_inferidas)
+        if a.operation_id == 'consultar':
+            result = f.query_graph(ctx, ' '.join(a.query), mode=a.mode, depth=a.depth,
+                                      tokens=a.tokens, direction=a.direction, relations=a.relation)
+        elif a.operation_id == 'impacto':
+            result = f.impact(ctx, a.target, depth=a.depth, tokens=a.tokens,
+                               include_inferred=a.include_inferred)
         else:
-            result = f.caminho(ctx, a.de, a.ate, direcao=a.direcao, tokens=a.tokens)
+            result = f.graph_path(ctx, a.source, a.target, direction=a.direction, tokens=a.tokens)
         print(result)
     finally:
         con.close()
@@ -111,15 +111,15 @@ def cmd_grafo(a):
 def cmd_mcp(a):
     from .mcp_server import run
 
-    run(resolve_vault(a.vault), auto_index=not a.sem_auto)
+    run(resolve_vault(a.vault), auto_index=not a.no_auto)
 
 
 def cmd_import(a):
-    from .importacao import importar
+    from .url_import import import_url
     from .indexer import index_vault
     vault = resolve_vault(a.vault)
     try:
-        result = importar(vault, a.url, a.titulo, a.atualizar)
+        result = import_url(vault, a.url, a.title, a.update)
         if result['importada']:
             index_vault(vault)
         print(json.dumps(result, ensure_ascii=False, indent=2))
@@ -151,9 +151,9 @@ def cmd_connect(a):
     url = f"http://127.0.0.1:{live['port']}/projects/{project_id(vault)}/mcp"
     targets = []
     if a.claude or not (a.claude or a.codex):
-        targets.append(('claude', ['mcp', 'add', '--transport', 'http', '--scope', 'user', a.nome, url]))
+        targets.append(('claude', ['mcp', 'add', '--transport', 'http', '--scope', 'user', a.name, url]))
     if a.codex or not (a.claude or a.codex):
-        targets.append(('codex', ['mcp', 'add', a.nome, '--url', url]))
+        targets.append(('codex', ['mcp', 'add', a.name, '--url', url]))
     for tool, args in targets:
         if not shutil.which(tool):
             print(f'{tool}: command not found; use setup to generate configuration.')
@@ -165,20 +165,20 @@ def cmd_connect(a):
 
 
 def cmd_capture(a):
-    from . import captura
+    from . import capture
 
     if not a.worker and not a.transcript:
-        captura.hook(a.vault, a.evento)  # o projeto sai do cwd que vem no JSON do hook
+        capture.hook(a.vault, a.event)  # o projeto sai do cwd que vem no JSON do hook
         return
     vault = resolve_vault(a.vault, cwd=a.cwd or None)
     if a.worker:
-        captura.worker(vault, Path(a.transcript), a.sessao, a.cwd, a.evento)
+        capture.worker(vault, Path(a.transcript), a.session_id, a.cwd, a.event)
     elif a.transcript:  # manual: extrai de um transcript específico agora
-        captura.worker(vault, Path(a.transcript), a.sessao or a.transcript, a.cwd or "", "SessionEnd")
+        capture.worker(vault, Path(a.transcript), a.session_id or a.transcript, a.cwd or "", "SessionEnd")
 
 
 def cmd_briefing(a):
-    from .captura import briefing
+    from .capture import briefing
 
     cwd = a.cwd
     if not cwd and not sys.stdin.isatty():
@@ -199,8 +199,8 @@ GUARD_TXT = ("This project has AtlasBrain (code graph and project memory). Befor
              "explain (dependencies) and search (content and meaning). "
              "If MCP is unavailable or finds nothing useful, use ordinary file tools.")
 
-BLOCO_INICIO, BLOCO_FIM = "<!-- atlasbrain:inicio -->", "<!-- atlasbrain:fim -->"
-BLOCO = f"""{BLOCO_INICIO}
+BLOCK_START, BLOCK_END = "<!-- atlasbrain:inicio -->", "<!-- atlasbrain:fim -->"
+INSTRUCTION_BLOCK = f"""{BLOCK_START}
 ## AtlasBrain — project second brain
 Each project has a local `.atlasbrain/` brain (code graph, decisions and learnings), exposed by the `atlasbrain` MCP.
 - Before grep/glob, use `find_files` (names/symbols), `symbol_location` (definitions/usages),
@@ -210,18 +210,18 @@ Each project has a local `.atlasbrain/` brain (code graph, decisions and learnin
 - Record important finalized decisions with `record_decision` (`supersedes` replaces an earlier decision);
   record non-obvious discoveries with `record_learning`.
 - On a global endpoint, pass `project_folder` with the absolute folder where you are working.
-{BLOCO_FIM}
+{BLOCK_END}
 """
 
 
-def _bloco_instrucoes(arquivo: Path, remover: bool) -> None:
-    txt = arquivo.read_text() if arquivo.exists() else ""
-    if BLOCO_INICIO in txt:
-        a, b = txt.index(BLOCO_INICIO), txt.index(BLOCO_FIM) + len(BLOCO_FIM)
+def _instruction_block(file_path: Path, remove: bool) -> None:
+    txt = file_path.read_text() if file_path.exists() else ""
+    if BLOCK_START in txt:
+        a, b = txt.index(BLOCK_START), txt.index(BLOCK_END) + len(BLOCK_END)
         txt = (txt[:a].rstrip() + "\n" + txt[b:].lstrip("\n")).strip() + "\n"
-    if not remover:
-        txt = txt.rstrip() + ("\n\n" if txt.strip() else "") + BLOCO
-    arquivo.write_text(txt)
+    if not remove:
+        txt = txt.rstrip() + ("\n\n" if txt.strip() else "") + INSTRUCTION_BLOCK
+    file_path.write_text(txt)
 
 
 def _guard_relevant(data):
@@ -255,8 +255,8 @@ def cmd_guard(a):
         if not _guard_relevant(data):
             return
         from .config import BRAIN, find_project
-        proj = find_project(Path(data.get("cwd") or "."))
-        if not proj or not (proj / BRAIN).is_dir():
+        project_root = find_project(Path(data.get("cwd") or "."))
+        if not project_root or not (project_root / BRAIN).is_dir():
             return
         state_f = Path.home() / ".cache" / "atlasbrain" / "guard.json"
         state_f.parent.mkdir(parents=True, exist_ok=True)
@@ -269,7 +269,7 @@ def cmd_guard(a):
                 state = json.loads(state_f.read_text()) if state_f.exists() else {}
             except ValueError:
                 state = {}
-            sid = str(proj) + ":" + str(data.get("session_id", "?"))
+            sid = str(project_root) + ":" + str(data.get("session_id", "?"))
             now = time.time()
             if now - state.get(sid, 0) < 1200:
                 return
@@ -283,19 +283,19 @@ def cmd_guard(a):
 
 def cmd_init(a):
     """Transforma a pasta (ou o projeto atual) num cérebro: cria .atlasbrain/, indexa e instala git hooks."""
-    vault = Path(a.pasta).expanduser().resolve() if a.pasta else resolve_vault()
+    vault = Path(a.folder).expanduser().resolve() if a.folder else resolve_vault()
     from .config import BRAIN, data_dir
     data_dir(vault)
     print(f"✓ cérebro em {vault / BRAIN}")
     hooks_dir = vault / ".git" / "hooks"
-    if hooks_dir.is_dir() and not a.sem_git:
+    if hooks_dir.is_dir() and not a.no_git:
         exe = shutil.which("atlasbrain") or str(Path(sys.argv[0]).resolve())
-        linha = f'"{exe}" index --vault "{vault}" --silencioso >/dev/null 2>&1 &  # atlasbrain'
+        line = f'"{exe}" index --vault "{vault}" --quiet >/dev/null 2>&1 &  # atlasbrain'
         for h in ("post-commit", "post-checkout", "post-merge"):
             f = hooks_dir / h
             txt = f.read_text() if f.exists() else "#!/bin/sh\n"
             if "# atlasbrain" not in txt:
-                f.write_text(txt.rstrip() + "\n" + linha + "\n")
+                f.write_text(txt.rstrip() + "\n" + line + "\n")
                 f.chmod(0o755)
         print("✓ git hooks: reindexa em segundo plano a cada commit, checkout e merge")
     from .indexer import index_vault
@@ -306,14 +306,14 @@ def cmd_bench(a):
     from . import bench
     from .config import BRAIN
     vault = resolve_vault(a.vault)
-    f = Path(a.arquivo) if a.arquivo else vault / BRAIN / "benchmark.jsonl"
+    f = Path(a.file_path) if a.file_path else vault / BRAIN / "benchmark.jsonl"
     if not f.exists():
         raise SystemExit(f"Sem perguntas em {f}. Formato: uma linha JSON por pergunta "
                          '{"pergunta": "...", "esperado": ["caminho/arquivo"], "tipo": "conceito"}')
-    res = bench.rodar(vault, bench.carregar(f))
-    print(bench.relatorio(res, detalhes=a.detalhes))
+    res = bench.run_benchmark(vault, bench.load_questions(f))
+    print(bench.report(res, details=a.details))
     if a.json:
-        Path(a.json).write_text(json.dumps({k: bench.metricas(v) for k, v in res.items()}, ensure_ascii=False, indent=2))
+        Path(a.json).write_text(json.dumps({k: bench.metrics(v) for k, v in res.items()}, ensure_ascii=False, indent=2))
 
 
 def _remove_owned_hooks(hooks):
@@ -327,12 +327,12 @@ def _remove_owned_hooks(hooks):
     return kept
 
 
-def _merge_hook(settings: Path, evento: str, command: str) -> bool:
+def _merge_hook(settings: Path, event: str, command: str) -> bool:
     data = json.loads(settings.read_text()) if settings.exists() else {}
-    hooks = data.setdefault("hooks", {}).setdefault(evento, [])
+    hooks = data.setdefault("hooks", {}).setdefault(event, [])
     hooks[:] = _remove_owned_hooks(hooks)
     entry = {"hooks": [{"type": "command", "command": command, "timeout": 10}]}
-    if evento == "PreToolUse":
+    if event == "PreToolUse":
         entry["matcher"] = "Bash|Read|Grep|Glob"
     hooks.append(entry)
     settings.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
@@ -341,29 +341,29 @@ def _merge_hook(settings: Path, evento: str, command: str) -> bool:
 
 def cmd_hooks(a):
     exe = shutil.which("atlasbrain") or str(Path(sys.argv[0]).resolve())
-    fixo = f' --vault "{resolve_vault(a.vault)}"' if a.vault else ""  # sem --vault: cérebro do projeto da sessão
-    cmd = f'"{exe}" capturar{fixo}'
-    brief = f'"{exe}" briefing{fixo}'
+    fixed = f' --vault "{resolve_vault(a.vault)}"' if a.vault else ""  # sem --vault: cérebro do projeto da sessão
+    cmd = f'"{exe}" capturar{fixed}'
+    brief = f'"{exe}" briefing{fixed}'
     guard = f'"{exe}" guard'
     targets = [(Path.home() / ".claude" / "settings.json", ["Stop", "SessionEnd", "SessionStart", "PreToolUse"]),
                (Path.home() / ".codex" / "hooks.json", ["Stop", "SessionStart", "PreToolUse"])]
-    for f, eventos in targets:
+    for f, events in targets:
         if not f.parent.exists():
             continue
-        for ev in eventos:
+        for ev in events:
             c = brief if ev == "SessionStart" else guard if ev == "PreToolUse" else cmd
-            if a.remover:
+            if a.remove:
                 data = json.loads(f.read_text()) if f.exists() else {}
                 lst = data.get("hooks", {}).get(ev, [])
                 lst[:] = _remove_owned_hooks(lst)
                 f.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
             else:
                 _merge_hook(f, ev, c)
-        print(f"{'removido de' if a.remover else '✓ hook em'} {f} ({', '.join(eventos)})")
+        print(f"{'removido de' if a.remove else '✓ hook em'} {f} ({', '.join(events)})")
     for f in (Path.home() / ".claude" / "CLAUDE.md", Path.home() / ".codex" / "AGENTS.md"):
         if f.parent.exists():
-            _bloco_instrucoes(f, a.remover)
-            print(f"{'removido de' if a.remover else '✓ instruções em'} {f}")
+            _instruction_block(f, a.remove)
+            print(f"{'removido de' if a.remove else '✓ instruções em'} {f}")
 
 
 def main():
@@ -373,11 +373,11 @@ def main():
     for command in ('setup', 'start', '_daemon'):
         p = sub.add_parser(command, help='shared local HTTP service' if command != '_daemon' else argparse.SUPPRESS)
         _vault_arg(p)
-        p.add_argument('--porta', type=int, default=8765)
-        p.add_argument('--sem-auto', action='store_true')
+        p.add_argument('--port', '--porta', type=int, default=8765)
+        p.add_argument('--no-auto', '--sem-auto', dest='no_auto', action='store_true')
         if command == 'setup':
             p.add_argument('--client', choices=['claude', 'antigravity', 'codex'], required=True)
-            p.add_argument('--nome', default='atlasbrain')
+            p.add_argument('--name', '--nome', dest='name', default='atlasbrain')
         p.set_defaults(fn=cmd_service)
     for command in ('status', 'stop'):
         p = sub.add_parser(command, help='inspect/stop the shared service')
@@ -388,88 +388,88 @@ def main():
     p.add_argument('--vault', help=argparse.SUPPRESS)
     p.set_defaults(fn=cmd_update)
 
-    p = sub.add_parser('importar-url', help='import a public web page or PDF')
+    p = sub.add_parser('import-url', aliases=['importar-url'], help='import a public web page or PDF')
     _vault_arg(p)
     p.add_argument('url')
-    p.add_argument('--titulo')
-    p.add_argument('--atualizar', action='store_true')
+    p.add_argument('--title', '--titulo', dest='title')
+    p.add_argument('--update', '--atualizar', dest='update', action='store_true')
     p.set_defaults(fn=cmd_import)
 
     p = sub.add_parser("index", help="indexa (incremental) a pasta")
     _vault_arg(p)
     p.add_argument("--force", action="store_true", help="reprocessa tudo")
-    p.add_argument("--silencioso", action="store_true", help=argparse.SUPPRESS)
+    p.add_argument("--quiet", "--silencioso", action="store_true", help=argparse.SUPPRESS)
     p.set_defaults(fn=cmd_index)
 
     p = sub.add_parser("search", aliases=["buscar"], help="busca híbrida no terminal")
     _vault_arg(p)
-    p.add_argument("consulta", nargs="+")
-    p.add_argument("--limite", "-n", type=int, default=10)
+    p.add_argument('query', nargs="+")
+    p.add_argument('--limit', '--limite', "-n", dest='limit', type=int, default=10)
     p.add_argument("--tag")
     p.set_defaults(fn=cmd_search)
 
-    p = sub.add_parser('consultar', help='busca e percorre o grafo de arquivos/símbolos')
+    p = sub.add_parser('query-graph', aliases=['consultar'], help='busca e percorre o grafo de arquivos/símbolos')
     _vault_arg(p)
-    p.add_argument('consulta', nargs='+')
-    p.add_argument('--modo', choices=['bfs', 'dfs'], default='bfs')
-    p.add_argument('--profundidade', type=int, choices=range(7), default=2)
-    p.add_argument('--direcao', choices=['entrada', 'saida', 'ambas'], default='ambas')
-    p.add_argument('--relacao', action='append', help='filtra relações; pode repetir')
+    p.add_argument('query', nargs='+')
+    p.add_argument('--mode', '--modo', dest='mode', choices=['bfs', 'dfs'], default='bfs')
+    p.add_argument('--depth', '--profundidade', dest='depth', type=int, choices=range(7), default=2)
+    p.add_argument('--direction', '--direcao', dest='direction', choices=['entrada', 'saida', 'ambas'], default='ambas')
+    p.add_argument('--relation', '--relacao', dest='relation', action='append', help='filtra relações; pode repetir')
     p.add_argument('--tokens', type=int, default=2000)
-    p.set_defaults(fn=cmd_grafo, operacao='consultar')
+    p.set_defaults(fn=cmd_graph, operation_id='consultar')
 
-    p = sub.add_parser('impacto', help='dependentes afetados por uma alteração')
+    p = sub.add_parser('impact', aliases=['impacto'], help='dependentes afetados por uma alteração')
     _vault_arg(p)
-    p.add_argument('alvo')
-    p.add_argument('--profundidade', type=int, choices=range(7), default=3)
-    p.add_argument('--incluir-inferidas', action='store_true')
+    p.add_argument('target')
+    p.add_argument('--depth', '--profundidade', dest='depth', type=int, choices=range(7), default=3)
+    p.add_argument('--include-inferred', '--incluir-inferidas', dest='include_inferred', action='store_true')
     p.add_argument('--tokens', type=int, default=2000)
-    p.set_defaults(fn=cmd_grafo, operacao='impacto')
+    p.set_defaults(fn=cmd_graph, operation_id='impacto')
 
-    p = sub.add_parser('caminho', help='caminho entre arquivos ou símbolos')
+    p = sub.add_parser('graph-path', aliases=['caminho'], help='caminho entre arquivos ou símbolos')
     _vault_arg(p)
-    p.add_argument('de')
-    p.add_argument('ate')
-    p.add_argument('--direcao', choices=['entrada', 'saida', 'ambas'], default='ambas')
+    p.add_argument('source')
+    p.add_argument('target')
+    p.add_argument('--direction', '--direcao', dest='direction', choices=['entrada', 'saida', 'ambas'], default='ambas')
     p.add_argument('--tokens', type=int, default=2000)
-    p.set_defaults(fn=cmd_grafo, operacao='caminho')
+    p.set_defaults(fn=cmd_graph, operation_id='caminho')
 
     p = sub.add_parser("serve", help="abre a interface web com o grafo")
     _vault_arg(p)
-    p.add_argument("--porta", type=int, default=8765)
-    p.add_argument("--sem-auto", action="store_true", help="não reindexa automaticamente")
-    p.add_argument("--nao-abrir", action="store_true", help="não abre o navegador")
+    p.add_argument('--port', '--porta', type=int, default=8765)
+    p.add_argument('--no-auto', '--sem-auto', dest="no_auto", action="store_true", help="não reindexa automaticamente")
+    p.add_argument('--no-open', '--nao-abrir', dest="no_open", action="store_true", help="não abre o navegador")
     p.set_defaults(fn=cmd_serve)
 
     p = sub.add_parser("mcp", help="servidor MCP (stdio) para Claude/Codex")
     _vault_arg(p)
-    p.add_argument("--sem-auto", action="store_true")
+    p.add_argument('--no-auto', '--sem-auto', dest="no_auto", action="store_true")
     p.set_defaults(fn=cmd_mcp)
 
     p = sub.add_parser("stats", help="números do índice")
     _vault_arg(p)
     p.set_defaults(fn=cmd_stats)
 
-    p = sub.add_parser("conectar", help="registra o MCP no Claude Code e no Codex")
+    p = sub.add_parser('connect', aliases=['conectar'], help="registra o MCP no Claude Code e no Codex")
     _vault_arg(p)
     p.add_argument("--claude", action="store_true")
     p.add_argument("--codex", action="store_true")
-    p.add_argument("--nome", default="atlasbrain")
+    p.add_argument('--name', '--nome', dest='name', default="atlasbrain")
     p.set_defaults(fn=cmd_connect)
 
-    p = sub.add_parser("capturar", help="captura decisões/aprendizados de um transcript (usado pelos hooks)")
+    p = sub.add_parser('capture', aliases=['capturar'], help="captura decisões/aprendizados de um transcript (usado pelos hooks)")
     _vault_arg(p)
     p.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     p.add_argument("--transcript")
-    p.add_argument("--sessao", default="")
+    p.add_argument('--session-id', '--sessao', dest='session_id', default="")
     p.add_argument("--cwd", default="")
-    p.add_argument("--evento")
+    p.add_argument('--event', '--evento', dest='event')
     p.set_defaults(fn=cmd_capture)
 
     p = sub.add_parser("bench", help="mede a qualidade da busca com perguntas de resposta conhecida")
     _vault_arg(p)
-    p.add_argument("--arquivo", help="JSONL de perguntas (padrão: .atlasbrain/benchmark.jsonl)")
-    p.add_argument("--detalhes", action="store_true", help="mostra o que veio nas perguntas erradas")
+    p.add_argument('--file', '--arquivo', dest='file_path', help="JSONL de perguntas (padrão: .atlasbrain/benchmark.jsonl)")
+    p.add_argument('--details', '--detalhes', dest='details', action="store_true", help="mostra o que veio nas perguntas erradas")
     p.add_argument("--json", help="salva as métricas nesse arquivo")
     p.set_defaults(fn=cmd_bench)
 
@@ -477,8 +477,8 @@ def main():
     p.set_defaults(fn=cmd_guard)
 
     p = sub.add_parser("init", help="transforma a pasta/projeto num cérebro (.atlasbrain/ + índice + git hooks)")
-    p.add_argument("pasta", nargs="?")
-    p.add_argument("--sem-git", action="store_true", help="não instala os git hooks")
+    p.add_argument('folder', nargs="?")
+    p.add_argument('--no-git', '--sem-git', dest="no_git", action="store_true", help="não instala os git hooks")
     p.set_defaults(fn=cmd_init)
 
     p = sub.add_parser("briefing", help="contexto curto para o início de sessão (usado pelo hook SessionStart)")
@@ -486,9 +486,9 @@ def main():
     p.add_argument("--cwd", default="")
     p.set_defaults(fn=cmd_briefing)
 
-    p = sub.add_parser("hooks", help="instala (ou --remover) a captura automática no Claude Code e no Codex")
+    p = sub.add_parser("hooks", help="instala (ou --remove) a captura automática no Claude Code e no Codex")
     _vault_arg(p)
-    p.add_argument("--remover", action="store_true")
+    p.add_argument("--remove", "--remover", action="store_true")
     p.set_defaults(fn=cmd_hooks)
 
     a = ap.parse_args()

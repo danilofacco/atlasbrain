@@ -12,7 +12,7 @@ def isolado(tmp_path, monkeypatch):
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))
-    monkeypatch.setattr(config, "REGISTRY", tmp_path / "registro" / "projetos.json")
+    monkeypatch.setattr(config, "REGISTRY", tmp_path / "registro" / "projects.json")
     monkeypatch.setattr(config, "GLOBAL_BRAIN", home / "SegundoCerebro")
     config._registered.clear()
     monkeypatch.setattr(embed, "EMBED_ENABLED", False)  # rápido por padrão; ver fixture com_embeddings
@@ -59,7 +59,7 @@ ARQUIVOS = {
 
 
 @pytest.fixture
-def projeto(tmp_path) -> Path:
+def project(tmp_path) -> Path:
     """Repositório git pequeno com Python, TypeScript (alias @/), notas e uma pasta ignorada."""
     root = tmp_path / "projeto"
     for rel, txt in ARQUIVOS.items():
@@ -71,18 +71,18 @@ def projeto(tmp_path) -> Path:
 
 
 @pytest.fixture
-def indexado(projeto):
+def indexado(project):
     from atlasbrain.db import connect
     from atlasbrain.indexer import index_vault
 
-    index_vault(projeto, quiet=True)
-    con = connect(projeto)
-    yield projeto, con
+    index_vault(project, quiet=True)
+    con = connect(project)
+    yield project, con
     con.close()
 
 
-def aresta(con, origem: str, destino: str, tipo: str):
+def aresta(con, origin: str, destination: str, kind: str):
     """Linha da aresta origem→destino (ou None)."""
     return con.execute(
         "SELECT l.kind, l.conf, l.detalhe FROM links l JOIN notes a ON a.id=l.src JOIN notes b ON b.id=l.dst "
-        "WHERE a.path=? AND b.path=? AND l.kind=?", (origem, destino, tipo)).fetchone()
+        "WHERE a.path=? AND b.path=? AND l.kind=?", (origin, destination, kind)).fetchone()

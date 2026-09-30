@@ -3,18 +3,18 @@ import json
 import numpy as np
 import pytest
 
-from atlasbrain import editor, renomear, consolidacao as c, captura, embed, indexer
+from atlasbrain import editor, rename, consolidation as c, capture, embed, indexer
 from atlasbrain.db import connect
-from atlasbrain.bench import avaliar_projeto
+from atlasbrain.bench import evaluate_project
 
 
 @pytest.mark.parametrize('action', ['concluir','reverter'])
-def test_recover_interrupted_move(projeto,monkeypatch,action):
-    editor.save(projeto,'Old.md','# Original',create=True)
-    editor.save(projeto,'ref.md','[[Old]]',create=True)
-    indexer.index_vault(projeto,quiet=True);con=connect(projeto)
+def test_recover_interrupted_move(project,monkeypatch,action):
+    editor.save(project,'Old.md','# Original',create=True)
+    editor.save(project,'ref.md','[[Old]]',create=True)
+    indexer.index_vault(project,quiet=True);con=connect(project)
     try:
-        plan=renomear.plan(projeto,con,'Old.md','New.md');save=editor.save
+        plan=rename.plan(project,con,'Old.md','New.md');save=editor.save
         def fail(vault,path,*args,**kwargs):
             if path=='ref.md':
                 raise OSError('disk failure')
@@ -22,64 +22,64 @@ def test_recover_interrupted_move(projeto,monkeypatch,action):
         with monkeypatch.context() as m:
             m.setattr(editor,'save',fail)
             with pytest.raises(editor.EditError):
-                renomear.apply(projeto,con,'Old.md','New.md',plan['revisao_plano'])
-        op=renomear.recovery(projeto,con)['operacoes'][0]['id']
-        preview=renomear.recovery(projeto,con,op)
-        (projeto/'ref.md').write_text('external edit')
+                rename.apply(project,con,'Old.md','New.md',plan['revisao_plano'])
+        op=rename.recovery(project,con)['operacoes'][0]['id']
+        preview=rename.recovery(project,con,op)
+        (project/'ref.md').write_text('external edit')
         with pytest.raises(editor.EditError):
-            renomear.recovery(projeto,con,op,action,preview['revisao_recuperacao'])
-        assert (projeto/'ref.md').read_text()=='external edit'
-        (projeto/'ref.md').write_text('[[Old]]')
-        preview=renomear.recovery(projeto,con,op)
-        result=renomear.recovery(projeto,con,op,action,preview['revisao_recuperacao'])
+            rename.recovery(project,con,op,action,preview['revisao_recuperacao'])
+        assert (project/'ref.md').read_text()=='external edit'
+        (project/'ref.md').write_text('[[Old]]')
+        preview=rename.recovery(project,con,op)
+        result=rename.recovery(project,con,op,action,preview['revisao_recuperacao'])
         assert result['estado']==('concluido' if action=='concluir' else 'revertido')
-        assert (projeto/'New.md').exists()==(action=='concluir')
-        assert (projeto/'Old.md').exists()==(action=='reverter')
-        assert (projeto/'ref.md').read_text()==('[[New.md]]' if action=='concluir' else '[[Old]]')
-        assert not renomear.recovery(projeto,con)['operacoes']
+        assert (project/'New.md').exists()==(action=='concluir')
+        assert (project/'Old.md').exists()==(action=='reverter')
+        assert (project/'ref.md').read_text()==('[[New.md]]' if action=='concluir' else '[[Old]]')
+        assert not rename.recovery(project,con)['operacoes']
     finally:
         con.close()
 
 
 @pytest.mark.parametrize('agent', [False,True])
-def test_refresh_respects_summary_authorship(projeto,agent):
+def test_refresh_respects_summary_authorship(project,agent):
     for i in range(3):
-        editor.save(projeto,f'notes/{i}.md',f'---\ntags: [fila]\n---\n# Nota {i}\n\nTimeout de {30+i} segundos.',create=True)
-    indexer.index_vault(projeto,quiet=True);con=connect(projeto)
+        editor.save(project,f'notes/{i}.md',f'---\ntags: [fila]\n---\n# Nota {i}\n\nTimeout de {30+i} segundos.',create=True)
+    indexer.index_vault(project,quiet=True);con=connect(project)
     try:
-        group=c.plan(projeto,con)['grupos'][0]['grupo'];bundle=c.prepare(projeto,con,group)
-        result=c.consolidate(projeto,group,'Resumo revisado com ressalvas próprias que devem ser preservadas.' if agent else None,
+        group=c.plan(project,con)['grupos'][0]['grupo'];bundle=c.prepare(project,con,group)
+        result=c.consolidate(project,group,'Resumo revisado com ressalvas próprias que devem ser preservadas.' if agent else None,
                              {s['path']:s['revision'] for s in bundle['fontes']} if agent else None)
-        before=(projeto/result['path']).read_text()
-        source=projeto/'notes/0.md';source.write_text(source.read_text()+'\n\nMudou para 90 segundos.')
-        indexer.index_vault(projeto,quiet=True)
-        queue=c.refresh_queue(projeto,execute=True)
+        before=(project/result['path']).read_text()
+        source=project/'notes/0.md';source.write_text(source.read_text()+'\n\nMudou para 90 segundos.')
+        indexer.index_vault(project,quiet=True)
+        queue=c.refresh_queue(project,execute=True)
         assert queue['fila'][0]['estado']==('revisao_agente' if agent else 'atualizado')
         if agent:
-            assert (projeto/result['path']).read_text()==before
+            assert (project/result['path']).read_text()==before
             with pytest.raises(editor.EditError,match='revisão explícita'):
-                c.consolidate(projeto,group)
+                c.consolidate(project,group)
         else:
-            assert '90 segundos' in (projeto/result['path']).read_text()
-            assert not c.refresh_queue(projeto)['fila']
+            assert '90 segundos' in (project/result['path']).read_text()
+            assert not c.refresh_queue(project)['fila']
     finally:
         con.close()
 
 
-def test_embedding_cache_reuses_chunks_and_invalidates_model(projeto,monkeypatch):
+def test_embedding_cache_reuses_chunks_and_invalidates_model(project,monkeypatch):
     calls=[]
     monkeypatch.setattr(embed,'EMBED_ENABLED',True)
     def vectors(texts):
         calls.extend(texts)
         return np.array([[1.,0.,0.] for _ in texts],dtype=np.float32)
     monkeypatch.setattr(embed,'embed',vectors)
-    first=indexer.index_vault(projeto,quiet=True)
+    first=indexer.index_vault(project,quiet=True)
     assert first['cache_embeddings']['calculados']>0
     calls.clear()
-    second=indexer.index_vault(projeto,force=True,quiet=True)
+    second=indexer.index_vault(project,force=True,quiet=True)
     assert not calls and second['cache_embeddings']['reutilizados']>0
     monkeypatch.setattr(indexer,'EMBED_MODEL','another-model')
-    third=indexer.index_vault(projeto,force=True,quiet=True)
+    third=indexer.index_vault(project,force=True,quiet=True)
     assert calls and third['cache_embeddings']['calculados']>0
 
 
@@ -105,7 +105,7 @@ def test_code_body_embeddings_are_bounded_and_overridable(indexado,monkeypatch):
     assert missing()==0
 
 
-def test_capture_receipts_metrics_and_worker_lock(projeto,monkeypatch):
+def test_capture_receipts_metrics_and_worker_lock(project,monkeypatch):
     import fcntl
     from atlasbrain.config import data_dir
     calls=[]
@@ -113,20 +113,20 @@ def test_capture_receipts_metrics_and_worker_lock(projeto,monkeypatch):
         calls.append(True)
         return {'criada':False,'revisao_necessaria':True,'path':None}
     payload=['decisao','session',{'titulo':'Preço','decisao':'R$ 50'}]
-    captura._capture_result(projeto,payload,action)
-    captura._capture_result(projeto,payload,action)
-    assert len(calls)==1 and captura.quality(projeto)['contadores']['revisar']==1
-    assert len(captura.quality(projeto)['revisar'])==1
-    monkeypatch.setattr(captura,'_worker',lambda *args: calls.append(False))
-    with open(data_dir(projeto)/'capture.lock','a') as lock:
+    capture._capture_result(project,payload,action)
+    capture._capture_result(project,payload,action)
+    assert len(calls)==1 and capture.quality(project)['contadores']['revisar']==1
+    assert len(capture.quality(project)['revisar'])==1
+    monkeypatch.setattr(capture,'_worker',lambda *args: calls.append(False))
+    with open(data_dir(project)/'capture.lock','a') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-        captura.worker(projeto,projeto/'missing','session','','Stop')
+        capture.worker(project,project/'missing','session','','Stop')
     assert calls==[True]
 
 
 def test_evaluation_reports_context_and_rejects_invalid_labels(indexado):
     vault,con=indexado
-    result=avaliar_projeto(vault,[{'pergunta':'src/util.py','esperado':['src/util.py']}],256)
+    result=evaluate_project(vault,[{'pergunta':'src/util.py','esperado':['src/util.py']}],256)
     assert result['metricas']['top1']==1
     assert result['metricas']['recuperacao_50']==1
     assert result['diagnostico']['top_3']==1
@@ -135,4 +135,4 @@ def test_evaluation_reports_context_and_rejects_invalid_labels(indexado):
     assert result['indice_estavel']
     assert (editor._cache(vault)/'benchmark-latest.json').exists()
     with pytest.raises(ValueError,match='ausente'):
-        avaliar_projeto(vault,[{'pergunta':'x','esperado':['missing.md']}])
+        evaluate_project(vault,[{'pergunta':'x','esperado':['missing.md']}])

@@ -4,20 +4,20 @@ All normal Markdown writes (visual editor, MCP notes, decision/learning capture,
 
 ## Updating memory
 
-- `ler` returns the full Markdown file's SHA-256 revision, including when reading one section.
-- `anexar` and `atualizar_nota` accept `revisao`. Supplying it rejects stale updates instead of silently overwriting them.
-- `editar_secao(nota, secao, texto, revisao, operacao)` replaces one H2 section, preserves other sections and frontmatter, ignores fenced-code headings and rejects ambiguous duplicate headings. A missing section is appended.
-- Creation, appending, decision/learning registration, note updates and section edits accept a stable `operacao` identifier. Repeat it with identical arguments after a network failure. Reusing it for different arguments fails.
+- `read` returns the full Markdown file's SHA-256 revision, including when reading one section.
+- `append_note` and `update_note` accept `revision`. Supplying it rejects stale updates instead of silently overwriting them.
+- `edit_section(note, section, text, revision, operation_id)` replaces one H2 section, preserves other sections and frontmatter, ignores fenced-code headings and rejects ambiguous duplicate headings. A missing section is appended.
+- Creation, appending, decision/learning registration, note updates and section edits accept a stable `operation_id` identifier. Repeat it with identical arguments after a network failure. Reusing it for different arguments fails.
 - Retry receipts are persisted locally. An interrupted operation with an unfinished receipt is blocked: inspect the file before deliberately starting a new operation. This prevents blind replay but does not promise automatic recovery from every crash.
-- Explicit decision replacement continues to link the new and previous decisions. `revisar_memoria` reports numeric disagreements between active decisions with the same normalized title and lists replacement links. These are **INFERRED review candidates**, not proof of contradictions or a general semantic contradiction detector.
-- When both decisions already exist, `revisar_decisao(antiga, acao="substituir", substituta=..., motivo=...)` marks the predecessor as superseded and links to the active successor. `acao="revogar"` retires a decision without a successor. Both references must be exact indexed Markdown paths; the reason is required. The operation updates only the predecessor, keeping the successor and original text intact. It never infers that similar notes contradict one another.
-- Historical decisions remain searchable with an explicit status label, but `contexto_tarefa` excludes them from automatic candidates and relationship lists. If one is explicitly focused, the response identifies it as historical and includes its active successor when available. The session briefing and `decisoes` already list active decisions by default.
+- Explicit decision replacement continues to link the new and previous decisions. `review_memory` reports numeric disagreements between active decisions with the same normalized title and lists replacement links. These are **INFERRED review candidates**, not proof of contradictions or a general semantic contradiction detector.
+- When both decisions already exist, `review_decision(previous, action="supersede", replacement=..., reason=...)` marks the predecessor as superseded and links to the active successor. `action="revoke"` retires a decision without a successor. Both references must be exact indexed Markdown paths; the reason is required. The operation updates only the predecessor, keeping the successor and original text intact. It never infers that similar notes contradict one another.
+- Historical decisions remain searchable with an explicit status label, but `task_context` excludes them from automatic candidates and relationship lists. If one is explicitly focused, the response identifies it as historical and includes its active successor when available. The session briefing and `decisions` already list active decisions by default.
 
 ## History and recovery
 
 Every replacement preserves the previous content; the most recent 30 versions per path are retained in `.atlasbrain/.editor-backups/`, excluded from indexing and Git. Existing notes acquire history on their next change; earlier edits cannot be reconstructed. The generated architecture report uses atomic replacement without version history.
 
-In the reader, the history icon lists versions, shows a diff against the current file and restores the selected version with a revision check. MCP clients can use `historico_nota` and `restaurar_nota`. The editor/history preview supports UTF-8 Markdown up to 200 KB. URL imports retain their existing 2 MB indexing limit; larger historical payloads remain on disk but cannot be previewed in this editor.
+In the reader, the history icon lists versions, shows a diff against the current file and restores the selected version with a revision check. MCP clients can use `note_history` and `restore_note`. The editor/history preview supports UTF-8 Markdown up to 200 KB. URL imports retain their existing 2 MB indexing limit; larger historical payloads remain on disk but cannot be previewed in this editor.
 
 File deletion is permanent after confirmation: it unlinks the file and deletes its local editor backup/version history. There is no trash or deleted-file restore API. This is filesystem deletion, not secure erasure of storage or removal from Git/external backups. Legacy trash copies created before this change are not automatically purged. Replacement of two linked decision files is not a single atomic transaction.
 

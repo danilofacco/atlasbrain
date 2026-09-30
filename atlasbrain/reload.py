@@ -16,22 +16,22 @@ import threading
 import time
 from pathlib import Path
 
-PACOTE = Path(__file__).parent
+PACKAGE = Path(__file__).parent
 # ordem de dependência: quem é importado vem antes de quem importa
-MODULOS = ["localization", "mcp_api", "config", "db", "embed", "parse", "extract", "codigo", "relevancia", "search", "graph",
-           "consultas", "topologia", "inteligencia", "editor", "indexer", "registro", "importacao", "relatorio", "captura", "classify", "consolidacao", "renomear", "bench", "ferramentas"]
+MODULES = ["localization", "mcp_api", "config", "db", "embed", "parse", "extract", "code", "relevance", "search", "graph",
+           "queries", "topology", "intelligence", "editor", "indexer", "memory", "url_import", "report", "capture", "classify", "consolidation", "rename", "bench", "tools"]
 
 
-def versao(com_interface: bool = False) -> tuple:
+def version(include_interface: bool = False) -> tuple:
     """Impressão digital do código: (mtime mais recente, quantidade de arquivos)."""
-    arqs = list(PACOTE.glob("*.py")) + (list((PACOTE / "static").glob("*")) if com_interface else [])
-    return max(f.stat().st_mtime for f in arqs), len(arqs)
+    files = list(PACKAGE.glob("*.py")) + (list((PACKAGE / "static").glob("*")) if include_interface else [])
+    return max(f.stat().st_mtime for f in files), len(files)
 
 
-def compila() -> str | None:
+def syntax_error() -> str | None:
     """Erro de sintaxe no código atual do pacote (ou None). Evita reiniciar para uma versão quebrada."""
     import py_compile
-    for f in PACOTE.glob("*.py"):
+    for f in PACKAGE.glob("*.py"):
         try:
             py_compile.compile(str(f), doraise=True, cfile=None)
         except py_compile.PyCompileError as e:
@@ -39,71 +39,71 @@ def compila() -> str | None:
     return None
 
 
-def vigiar_e_reiniciar(antes_de_reiniciar, log, intervalo: float = 3.0) -> None:
+def watch_and_restart(before_restart, log, interval: float = 3.0) -> None:
     """Para processos que podem reiniciar (a interface web): quando o código muda e compila, troca o
     processo pelo novo no mesmo lugar (mesmos argumentos, sem abrir outra aba do navegador)."""
     import os
 
-    def vigia():
-        v = versao()
+    def watcher():
+        v = version()
         while True:
-            time.sleep(intervalo)
-            if versao() == v:
+            time.sleep(interval)
+            if version() == v:
                 continue
-            erro = compila()
-            if erro:
-                log(f"[atlasbrain] código novo com erro; sigo na versão atual: {erro.splitlines()[-1]}")
-                v = versao()
+            error = syntax_error()
+            if error:
+                log(f"[atlasbrain] código novo com erro; sigo na versão atual: {error.splitlines()[-1]}")
+                v = version()
                 continue
             log("[atlasbrain] código atualizado: reiniciando a interface")
-            antes_de_reiniciar()
-            args = [a for a in sys.argv[1:] if a != "--nao-abrir"] + ["--nao-abrir"]
+            before_restart()
+            args = [a for a in sys.argv[1:] if a not in ("--no-open", "--nao-abrir")] + ["--no-open"]
             os.execv(sys.executable, [sys.executable, "-m", "atlasbrain.cli", *args])
 
-    threading.Thread(target=vigia, daemon=True).start()
+    threading.Thread(target=watcher, daemon=True).start()
 
 
-def modulo(nome: str):
+def current_module(name: str):
     """Sempre a versão atual do módulo (use isto em vez de guardar funções importadas)."""
-    return importlib.import_module(f"atlasbrain.{nome}")
+    return importlib.import_module(f"atlasbrain.{name}")
 
 
-class Recarregador:
-    def __init__(self, ao_recarregar=None, intervalo: float = 3.0, log=None):
-        self.v = versao()
-        self.ao_recarregar = ao_recarregar
-        self.intervalo = intervalo
-        self.ultimo = 0.0
-        self.recargas = 0
+class ModuleReloader:
+    def __init__(self, on_reload=None, interval: float = 3.0, log=None):
+        self.v = version()
+        self.on_reload = on_reload
+        self.interval = interval
+        self.last_check = 0.0
+        self.reload_count = 0
         self.lock = threading.Lock()
         self.log = log or (lambda *_: None)
 
-    def fresco(self) -> bool:
+    def refresh(self) -> bool:
         """Recarrega se o código mudou. Barato: no máximo um stat de ~20 arquivos a cada `intervalo` s."""
-        agora = time.time()
-        if agora - self.ultimo < self.intervalo:
+        now = time.time()
+        if now - self.last_check < self.interval:
             return False
         with self.lock:
-            self.ultimo = agora
-            v = versao()
+            self.last_check = now
+            v = version()
             if v == self.v:
                 return False
             try:
-                embed_antigo = sys.modules.get("atlasbrain.embed")
-                modelo = getattr(embed_antigo, "_model", None)
-                for nome in MODULOS:
-                    m = sys.modules.get(f"atlasbrain.{nome}")
+                previous_embed_module = sys.modules.get("atlasbrain.embed")
+                model = getattr(previous_embed_module, "_model", None)
+                for name in MODULES:
+                    m = sys.modules.get(f"atlasbrain.{name}")
                     if m is not None:
                         importlib.reload(m)
-                novo_embed = sys.modules.get("atlasbrain.embed")
-                if modelo is not None and novo_embed is not None and novo_embed._model is None:
-                    novo_embed._model = modelo  # não recarrega o modelo de embeddings (~1 s) à toa
+                current_embed_module = sys.modules.get("atlasbrain.embed")
+                if model is not None and current_embed_module is not None and current_embed_module._model is None:
+                    current_embed_module._model = model  # não recarrega o modelo de embeddings (~1 s) à toa
             except Exception as e:  # código no meio de uma edição: tenta de novo na próxima chamada
                 self.log(f"[atlasbrain] recarga adiada, código com erro: {e}")
                 return False
             self.v = v
-            self.recargas += 1
-            self.log(f"[atlasbrain] código atualizado: recarreguei os módulos (recarga #{self.recargas})")
-            if self.ao_recarregar:
-                self.ao_recarregar()
+            self.reload_count += 1
+            self.log(f"[atlasbrain] código atualizado: recarreguei os módulos (recarga #{self.reload_count})")
+            if self.on_reload:
+                self.on_reload()
             return True

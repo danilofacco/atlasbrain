@@ -50,7 +50,7 @@ def test_create_collision_and_index_links(indexado):
     assert con.execute("SELECT 1 FROM tags WHERE tag='teste'").fetchone()
 
 
-@pytest.mark.parametrize('path',['../outside.md','/tmp/outside.md','src/app.py','.git/config.md','.atlasbrain/RELATORIO.md','.atlasbrain/.editor-backups/private.md','build/generated.md','.hidden.md','a//b.md'])
+@pytest.mark.parametrize('path',['../outside.md','/tmp/outside.md','src/app.py','.git/config.md','.atlasbrain/REPORT.md','.atlasbrain/.editor-backups/private.md','build/generated.md','.hidden.md','a//b.md'])
 def test_reject_paths(indexado,path):
     vault,_=indexado
     with pytest.raises(editor.EditError):

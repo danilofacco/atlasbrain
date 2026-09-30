@@ -1,4 +1,4 @@
-"""English MCP contract. Internal storage and legacy clients keep their existing identifiers."""
+"""English MCP contract. Legacy wire names and stored metadata are translated at the compatibility boundary."""
 
 # Internal name: (public name, description). The aliases remain callable, but are not advertised.
 TOOLS = {
@@ -156,3 +156,129 @@ def public_result(result):
                 return text(value)
         return value
     return json.dumps(translate(data), ensure_ascii=False)
+
+
+# The compatibility boundary keeps cached Portuguese MCP contracts callable.
+# Native Python implementations and their parameter names are English.
+LEGACY_SIGNATURES = {'buscar': ['search', {'consulta': 'query', 'limite': 'limit', 'detalhado': 'detailed'}],
+ 'ler': ['read', {'nota': 'note', 'secao': 'section', 'max_caracteres': 'max_characters'}],
+ 'ler_varios': ['read_many', {'notas': 'notes', 'max_caracteres_cada': 'max_characters_each'}],
+ 'relacionados': ['related', {'nota': 'note', 'limite': 'limit'}],
+ 'caminho': ['graph_path',
+             {'de': 'source', 'ate': 'target', 'direcao': 'direction', 'tokens': 'tokens'}],
+ 'consultar_grafo': ['query_graph',
+                     {'consulta': 'query',
+                      'modo': 'mode',
+                      'profundidade': 'depth',
+                      'tokens': 'tokens',
+                      'direcao': 'direction',
+                      'relacoes': 'relations'}],
+ 'impacto': ['impact',
+             {'alvo': 'target',
+              'profundidade': 'depth',
+              'tokens': 'tokens',
+              'incluir_inferidas': 'include_inferred'}],
+ 'mapa': ['graph_map', {'comunidades': 'communities', 'por_comunidade': 'per_community'}],
+ 'soltos': ['isolated_files', {'pasta': 'folder', 'limite': 'limit', 'offset': 'offset'}],
+ 'tags': ['tags', {'tag': 'tag', 'limite': 'limit'}],
+ 'recentes': ['recent_files', {'limite': 'limit', 'pasta': 'folder'}],
+ 'arquivos': ['find_files', {'consulta': 'query', 'limite': 'limit'}],
+ 'onde': ['symbol_location', {'simbolo': 'symbol'}],
+ 'explicar': ['explain', {'alvo': 'target'}],
+ 'relatorio': ['report', {}],
+ 'registrar_decisao': ['record_decision',
+                       {'titulo': 'title',
+                        'decisao': 'decision',
+                        'contexto': 'context',
+                        'motivo': 'reason',
+                        'alternativas': 'alternatives',
+                        'consequencias': 'consequences',
+                        'projeto': 'project',
+                        'tags': 'tags',
+                        'forcar': 'force',
+                        'substitui': 'supersedes',
+                        'operacao': 'operation_id'}],
+ 'registrar_aprendizado': ['record_learning',
+                           {'titulo': 'title',
+                            'conteudo': 'content',
+                            'projeto': 'project',
+                            'tags': 'tags',
+                            'forcar': 'force',
+                            'operacao': 'operation_id'}],
+ 'revisar_decisao': ['review_decision',
+                     {'antiga': 'previous',
+                      'acao': 'action',
+                      'motivo': 'reason',
+                      'substituta': 'replacement',
+                      'operacao': 'operation_id'}],
+ 'atualizar_nota': ['update_note',
+                    {'nota': 'note',
+                     'texto': 'text',
+                     'so_novidades': 'only_new',
+                     'revisao': 'revision',
+                     'operacao': 'operation_id'}],
+ 'decisoes': ['decisions',
+              {'projeto': 'project',
+               'limite': 'limit',
+               'incluir_substituidas': 'include_superseded'}],
+ 'importar_url': ['import_url', {'url': 'url', 'titulo': 'title', 'atualizar': 'update'}],
+ 'reindexar': ['reindex', {}],
+ 'estado_indice': ['index_status', {'limite': 'limit', 'offset': 'offset', 'tokens': 'tokens'}],
+ 'mudancas': ['changes', {'limite': 'limit', 'offset': 'offset', 'tokens': 'tokens'}],
+ 'sugerir_vinculos': ['suggest_links', {'nota': 'note', 'limite': 'limit', 'tokens': 'tokens'}],
+ 'contexto_tarefa': ['task_context',
+                     {'tarefa': 'task',
+                      'limite': 'limit',
+                      'tokens': 'tokens',
+                      'foco': 'focus',
+                      'objetivo': 'objective'}],
+ 'registrar_vinculo': ['record_link', {'de': 'source', 'para': 'target', 'motivo': 'reason'}],
+ 'editar_secao': ['edit_section',
+                  {'nota': 'note',
+                   'secao': 'section',
+                   'texto': 'text',
+                   'revisao': 'revision',
+                   'operacao': 'operation_id'}],
+ 'historico_nota': ['note_history', {'nota': 'note', 'versao': 'version'}],
+ 'restaurar_nota': ['restore_note', {'nota': 'note', 'versao': 'version', 'revisao': 'revision'}],
+ 'criar_nota': ['create_note',
+                {'titulo': 'title',
+                 'conteudo': 'content',
+                 'pasta': 'folder',
+                 'tags': 'tags',
+                 'operacao': 'operation_id'}],
+ 'anexar': ['append_note',
+            {'nota': 'note', 'texto': 'text', 'revisao': 'revision', 'operacao': 'operation_id'}],
+ 'revisar_memoria': ['review_memory', {'limite': 'limit'}],
+ 'planejar_compactacao': ['plan_consolidation', {'grupo': 'group'}],
+ 'compactar_memoria': ['consolidate_memory',
+                       {'grupo': 'group', 'resumo': 'summary', 'revisoes': 'revisions'}],
+ 'renomear_nota': ['rename_note',
+                   {'nota': 'note', 'destino': 'destination', 'revisao_plano': 'plan_revision'}],
+ 'operacoes_pendentes': ['pending_operations', {'operacao': 'operation_id'}],
+ 'recuperar_operacao': ['recover_operation',
+                        {'operacao': 'operation_id',
+                         'acao': 'action',
+                         'revisao_recuperacao': 'recovery_revision'}],
+ 'fila_sinteses': ['summary_queue', {}],
+ 'atualizar_sinteses': ['refresh_summaries', {}],
+ 'avaliar_busca': ['evaluate_search', {'perguntas': 'questions', 'tokens': 'tokens'}],
+ 'qualidade_captura': ['capture_quality', {}]}
+
+
+def legacy_function(module, name):
+    import inspect
+    import functools
+    native_name, parameters = LEGACY_SIGNATURES[name]
+    native = getattr(module, native_name)
+    reverse = {current: previous for previous, current in parameters.items()}
+    @functools.wraps(native)
+    def invoke(ctx, **kwargs):
+        return native(ctx, **{parameters.get(key, key): value for key, value in kwargs.items()})
+    signature = inspect.signature(native)
+    invoke.__signature__ = signature.replace(parameters=[
+        parameter.replace(name=reverse.get(parameter.name, parameter.name))
+        for parameter in signature.parameters.values()
+    ])
+    invoke.__annotations__ = {reverse.get(key, key): value for key, value in native.__annotations__.items()}
+    return invoke

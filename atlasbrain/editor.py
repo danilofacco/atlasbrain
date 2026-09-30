@@ -38,7 +38,7 @@ def _file(vault, path, *, markdown_only=True):
         raise EditError(_text('Arquivos ocultos e pastas geradas não podem ser editados'))
     if any(p.startswith('.') and p != BRAIN for p in relative.parts[:-1]):
         raise EditError(_text('Pastas internas não podem ser editadas'))
-    if tuple(p.lower() for p in relative.parts) == (BRAIN.lower(), 'relatorio.md'):
+    if len(relative.parts) == 2 and relative.parts[0].lower() == BRAIN.lower() and relative.name.lower() in ('report.md', 'relatorio.md'):
         raise EditError(_text('O relatório é gerado automaticamente'))
     file = vault.resolve()
     for part in relative.parts:

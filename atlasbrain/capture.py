@@ -18,11 +18,11 @@ import time
 from pathlib import Path
 
 from .config import data_dir
-from .registro import registrar_aprendizado, registrar_decisao
+from .memory import record_learning, record_decision
 
-MIN_NOVOS = int(os.environ.get("ATLASBRAIN_CAPTURA_MIN", "4000"))  # caracteres de conversa nova
-INTERVALO = int(os.environ.get("ATLASBRAIN_CAPTURA_INTERVALO", "600"))  # segundos entre capturas da mesma sessão
-JANELA = 40_000
+MIN_NEW = int(os.environ.get("ATLASBRAIN_CAPTURA_MIN", "4000"))  # caracteres de conversa nova
+INTERVAL = int(os.environ.get("ATLASBRAIN_CAPTURA_INTERVALO", "600"))  # segundos entre capturas da mesma sessão
+WINDOW = 40_000
 
 PROMPT = """Você é o curador do "segundo cérebro" do usuário: uma pasta de notas markdown.
 Leia o trecho de conversa abaixo (entre um usuário e um assistente de IA de programação) e extraia
@@ -36,9 +36,9 @@ SÓ o que merece virar nota permanente:
 
 Seja exigente: numa conversa comum o normal é 0 a 2 itens. Na dúvida, deixe de fora.
 Escreva em português, com frases completas e específicas (nomes, números, o porquê).
-Data da conversa: {hoje}. Converta datas relativas ("amanhã", "semana passada") em datas absolutas.
-Notas que já existem no cérebro (não repita): {existentes}
-Decisões ATIVAS no cérebro: {ativas}
+Data da conversa: {today}. Converta datas relativas ("amanhã", "semana passada") em datas absolutas.
+Notas que já existem no cérebro (não repita): {existing}
+Decisões ATIVAS no cérebro: {active_decisions}
 Se uma decisão nova REVOGA ou MUDA uma dessas ativas, preencha "substitui" com o título exato dela.
 
 Responda APENAS com JSON válido, sem markdown:
@@ -53,16 +53,16 @@ durabilidade: por quanto tempo continua verdade (1 = só nesta sessão, 5 = mese
 Projeto/pasta de trabalho da conversa: {cwd}
 
 === CONVERSA ===
-{conversa}
+{conversation}
 """
 
 
 def _log(vault: Path, msg: str) -> None:
-    with open(data_dir(vault) / "captura.log", "a", encoding="utf-8") as f:
+    with open(data_dir(vault) / "capture.log", "a", encoding="utf-8") as f:
         f.write(f"{dt.datetime.now().isoformat(timespec='seconds')} {msg}\n")
 
 
-def _textos(item, role=None):
+def _texts(item, role=None):
     """Extrai (papel, texto) de uma linha de transcript do Claude Code ou do Codex, ignorando
     saídas de ferramenta (ruído) e mantendo só o que usuário e assistente disseram."""
     if isinstance(item, dict):
@@ -76,16 +76,16 @@ def _textos(item, role=None):
             if k in ("text", "toolUseResult"):
                 continue
             if isinstance(v, (dict, list)):
-                yield from _textos(v, r)
+                yield from _texts(v, r)
             elif k == "content" and isinstance(v, str) and r in ("user", "assistant"):
                 yield r, v
     elif isinstance(item, list):
         for x in item:
-            yield from _textos(x, role)
+            yield from _texts(x, role)
 
 
-def ler_conversa(transcript: Path) -> str:
-    partes = []
+def read_transcript(transcript: Path) -> str:
+    parts = []
     for line in transcript.read_text(encoding="utf-8", errors="replace").splitlines():
         try:
             obj = json.loads(line)
@@ -93,47 +93,47 @@ def ler_conversa(transcript: Path) -> str:
             continue
         if obj.get("isMeta") or obj.get("isSidechain"):
             continue
-        for role, text in _textos(obj):
+        for role, text in _texts(obj):
             text = text.strip()
             if not text or text.startswith("<"):  # system-reminder, environment_context, comandos…
                 continue
-            partes.append(f"[{'USUÁRIO' if role == 'user' else 'ASSISTENTE'}] {text}")
-    return "\n\n".join(partes)
+            parts.append(f"[{'USUÁRIO' if role == 'user' else 'ASSISTENTE'}] {text}")
+    return "\n\n".join(parts)
 
 
-def _json_de(texto: str) -> dict:
-    texto = texto[texto.find("{"): texto.rfind("}") + 1]
-    return json.loads(texto)
+def _json_from_text(text: str) -> dict:
+    text = text[text.find("{"): text.rfind("}") + 1]
+    return json.loads(text)
 
 
-def _extrair(prompt: str) -> dict:
+def _extract(prompt: str) -> dict:
     """Usa o CLI de IA que estiver logado: Claude (Haiku) primeiro, Codex (modelo leve) depois.
     ATLASBRAIN_CAPTURA_MOTOR=claude|codex força um deles."""
     env = {**os.environ, "ATLASBRAIN_CAPTURANDO": "1"}
-    motor = os.environ.get("ATLASBRAIN_CAPTURA_MOTOR", "auto")
-    erros = []
-    if motor in ("auto", "claude"):
+    engine = os.environ.get("ATLASBRAIN_CAPTURA_MOTOR", "auto")
+    errors = []
+    if engine in ("auto", "claude"):
         try:
             r = subprocess.run(["claude", "-p", "--model", os.environ.get("ATLASBRAIN_CAPTURA_MODELO_CLAUDE", "haiku"),
                                 "--strict-mcp-config", "--output-format", "text"],
                                input=prompt, capture_output=True, text=True, timeout=90, env=env)
-            return _json_de(r.stdout)
+            return _json_from_text(r.stdout)
         except Exception as e:
-            erros.append(f"claude: {e}")
-    if motor in ("auto", "codex"):
+            errors.append(f"claude: {e}")
+    if engine in ("auto", "codex"):
         try:
             r = subprocess.run(["codex", "exec", "--skip-git-repo-check", "--ephemeral", "--sandbox", "read-only",
                                 "-m", os.environ.get("ATLASBRAIN_CAPTURA_MODELO_CODEX", "gpt-5.6-luna"),
                                 "-c", "model_reasoning_effort=low", "-"],
                                input=prompt, capture_output=True, text=True, timeout=240, env=env,
                                cwd=str(Path.home()))
-            return _json_de(r.stdout)
+            return _json_from_text(r.stdout)
         except Exception as e:
-            erros.append(f"codex: {e}")
-    raise RuntimeError("; ".join(erros) or "nenhum motor disponível")
+            errors.append(f"codex: {e}")
+    raise RuntimeError("; ".join(errors) or "nenhum motor disponível")
 
 
-def hook(vault_arg: str | None = None, evento: str | None = None) -> None:
+def hook(vault_arg: str | None = None, event: str | None = None) -> None:
     """Chamado pelo hook: lê o JSON do stdin e dispara o worker desacoplado. Nunca bloqueia nem falha.
     Sem --vault, o cérebro é o do projeto onde a sessão está (cwd do hook)."""
     if os.environ.get("ATLASBRAIN_CAPTURA", "1") == "0" or os.environ.get("ATLASBRAIN_CAPTURANDO"):
@@ -147,33 +147,33 @@ def hook(vault_arg: str | None = None, evento: str | None = None) -> None:
     transcript = data.get("transcript_path")
     if not transcript or not Path(transcript).exists():
         return
-    evento = evento or data.get("hook_event_name") or "Stop"
+    event = event or data.get("hook_event_name") or "Stop"
     args = [sys.executable, "-m", "atlasbrain.cli", "capturar", "--vault", str(vault), "--worker",
             "--transcript", transcript, "--sessao", str(data.get("session_id", transcript)),
-            "--cwd", str(data.get("cwd", "")), "--evento", evento]
+            "--cwd", str(data.get("cwd", "")), "--evento", event]
     subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                      start_new_session=True, env={**os.environ, "ATLASBRAIN_CAPTURANDO": "1"})
 
 
-def _rotulo(tipo: str, titulo: str, res: dict) -> str:
+def _label(kind: str, title: str, res: dict) -> str:
     if res.get("criada"):
         extra = f" (substituiu {res['substituiu']})" if res.get("substituiu") else ""
-        return f"{tipo} ✓ {res['path']} [rel {res.get('relevancia', 0):.2f}]{extra}"
+        return f"{kind} ✓ {res['path']} [rel {res.get('relevancia', 0):.2f}]{extra}"
     if res.get("atualizada"):
-        return f"{tipo} ↻ atualizou {res['path']} (+{len(res['acrescentado'])} frase(s))"
+        return f"{kind} ↻ atualizou {res['path']} (+{len(res['acrescentado'])} frase(s))"
     if res.get("path") is None and "relevância" in res.get("motivo", ""):
-        return f"{tipo} ✗ recusada “{titulo}”: {res['motivo']}"
-    return f"{tipo} = {res.get('path')} ({res.get('motivo', 'sem mudança')})"
+        return f"{kind} ✗ recusada “{title}”: {res['motivo']}"
+    return f"{kind} = {res.get('path')} ({res.get('motivo', 'sem mudança')})"
 
 
-def worker(vault: Path, transcript: Path, sessao: str, cwd: str, evento: str) -> None:
+def worker(vault: Path, transcript: Path, session_id: str, cwd: str, event: str) -> None:
     # One extraction per vault; do not hold the Markdown writer lock during model calls.
     with open(data_dir(vault)/'capture.lock','a') as lock:
         try:
             fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError:
             return
-        _worker(vault,transcript,sessao,cwd,evento)
+        _worker(vault,transcript,session_id,cwd,event)
 
 
 def quality(vault):
@@ -198,83 +198,84 @@ def _capture_result(vault, payload, action):
     return result
 
 
-def _worker(vault: Path, transcript: Path, sessao: str, cwd: str, evento: str) -> None:
-    estado_f = data_dir(vault) / "captura.json"
+def _worker(vault: Path, transcript: Path, session_id: str, cwd: str, event: str) -> None:
+    file_state = data_dir(vault) / "capture.json"
+    previous_state = file_state if file_state.exists() else file_state.with_name("captura.json")
     try:
-        estado = json.loads(estado_f.read_text())
+        state = json.loads(previous_state.read_text())
     except Exception:
-        estado = {}
-    s = estado.get(sessao, {"offset": 0, "quando": 0})
-    conversa = ler_conversa(transcript)
-    novos = conversa[s["offset"]:]
-    final = evento == "SessionEnd"
-    if len(novos) < (800 if final else MIN_NOVOS):
+        state = {}
+    s = state.get(session_id, {"offset": 0, "quando": 0})
+    conversation = read_transcript(transcript)
+    new_items = conversation[s["offset"]:]
+    final = event == "SessionEnd"
+    if len(new_items) < (800 if final else MIN_NEW):
         return
-    if not final and time.time() - s["quando"] < INTERVALO:
+    if not final and time.time() - s["quando"] < INTERVAL:
         return
 
     from .db import connect
 
     con = connect(vault)
-    existentes = [r[0] for r in con.execute(
+    existing = [r[0] for r in con.execute(
         "SELECT title FROM notes WHERE json_extract(frontmatter,'$.tipo') IN ('decisao','aprendizado') ORDER BY mtime DESC LIMIT 60")]
-    ativas = [r[0] for r in con.execute(
+    active_decisions = [r[0] for r in con.execute(
         "SELECT title FROM notes WHERE json_extract(frontmatter, '$.tipo')='decisao' "
         "AND coalesce(json_extract(frontmatter, '$.status'), 'ativa')='ativa' ORDER BY mtime DESC LIMIT 40")]
     con.close()
-    prompt = PROMPT.format(existentes="; ".join(existentes) or "nenhuma", ativas="; ".join(ativas) or "nenhuma",
-                           hoje=dt.date.today().isoformat(), cwd=cwd or "?", conversa=novos[-JANELA:])
+    prompt = PROMPT.format(existing="; ".join(existing) or "nenhuma", active_decisions="; ".join(active_decisions) or "nenhuma",
+                           today=dt.date.today().isoformat(), cwd=cwd or "?", conversation=new_items[-WINDOW:])
     try:
-        itens = _extrair(prompt)
+        items = _extract(prompt)
     except Exception as e:
-        _log(vault, f"falha ao extrair ({sessao[:8]}): {e}")
+        _log(vault, f"falha ao extrair ({session_id[:8]}): {e}")
         return
 
-    origem = f"{'Codex' if '.codex' in str(transcript) else 'Claude Code'} · {Path(cwd).name if cwd else '?'}"
-    feitos = []
-    for d in itens.get("decisoes") or []:
+    origin = f"{'Codex' if '.codex' in str(transcript) else 'Claude Code'} · {Path(cwd).name if cwd else '?'}"
+    completed = []
+    for d in items.get("decisoes") or []:
         if d.get("titulo") and d.get("decisao"):
-            res = _capture_result(vault, ['decisao',sessao,d], lambda: registrar_decisao(vault, d["titulo"], d["decisao"], d.get("contexto", ""), d.get("motivo", ""),
+            res = _capture_result(vault, ['decisao',session_id,d], lambda: record_decision(vault, d["titulo"], d["decisao"], d.get("contexto", ""), d.get("motivo", ""),
                                     d.get("alternativas"), d.get("consequencias", ""), d.get("projeto"),
-                                    d.get("tags"), origem, substitui=d.get("substitui") or None, sessao=sessao,
-                                    modo="automatico", llm=d))
-            feitos.append(_rotulo("decisão", d["titulo"], res))
-    for a in itens.get("aprendizados") or []:
+                                    d.get("tags"), origin, supersedes=d.get("substitui") or None, session_id=session_id,
+                                    mode="automatico", llm=d))
+            completed.append(_label("decisão", d["titulo"], res))
+    for a in items.get("aprendizados") or []:
         if a.get("titulo") and a.get("conteudo"):
-            res = _capture_result(vault, ['aprendizado',sessao,a], lambda: registrar_aprendizado(vault, a["titulo"], a["conteudo"], a.get("projeto"), a.get("tags"), origem,
-                                        sessao=sessao, modo="automatico", llm=a))
-            feitos.append(_rotulo("aprendizado", a["titulo"], res))
+            res = _capture_result(vault, ['aprendizado',session_id,a], lambda: record_learning(vault, a["titulo"], a["conteudo"], a.get("projeto"), a.get("tags"), origin,
+                                        session_id=session_id, mode="automatico", llm=a))
+            completed.append(_label("aprendizado", a["titulo"], res))
 
-    estado[sessao] = {"offset": len(conversa), "quando": time.time()}
-    editor._atomic(estado_f,json.dumps(estado).encode(),mode=0o600)
-    _log(vault, f"{evento} {sessao[:8]} ({len(novos)} chars novos): " + ("; ".join(feitos) or "nada relevante"))
+    state[session_id] = {"offset": len(conversation), "quando": time.time()}
+    editor._atomic(file_state,json.dumps(state).encode(),mode=0o600)
+    _log(vault, f"{event} {session_id[:8]} ({len(new_items)} chars novos): " + ("; ".join(completed) or "nada relevante"))
 
 
-def briefing(vault: Path, cwd: str = "", limite: int = 8) -> str:
+def briefing(vault: Path, cwd: str = "", limit: int = 8) -> str:
     """Texto curto injetado no início de cada sessão do Claude/Codex: decisões ativas (primeiro as do
     projeto atual) e aprendizados recentes. Só lê o SQLite, então leva milissegundos."""
     from .db import connect
 
     con = connect(vault)
-    projeto = Path(cwd).name.lower() if cwd else ""
+    project = Path(cwd).name.lower() if cwd else ""
     rows = con.execute(
         "SELECT title, path, json_extract(frontmatter,'$.tipo') tipo, json_extract(frontmatter,'$.data') data, "
         "coalesce(json_extract(frontmatter,'$.projeto'),'') projeto, coalesce(json_extract(frontmatter,'$.status'),'ativa') status "
         "FROM notes WHERE json_extract(frontmatter,'$.tipo') IN ('decisao','aprendizado') ORDER BY data DESC, mtime DESC LIMIT 200"
     ).fetchall()
     con.close()
-    dec = [r for r in rows if r["tipo"] == "decisao" and r["status"] == "ativa"]
-    apr = [r for r in rows if r["tipo"] == "aprendizado"]
-    daqui = lambda r: projeto and projeto in r["projeto"].lower()
-    dec.sort(key=lambda r: not daqui(r))
-    apr.sort(key=lambda r: not daqui(r))
+    decision_notes = [r for r in rows if r["tipo"] == "decisao" and r["status"] == "ativa"]
+    learning_notes = [r for r in rows if r["tipo"] == "aprendizado"]
+    remaining = lambda r: project and project in r["projeto"].lower()
+    decision_notes.sort(key=lambda r: not remaining(r))
+    learning_notes.sort(key=lambda r: not remaining(r))
     fmt = lambda r: f"- {r['data']} {r['title']}" + (f" ({r['projeto'].strip('[]')})" if r["projeto"] else "")
     out = ["[Segundo cérebro] Contexto registrado em conversas anteriores (use o MCP atlasbrain: "
            "`ler` para detalhes, `buscar` para o resto; registre decisões novas com `registrar_decisao`)."]
-    if dec:
-        out.append("Decisões ativas:\n" + "\n".join(fmt(r) for r in dec[:limite]))
-    if apr:
-        out.append("Aprendizados recentes:\n" + "\n".join(fmt(r) for r in apr[:max(3, limite // 2)]))
-    if not dec and not apr:
+    if decision_notes:
+        out.append("Decisões ativas:\n" + "\n".join(fmt(r) for r in decision_notes[:limit]))
+    if learning_notes:
+        out.append("Aprendizados recentes:\n" + "\n".join(fmt(r) for r in learning_notes[:max(3, limit // 2)]))
+    if not decision_notes and not learning_notes:
         out.append("Ainda não há decisões registradas: registre as importantes que surgirem nesta conversa.")
     return "\n".join(out)[:4000]

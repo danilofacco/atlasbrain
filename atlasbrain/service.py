@@ -155,11 +155,11 @@ def create_app(vault, identity, auto_index=True):
     from starlette.requests import Request as WebRequest
     from starlette.responses import JSONResponse, Response
     from starlette.routing import Route
-    from .web import criar_servidor
+    from .web import create_server
     from .mcp_server import build_server
     import inspect
 
-    handler = criar_servidor(vault, auto_index=False, handler_only=True)
+    handler = create_server(vault, auto_index=False, handler_only=True)
     apps = {}
     mutex = asyncio.Lock()
     done = threading.Event()
@@ -189,7 +189,7 @@ def create_app(vault, identity, auto_index=True):
                 try:
                     result=queue.step(Path(brain['path']))
                     if result is not None and not result.get('skipped') and not result.get('erro'):
-                        from .consolidacao import refresh_queue
+                        from .consolidation import refresh_queue
                         refresh_queue(Path(brain['path']),execute=True)
                 except Exception as e:
                     _log(f'[atlasbrain] indexing failed: {e}')
