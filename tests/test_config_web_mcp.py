@@ -137,17 +137,17 @@ def test_mcp_stdio(indexado):
                 exp = (await s.call_tool("explicar", {"alvo": "src/app.py"})).content[0].text
                 graph = (await s.call_tool("consultar_grafo", {"consulta": "src/app.py::main", "relacoes": ["chama"]})).content[0].text
                 impact = (await s.call_tool("impacto", {"alvo": "src/util.py::soma"})).content[0].text
-                graph_tool = next(t for t in tools if t.name == "consultar_grafo")
+                graph_tool = next(t for t in tools if t.name == "query_graph")
                 schema = getattr(graph_tool, "input_schema", None) or getattr(graph_tool, "inputSchema")
                 return leitura, onde, exp, graph, impact, schema
 
     leitura, onde, exp, graph, impact, schema = asyncio.run(rodar())
-    assert {"buscar", "arquivos", "onde", "explicar", "consultar_grafo", "impacto"} <= leitura and "registrar_decisao" not in leitura
+    assert {"search", "find_files", "symbol_location", "explain", "query_graph", "impact"} <= leitura and "record_decision" not in leitura
     assert "src/util.py" in onde and "src/app.py" in onde  # definição e uso
     assert "src/util.py" in exp and "EXTRACTED" in exp
     assert "src/util.py" in graph and "EXTRACTED" in graph
     assert "src/app.py" in impact and "evidência L9" in impact
-    assert {"tokens", "modo", "direcao", "relacoes"} <= set(schema["properties"])
+    assert {"tokens", "mode", "direction", "relations"} <= set(schema["properties"])
 
 
 def test_web_intelligence_and_filters(servidor):
@@ -256,3 +256,15 @@ def test_trash_routes_are_removed(servidor):
     headers = {'X-atlasbrain':'1'}
     assert req(url+'/api/lixeira', headers=headers)[0] == 404
     assert req(url+'/api/lixeira/restaurar', 'POST', {'id':'trash-old'}, headers)[0] == 404
+
+
+def test_web_custom_graph_page_size_validation(servidor):
+    url, _ = servidor
+    for raw, expected in ((None, 500), (375, 375), (9000, 800), (-1, 1)):
+        route = "/api/graph" + (f"?limite={raw}" if raw is not None else "")
+        status, result = req(url + route)
+        assert status == 200 and result["limite"] == expected
+        assert len(result["nodes"]) <= expected
+    for query in ("limite=oops", "limite=500.5", "pagina=oops"):
+        status, result = req(url + "/api/graph?" + query)
+        assert status == 400 and "integers" in result["erro"]

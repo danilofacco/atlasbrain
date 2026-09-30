@@ -176,7 +176,7 @@ def neighbors(con, note_id: int) -> dict:
     return out
 
 
-def vista(G: nx.Graph, prefixo: str = "", limite: int = 300, max_arestas: int = 2500,
+def vista(G: nx.Graph, prefixo: str = "", limite: int = 500, max_arestas: int = 2500,
           pagina: int = 0, foco: str = "") -> dict:
     """Exibe arquivos reais em páginas limitadas e distribuídas entre as áreas do projeto."""
     prefixo = prefixo.strip("/")
@@ -225,7 +225,7 @@ def vista(G: nx.Graph, prefixo: str = "", limite: int = 300, max_arestas: int = 
     maxw = max((e[2]["weight"] for e in arestas), default=1) or 1
     return {
         "modo": "arquivos", "prefixo": prefixo, "total": total,
-        "pagina": pagina, "paginas": paginas, "itens": itens, "inicio": inicio, "fim": fim,
+        "limite": limite, "pagina": pagina, "paginas": paginas, "itens": itens, "inicio": inicio, "fim": fim,
         "visiveis": V.number_of_nodes(),
         "ocultos": max(0, V.number_of_edges() - len(arestas)),
         "nodes": [{"i": ids[n], "id": str(n), "label": d["label"], "path": d.get("path"), "kind": d["kind"],

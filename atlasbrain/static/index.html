@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -66,6 +66,8 @@ kbd{font:11px var(--mono);padding:2px 6px;border-radius:5px;border:1px solid var
 .graphcontrols{position:fixed;top:80px;left:20px;z-index:10;width:300px;max-width:calc(100vw - 40px);max-height:calc(100dvh - 240px);overflow:auto;padding:12px;box-sizing:border-box;border:1px solid var(--line);border-radius:12px;background:var(--bg-subtle)}
 .graphcontrols:not([open]){width:40px;height:40px;padding:0;overflow:visible}.graphcontrols>summary{list-style:none;display:flex;align-items:center;justify-content:center;width:38px;height:38px;cursor:pointer;color:var(--fg-muted);border-radius:10px}.graphcontrols>summary::-webkit-details-marker{display:none}.graphcontrols>summary svg{width:19px;height:19px}.graphcontrols>summary:hover{color:var(--brand-fg)}.graphcontrols>summary:focus-visible{outline:2px solid var(--brand);outline-offset:2px}.graphcontrols[open]>summary{margin:-12px 0 10px -12px;color:var(--brand-fg)}
 .graphcontrols .graphfilters{margin:12px 0 0}.graphcontrols .filterfields{display:grid;grid-template-columns:1fr}.graphcontrols .filterfields input,.graphcontrols .filterfields select{width:100%;max-width:none;box-sizing:border-box}
+.pulse-toggle{position:fixed;top:80px;left:70px;z-index:10;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:12px;background:var(--bg-subtle);color:var(--fg-subtle);cursor:pointer}.pulse-toggle svg{width:19px;height:19px}.pulse-toggle[aria-pressed=true]{color:var(--brand-fg);border-color:var(--brand)}.language-select{padding:5px 7px;border:1px solid var(--line);border-radius:8px;background:var(--bg-subtle);color:var(--fg-muted);font:12px var(--font)}
+.graph-page-size{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;color:var(--fg-muted);font-size:12px}.graph-page-size input{width:84px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--fg);font:inherit}.graph-page-help{margin:5px 0 0;color:var(--fg-subtle);font-size:11px}
 .hud{position:fixed;left:20px;bottom:20px;z-index:10;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 .crumbs{display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:13px;color:var(--fg-subtle)}
 .crumbs button{border:0;background:transparent;color:var(--fg-muted);cursor:pointer;padding:6px 6px;border-radius:6px;min-height:32px;font:inherit}
@@ -228,7 +230,7 @@ kbd{font:11px var(--mono);padding:2px 6px;border-radius:5px;border:1px solid var
 @media (max-width:900px){.searchbtn{min-width:0}.searchbtn span,.searchbtn kbd{display:none}.legend{display:none}.vault{max-width:150px}}
 @media (max-width:767px){
   .top{gap:8px;padding:0 10px;height:68px}.mark{display:flex}.mark b{display:none}.vault{max-width:100px}.tabs{margin-left:0}.tab{padding:6px 10px;min-height:44px}.tab .n{display:none}
-  .searchbtn{min-height:44px;min-width:44px;justify-content:center}.chip{min-height:44px}.crumbs button{min-height:44px}.zoom button{width:44px;height:44px}.vault{max-width:96px;min-height:44px;padding-left:10px}.tab{padding:6px 7px;font-size:12.5px}.tabs{flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}.spacer{min-width:0}
+  .language-select{max-width:65px}.new-note span{display:none}.searchbtn{min-height:44px;min-width:44px;justify-content:center}.chip{min-height:44px}.crumbs button{min-height:44px}.zoom button{width:44px;height:44px}.vault{max-width:96px;min-height:44px;padding-left:10px}.tab{padding:6px 7px;font-size:12.5px}.tabs{flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}.spacer{min-width:0}
   .graphcontrols{left:12px;top:80px;width:260px;max-height:40dvh}
   .hud{left:12px;bottom:36px;right:70px}.zoom{right:12px;bottom:36px}
   .list{padding:84px 16px 80px}.list-inner{margin:0}
@@ -244,192 +246,921 @@ kbd{font:11px var(--mono);padding:2px 6px;border-radius:5px;border:1px solid var
 <div class="scene" aria-hidden="true"></div>
 
 <header class="top">
-  <a class="mark" href="#grafo" aria-label="AtlasBrain — início">
+  <a class="mark" href="#grafo" aria-label="AtlasBrain — home">
     <svg viewBox="0 0 64 64" aria-hidden="true"><g id="icon" fill="none" stroke="#1EB880" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 51 32 13 52 51M21 35h22"/><g fill="#081011"><circle cx="32" cy="13" r="6"/><circle cx="12" cy="51" r="6"/><circle cx="52" cy="51" r="6"/></g></g></svg>
     <b><span>Atlas</span>Brain</b>
   </a>
-  <label class="sr" for="vault">Projeto</label>
-  <select class="vault" id="vault" aria-label="Trocar de projeto"><option>…</option></select>
-  <nav class="tabs" role="tablist" aria-label="Vistas">
-    <button class="tab" role="tab" data-view="grafo" aria-selected="true">Grafo</button>
-    <button class="tab" role="tab" data-view="decisoes" aria-selected="false">Decisões <span class="n" id="nDec"></span></button>
-    <button class="tab" role="tab" data-view="mudancas" aria-selected="false">Mudanças</button>
-    <button class="tab" role="tab" data-view="recentes" aria-selected="false">Recentes</button>
-    <button class="tab" role="tab" data-view="soltos" aria-selected="false">Soltos <span class="n" id="nSoltos"></span></button>
+  <label class="sr" for="vault">Project</label>
+  <select class="vault" id="vault" aria-label="Switch project"><option>…</option></select>
+  <nav class="tabs" role="tablist" aria-label="Views">
+    <button class="tab" role="tab" data-view="grafo" aria-selected="true">Graph</button>
+    <button class="tab" role="tab" data-view="decisoes" aria-selected="false">Decisions <span class="n" id="nDec"></span></button>
+    <button class="tab" role="tab" data-view="mudancas" aria-selected="false">Changes</button>
+    <button class="tab" role="tab" data-view="recentes" aria-selected="false">Recent</button>
+    <button class="tab" role="tab" data-view="soltos" aria-selected="false">Isolated <span class="n" id="nSoltos"></span></button>
   </nav>
   <div class="spacer"></div>
-  <button class="chip new-note" id="newNote" aria-label="Nova nota (⌘/Ctrl+N)" title="Nova nota (⌘/Ctrl+N)">+ <span>Nova nota</span></button>
-  <button class="searchbtn" id="openPal" aria-label="Buscar (⌘K)">
+  <select id="language" class="language-select" aria-label="Language"><option value="en">EN</option><option value="pt-BR">PT-BR</option></select>
+  <button class="chip new-note" id="newNote" aria-label="New note (⌘/Ctrl+N)" title="New note (⌘/Ctrl+N)">+ <span>New note</span></button>
+  <button class="searchbtn" id="openPal" aria-label="Search (⌘K)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-    <span>Buscar por palavra ou ideia</span><kbd>⌘K</kbd>
+    <span>Search by keyword or idea</span><kbd>⌘K</kbd>
   </button>
 </header>
 
-<section class="view" id="v-grafo" aria-label="Grafo de conhecimento">
-  <canvas id="cv" aria-label="Grafo interativo das notas. Use a busca para navegar pelo teclado."></canvas>
+<section class="view" id="v-grafo" aria-label="Knowledge graph">
+  <canvas id="cv" aria-label="Interactive note graph. Use search to navigate with the keyboard."></canvas>
   <div class="status" id="gstatus" role="status"></div>
-  <details class="graphcontrols" aria-label="Controles do grafo">
-    <summary title="Filtros do grafo" aria-label="Filtros do grafo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--bg-subtle)"/><circle cx="15" cy="17" r="3" fill="var(--bg-subtle)"/></svg></summary>
-    <div class="layers" role="group" aria-label="Camadas do grafo">
-      <button class="chip" data-layer="similar" aria-pressed="true"><i></i>Semelhança</button>
+  <details class="graphcontrols" aria-label="Graph controls">
+    <summary title="Graph filters" aria-label="Graph filters"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--bg-subtle)"/><circle cx="15" cy="17" r="3" fill="var(--bg-subtle)"/></svg></summary>
+    <div class="layers" role="group" aria-label="Graph layers">
+      <button class="chip" data-layer="similar" aria-pressed="true"><i></i>Similarity</button>
       <button class="chip" data-layer="tags" aria-pressed="false"><i></i>Tags</button>
-      <button class="chip" data-layer="ghosts" aria-pressed="true"><i></i>Notas a criar</button>
-      <button class="chip" data-layer="orphans" aria-pressed="true"><i></i>Soltas</button>
-      <button class="chip" data-layer="changes" aria-pressed="false" title="Destacar em esmeralda os arquivos adicionados ou alterados desde a indexação anterior; soltos continuam vermelhos"><i></i>Alterados recentes</button>
+      <button class="chip" data-layer="ghosts" aria-pressed="true"><i></i>Pending notes</button>
+      <button class="chip" data-layer="orphans" aria-pressed="true"><i></i>Isolated nodes</button>
+      <button class="chip" data-layer="changes" aria-pressed="false" title="Highlight files added or changed since the previous index in emerald; isolated files stay red"><i></i>Recently changed</button>
     </div>
-    <details class="graphfilters"><summary>Filtros do grafo</summary><div class="filterfields">
-      <input id="filterFolder" aria-label="Filtrar por pasta" placeholder="Pasta, ex.: src">
-      <select id="filterExt" aria-label="Filtrar por linguagem"><option value="">Todas as linguagens</option></select>
-      <select id="filterKind" aria-label="Filtrar por tipo"><option value="">Todos os tipos</option><option value="codigo">Código</option><option value="nota">Notas</option><option value="documento">Documentos</option></select>
-      <select id="filterOrigin" aria-label="Procedência dos vínculos"><option value="">Todas as procedências</option><option value="EXTRACTED">Extraídos do código</option><option value="INFERRED">Inferidos</option><option value="DECLARED">Declarados</option></select>
-      <select id="filterRelation" aria-label="Tipo de vínculo"><option value="">Todos os vínculos</option><option value="importa">Importa</option><option value="chama">Chama</option><option value="similar">Semelhança</option><option value="wikilink">Link de nota</option><option value="manual">Declarado</option></select>
-      <button class="chip" id="clearFilters">Limpar filtros</button>
+    <label class="graph-page-size" for="graphPageSize">Nodes per page<input id="graphPageSize" type="number" min="50" max="800" step="1" value="500" aria-describedby="graphPageHelp"></label>
+    <p class="graph-page-help" id="graphPageHelp">50–800 · saved for this project</p>
+    <details class="graphfilters"><summary>Graph filters</summary><div class="filterfields">
+      <input id="filterFolder" aria-label="Filter by folder" placeholder="Folder, e.g. src">
+      <select id="filterExt" aria-label="Filter by language"><option value="">All languages</option></select>
+      <select id="filterKind" aria-label="Filter by type"><option value="">All types</option><option value="codigo">Code</option><option value="nota">Notes</option><option value="documento">Documents</option></select>
+      <select id="filterOrigin" aria-label="Link provenance"><option value="">All provenance</option><option value="EXTRACTED">Extracted from code</option><option value="INFERRED">Inferred</option><option value="DECLARED">Declared links</option></select>
+      <select id="filterRelation" aria-label="Link type"><option value="">All links</option><option value="importa">Imports</option><option value="chama">Calls</option><option value="similar">Similarity</option><option value="wikilink">Note link</option><option value="manual">Declared</option></select>
+      <button class="chip" id="clearFilters">Clear filters</button>
     </div></details>
   </details>
+  <button class="pulse-toggle" id="pulseToggle" aria-label="Cortex pulse" title="Toggle cortex pulse" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h5l3-8 4 16 3-8h5"/></svg></button>
   <div class="hud">
-    <nav class="crumbs" id="crumbs" aria-label="Pasta atual"></nav>
-    <div class="layers" role="group" aria-label="Organização do grafo">
-      <span id="graphhint" style="font-size:11px;color:var(--fg-subtle)">Clique para selecionar · duplo clique para abrir</span>
+    <nav class="crumbs" id="crumbs" aria-label="Current folder"></nav>
+    <div class="layers" role="group" aria-label="Graph layout">
+      <span id="graphhint" style="font-size:11px;color:var(--fg-subtle)">Click to select · double-click to open</span>
     </div>
 
     <div class="stats" id="stats"></div>
-    <button class="chip" id="indexStatus" title="Ver estado do índice e mudanças">Verificando índice…</button>
+    <button class="chip" id="indexStatus" title="View index status and changes">Checking index…</button>
   </div>
   <div class="legend" aria-hidden="true">
-    <span><svg viewBox="0 0 64 64"><path fill="#3FEEC5" d="M32 4Q35.5 28.5 60 32Q35.5 35.5 32 60Q28.5 35.5 4 32Q28.5 28.5 32 4Z"/></svg>decisão</span>
-    <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4" fill="none" stroke="#6EF2AC" stroke-width="2"/></svg>aprendizado</span>
-    <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4" fill="none" stroke="#879DA6" stroke-dasharray="2 2"/></svg>a criar</span>
-    <span style="color:#FF6B78">● sem vínculos</span><span style="color:#F5C84B">● tag</span>
+    <span><svg viewBox="0 0 64 64"><path fill="#3FEEC5" d="M32 4Q35.5 28.5 60 32Q35.5 35.5 32 60Q28.5 35.5 4 32Q28.5 28.5 32 4Z"/></svg>decision</span>
+    <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4" fill="none" stroke="#6EF2AC" stroke-width="2"/></svg>learning</span>
+    <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4" fill="none" stroke="#879DA6" stroke-dasharray="2 2"/></svg>pending</span>
+    <span style="color:#FF6B78">● isolated</span><span style="color:#F5C84B">● tag</span>
   </div>
-  <div class="zoom" role="group" aria-label="Visualização e zoom">
-    <div class="viewmodes" role="group" aria-label="Modo de visualização">
-      <button id="mode2d" aria-pressed="true" title="Cérebro visto de lado em 2D">2D</button>
-      <button id="mode3d" aria-pressed="false" title="Cérebro em 3D: arraste para girar; Shift + arraste para mover">3D</button>
-      <button id="radial" aria-pressed="false" title="Agrupar comunidades em órbitas">Órbitas</button>
+  <div class="zoom" role="group" aria-label="View and zoom">
+    <div class="viewmodes" role="group" aria-label="View mode">
+      <button id="mode2d" aria-pressed="true" title="Brain viewed from the side in 2D">2D</button>
+      <button id="mode3d" aria-pressed="false" title="3D brain: drag to rotate; Shift + drag to pan">3D</button>
+      <button id="radial" aria-pressed="false" title="Group communities into orbits">Orbits</button>
     </div>
-    <button id="zin" aria-label="Aproximar">+</button><button id="zout" aria-label="Afastar">−</button>
-    <button id="zfit" aria-label="Enquadrar tudo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button>
+    <button id="zfit" aria-label="Fit all"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   </div>
 </section>
 
-<section class="view" id="v-decisoes" hidden aria-label="Decisões">
+<section class="view" id="v-decisoes" hidden aria-label="Decisions">
   <div class="list"><div class="list-inner">
-    <h1>O que foi <em>decidido</em></h1>
-    <p class="lede">Decisões e aprendizados registrados nas conversas com o Claude e o Codex, em ordem cronológica. Cada um é um markdown em <code>.atlasbrain/Decisões/</code> ou <code>.atlasbrain/Aprendizados/</code> do projeto.</p>
-    <div class="filters" role="group" aria-label="Filtrar">
-      <button class="chip" data-f="todos" aria-pressed="true"><i></i>Tudo</button>
-      <button class="chip" data-f="decisao" aria-pressed="false"><i></i>Decisões</button>
-      <button class="chip" data-f="aprendizado" aria-pressed="false"><i></i>Aprendizados</button>
+    <h1>What was <em>decided</em></h1>
+    <p class="lede">Decisions and learnings recorded in conversations with Claude and Codex, in chronological order. Each is a Markdown file in <code>.atlasbrain/Decisões/</code> or <code>.atlasbrain/Aprendizados/</code> in the project.</p>
+    <div class="filters" role="group" aria-label="Filter">
+      <button class="chip" data-f="todos" aria-pressed="true"><i></i>All</button>
+      <button class="chip" data-f="decisao" aria-pressed="false"><i></i>Decisions</button>
+      <button class="chip" data-f="aprendizado" aria-pressed="false"><i></i>Learnings</button>
     </div>
     <div id="dlist"></div>
   </div></div>
 </section>
 
-<section class="view" id="v-recentes" hidden aria-label="Recentes">
+<section class="view" id="v-recentes" hidden aria-label="Recent">
   <div class="list"><div class="list-inner">
-    <h1>Mexido <em>por último</em></h1>
-    <p class="lede">Os arquivos que mudaram mais recentemente na pasta.</p>
+    <h1>Changed <em>most recently</em></h1>
+    <p class="lede">The most recently changed files in the folder.</p>
     <div id="rlist"></div>
   </div></div>
 </section>
 
-<section class="view" id="v-soltos" hidden aria-label="Arquivos sem vínculos">
+<section class="view" id="v-soltos" hidden aria-label="Isolated files">
   <div class="list"><div class="list-inner">
-    <h1>Arquivos <em style="color:#FF6B78">soltos</em></h1>
-    <p class="lede">Sem conexões no índice completo: links, referências recebidas, semelhanças, tags e links para notas a criar. Os filtros do desenho não mudam esta lista.</p>
-    <p class="lede">Revise e conecte o que fizer sentido. Um arquivo solto não significa que pode ser apagado.</p>
+    <h1>Files <em style="color:#FF6B78">without links</em></h1>
+    <p class="lede">No connections in the full index: links, backlinks, similarities, tags or pending note links. Visual filters do not change this list.</p>
+    <p class="lede">Review files and connect what makes sense. An isolated file is not necessarily safe to delete.</p>
     <div id="olist"></div>
   </div></div>
 </section>
 
-<section class="view" id="v-mudancas" hidden aria-label="Mudanças do índice"><div class="list"><div class="list-inner">
-  <h1>O que <em>mudou</em></h1><p class="lede">Comparação entre as duas últimas versões diferentes do índice. Alterações anteriores à ativação deste recurso não têm histórico.</p>
-  <p class="lede">No grafo, ative “Alterados recentes” para destacar em esmeralda os arquivos adicionados ou alterados desde a indexação anterior. Arquivos soltos continuam vermelhos e tags, amarelas. Os detalhes das mudanças de vínculos aparecem nesta lista.</p><div id="indexDetails"></div><div id="changeList"></div>
+<section class="view" id="v-mudancas" hidden aria-label="Index changes"><div class="list"><div class="list-inner">
+  <h1>What <em>changed</em></h1><p class="lede">Comparison of the two latest distinct index versions. Changes made before enabling this feature have no history.</p>
+  <p class="lede">In the graph, enable “Recently changed” to highlight files added or changed since the previous index in emerald. Isolated files remain red and tags yellow. Link changes appear in this list.</p><div id="indexDetails"></div><div id="changeList"></div>
 </div></div></section>
-<dialog id="historyDialog"><div class="editor-head"><strong id="historyTitle">Histórico</strong><button class="chip" id="closeHistory" aria-label="Fechar histórico">×</button></div><div id="historyItems"></div><pre id="historyDiff" hidden></pre><button class="chip" id="restoreVersion" hidden>Restaurar esta versão</button><p id="historyMessage" role="status"></p></dialog>
-<aside class="inspector" id="selectionPanel" hidden aria-label="Item selecionado"></aside>
+<dialog id="historyDialog"><div class="editor-head"><strong id="historyTitle">History</strong><button class="chip" id="closeHistory" aria-label="Close history">×</button></div><div id="historyItems"></div><pre id="historyDiff" hidden></pre><button class="chip" id="restoreVersion" hidden>Restore this version</button><p id="historyMessage" role="status"></p></dialog>
+<aside class="inspector" id="selectionPanel" hidden aria-label="Selected item"></aside>
 
-<footer class="credits">Criado por <a href="https://github.com/danilofacco" target="_blank" rel="noopener noreferrer">@danilofacco</a></footer>
+<footer class="credits">Created by <a href="https://github.com/danilofacco" target="_blank" rel="noopener noreferrer">@danilofacco</a></footer>
 
-<aside class="reader" id="reader" aria-label="Nota" aria-hidden="true">
+<aside class="reader" id="reader" aria-label="Note" aria-hidden="true">
   <div class="rhead">
     <small id="rpath"></small>
-    <button class="chip" id="bEdit" hidden>Editar</button>
-    <button class="ib" id="bOpen" aria-label="Abrir no app padrão"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></button>
-    <button class="ib" id="bReveal" aria-label="Mostrar no Finder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button>
-    <button class="ib" id="bHistory" title="Histórico de versões" aria-label="Histórico de versões"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7M12 7v5l3 2"/></svg></button>
-    <button class="ib delete-action" id="bDelete" title="Excluir arquivo" aria-label="Excluir arquivo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg></button>
-    <button class="ib" id="bClose" aria-label="Fechar nota (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    <button class="chip" id="bEdit" hidden>Edit</button>
+    <button class="ib" id="bOpen" aria-label="Open in default app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></button>
+    <button class="ib" id="bReveal" aria-label="Show in Finder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button>
+    <button class="ib" id="bHistory" title="Version history" aria-label="Version history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7M12 7v5l3 2"/></svg></button>
+    <button class="ib delete-action" id="bDelete" title="Delete file" aria-label="Delete file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg></button>
+    <button class="ib" id="bClose" aria-label="Close note (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   </div>
-  <div class="rtabs" role="tablist" aria-label="Conteúdo do leitor">
-    <button role="tab" id="tabNota" aria-selected="true">Nota</button>
-    <button role="tab" id="tabCon" aria-selected="false">Conexões</button>
-    <button class="depbtn" id="bDeps" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="2.5"/><circle cx="4" cy="6" r="2"/><circle cx="4" cy="18" r="2"/><circle cx="20" cy="6" r="2"/><circle cx="20" cy="18" r="2"/><path d="M6 6.5l4 4M6 17.5l4-4M14 10.5l4-4M14 13.5l4 4"/></svg>Mapa de dependências</button>
+  <div class="rtabs" role="tablist" aria-label="Reader content">
+    <button role="tab" id="tabNota" aria-selected="true">Note</button>
+    <button role="tab" id="tabCon" aria-selected="false">Connections</button>
+    <button class="depbtn" id="bDeps" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="2.5"/><circle cx="4" cy="6" r="2"/><circle cx="4" cy="18" r="2"/><circle cx="20" cy="6" r="2"/><circle cx="20" cy="18" r="2"/><path d="M6 6.5l4 4M6 17.5l4-4M14 10.5l4-4M14 13.5l4 4"/></svg>Dependency map</button>
   </div>
   <div class="rbody" id="rbody"></div>
   <div class="rbody" id="rcon" hidden></div>
 </aside>
 
 <div class="pal" id="createNote" role="dialog" aria-modal="true" aria-labelledby="createNoteTitle">
- <div class="pbox"><div class="editor-head"><strong id="createNoteTitle">Nova nota</strong><button class="ib" id="closeCreate" aria-label="Fechar criação de nota">×</button></div>
+ <div class="pbox"><div class="editor-head"><strong id="createNoteTitle">New note</strong><button class="ib" id="closeCreate" aria-label="Close note creation">×</button></div>
  <form id="createNoteForm"><div class="create-fields">
-  <label>Título<input id="noteTitle" required maxlength="140" autocomplete="off" placeholder="O que você quer registrar?"></label>
-  <label>Modelo<select id="noteTemplate"><option value="nota">Nota</option><option value="decisao">Decisão</option><option value="aprendizado">Aprendizado</option></select></label>
-  <label>Pasta no projeto<input id="noteFolder" required value=".atlasbrain/Inbox" autocomplete="off"></label>
-  <label>Tags<input id="noteTags" placeholder="arquitetura, backend" autocomplete="off"></label>
- </div><div class="editor-actions"><button class="btn brand" type="submit">Abrir editor</button><button class="btn" type="button" id="cancelCreate">Cancelar</button></div></form></div>
+  <label>Title<input id="noteTitle" required maxlength="140" autocomplete="off" placeholder="What would you like to record?"></label>
+  <label>Template<select id="noteTemplate"><option value="nota">Note</option><option value="decisao">Decision</option><option value="aprendizado">Learning</option></select></label>
+  <label>Project folder<input id="noteFolder" required value=".atlasbrain/Inbox" autocomplete="off"></label>
+  <label>Tags<input id="noteTags" placeholder="architecture, backend" autocomplete="off"></label>
+ </div><div class="editor-actions"><button class="btn brand" type="submit">Open editor</button><button class="btn" type="button" id="cancelCreate">Cancel</button></div></form></div>
 </div>
 <div class="pal" id="noteEditor" role="dialog" aria-modal="true" aria-labelledby="editorTitle">
- <div class="pbox note-editor"><div class="editor-head"><strong id="editorTitle">Editar nota</strong><button class="ib" id="closeEditor" aria-label="Fechar editor">×</button></div>
- <div class="editor-tabs" role="tablist" aria-label="Edição Markdown"><button class="chip" id="editorTextTab" role="tab" aria-selected="true">Texto</button><button class="chip" id="editorPreviewTab" role="tab" aria-selected="false">Prévia</button><small id="editorState"></small></div>
- <div class="editor-body"><label id="editorPathLabel" class="create-fields" hidden>Caminho do novo arquivo<input id="editorPath" aria-label="Caminho do novo arquivo"></label><textarea id="editorText" aria-label="Conteúdo Markdown" aria-autocomplete="list" aria-controls="wikiOptions" aria-expanded="false" spellcheck="false"></textarea><div id="wikiOptions" class="wiki-options" role="listbox" aria-label="Arquivos para vincular" hidden></div><details class="editor-connections"><summary>Backlinks e sugestões</summary><div id="editorConnections"></div></details><div class="md editor-preview" id="editorPreview" hidden></div></div>
+ <div class="pbox note-editor"><div class="editor-head"><strong id="editorTitle">Edit note</strong><button class="ib" id="closeEditor" aria-label="Close editor">×</button></div>
+ <div class="editor-tabs" role="tablist" aria-label="Markdown editing"><button class="chip" id="editorTextTab" role="tab" aria-selected="true">Text</button><button class="chip" id="editorPreviewTab" role="tab" aria-selected="false">Preview</button><small id="editorState"></small></div>
+ <div class="editor-body"><label id="editorPathLabel" class="create-fields" hidden>New file path<input id="editorPath" aria-label="New file path"></label><textarea id="editorText" aria-label="Markdown content" aria-autocomplete="list" aria-controls="wikiOptions" aria-expanded="false" spellcheck="false"></textarea><div id="wikiOptions" class="wiki-options" role="listbox" aria-label="Files to link" hidden></div><details class="editor-connections"><summary>Backlinks and suggestions</summary><div id="editorConnections"></div></details><div class="md editor-preview" id="editorPreview" hidden></div></div>
  <p class="editor-message" id="editorMessage" role="status"></p>
- <div class="editor-actions"><button class="btn brand" id="saveEditor">Salvar</button><button class="btn" id="reloadEditor">Recarregar do disco</button><button class="btn" id="recoverEditor">Versão anterior</button><button class="btn" id="cancelEditor">Fechar</button></div>
+ <div class="editor-actions"><button class="btn brand" id="saveEditor">Save</button><button class="btn" id="reloadEditor">Reload from disk</button><button class="btn" id="recoverEditor">Previous version</button><button class="btn" id="cancelEditor">Close</button></div>
  </div>
 </div>
 
-<div class="pal" id="pal" role="dialog" aria-modal="true" aria-label="Buscar no AtlasBrain">
+<div class="pal" id="pal" role="dialog" aria-modal="true" aria-label="Search AtlasBrain">
   <div class="pbox">
     <div class="pin">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" placeholder="Pergunte ou digite uma palavra — ex.: o que decidi sobre preços?" autocomplete="off" aria-label="Buscar" aria-controls="pres">
+      <input id="q" placeholder="Ask a question or enter a keyword — e.g. what did we decide about pricing?" autocomplete="off" aria-label="Search" aria-controls="pres">
     </div>
     <div class="pres" id="pres" role="listbox"></div>
-    <div class="pfoot"><span><kbd>↑↓</kbd>navegar</span><span><kbd>↵</kbd>abrir</span><span><kbd>esc</kbd>fechar</span></div>
+    <div class="pfoot"><span><kbd>↑↓</kbd>navigate</span><span><kbd>↵</kbd>open</span><span><kbd>esc</kbd>close</span></div>
   </div>
 </div>
 <div class="pal" id="abrir" role="dialog" aria-modal="true" aria-labelledby="abrirT">
   <div class="pbox">
-    <div class="dhead"><h2 id="abrirT">Abrir uma pasta como cérebro</h2>
-      <p>A pasta ganha um <code>.atlasbrain/</code> e é indexada no seu computador. Num repositório git, só entra o que o git vê.</p></div>
+    <div class="dhead"><h2 id="abrirT">Open a folder as a brain</h2>
+      <p>The folder gets an <code>.atlasbrain/</code> and is indexed on your computer. In a Git repository, only files visible to Git are included.</p></div>
     <div class="dbody">
-      <button class="btn" id="escolher"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Escolher no Finder…</button>
-      <div class="ou"><span>ou digite o caminho</span></div>
-      <div class="pin"><input id="caminho" placeholder="~/Documents/GitHub/meu-projeto" autocomplete="off" spellcheck="false" aria-label="Caminho da pasta" aria-describedby="abrirMsg" aria-controls="sugs"></div>
+      <button class="btn" id="escolher"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Choose in Finder…</button>
+      <div class="ou"><span>or enter a path</span></div>
+      <div class="pin"><input id="caminho" placeholder="~/Documents/GitHub/my-project" autocomplete="off" spellcheck="false" aria-label="Folder path" aria-describedby="abrirMsg" aria-controls="sugs"></div>
       <div class="sugs" id="sugs" role="listbox"></div>
       <p class="dmsg" id="abrirMsg" role="status"></p>
     </div>
-    <div class="pfoot"><span><kbd>tab</kbd>completar</span><span><kbd>↵</kbd>abrir</span><span><kbd>esc</kbd>fechar</span><button class="btn brand" id="abrirOk">Abrir pasta</button></div>
+    <div class="pfoot"><span><kbd>tab</kbd>complete</span><span><kbd>↵</kbd>open</span><span><kbd>esc</kbd>close</span><button class="btn brand" id="abrirOk">Open folder</button></div>
   </div>
 </div>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
 "use strict";
+// Explicit UI translations. Interpolated titles, paths and document content are preserved.
+const PT_BR={
+  "Learnings": "Aprendizados",
+  "Open": "Abrir",
+  "AtlasBrain — home": "AtlasBrain — início",
+  "Project": "Projeto",
+  "Switch project": "Trocar de projeto",
+  "Views": "Vistas",
+  "Graph": "Grafo",
+  "Decisions ": "Decisões ",
+  "Changes": "Mudanças",
+  "Recent": "Recentes",
+  "Isolated ": "Soltos ",
+  "Language": "Idioma",
+  "New note (⌘/Ctrl+N)": "Nova nota (⌘/Ctrl+N)",
+  "New note": "Nova nota",
+  "Search (⌘K)": "Buscar (⌘K)",
+  "Search by keyword or idea": "Buscar por palavra ou ideia",
+  "Knowledge graph": "Grafo de conhecimento",
+  "Interactive note graph. Use search to navigate with the keyboard.": "Grafo interativo das notas. Use a busca para navegar pelo teclado.",
+  "Graph controls": "Controles do grafo",
+  "Graph filters": "Filtros do grafo",
+  "Graph layers": "Camadas do grafo",
+  "Similarity": "Semelhança",
+  "Pending notes": "Notas a criar",
+  "Isolated nodes": "Soltas",
+  "Highlight files added or changed since the previous index in emerald; isolated files stay red": "Destacar em esmeralda os arquivos adicionados ou alterados desde a indexação anterior; soltos continuam vermelhos",
+  "Recently changed": "Alterados recentes",
+  "Nodes per page": "Nós por página",
+  "50–800 · saved for this project": "50–800 · salvo para este projeto",
+  "Filter by folder": "Filtrar por pasta",
+  "Folder, e.g. src": "Pasta, ex.: src",
+  "Filter by language": "Filtrar por linguagem",
+  "All languages": "Todas as linguagens",
+  "Filter by type": "Filtrar por tipo",
+  "All types": "Todos os tipos",
+  "Code": "Código",
+  "Notes": "Notas",
+  "Documents": "Documentos",
+  "Link provenance": "Procedência dos vínculos",
+  "All provenance": "Todas as procedências",
+  "Extracted from code": "Extraídos do código",
+  "Inferred": "Inferidos",
+  "Declared links": "Declarados",
+  "Link type": "Tipo de vínculo",
+  "All links": "Todos os vínculos",
+  "Imports": "Importa",
+  "Calls": "Chama",
+  "Note link": "Link de nota",
+  "Declared": "Declarado",
+  "Clear filters": "Limpar filtros",
+  "Cortex pulse": "Pulso do córtex",
+  "Toggle cortex pulse": "Ativar ou desativar o pulso do córtex",
+  "Current folder": "Pasta atual",
+  "Graph layout": "Organização do grafo",
+  "Click to select · double-click to open": "Clique para selecionar · duplo clique para abrir",
+  "View index status and changes": "Ver estado do índice e mudanças",
+  "Checking index…": "Verificando índice…",
+  "decision": "decisão",
+  "learning": "aprendizado",
+  "pending": "a criar",
+  "● isolated": "● sem vínculos",
+  "View and zoom": "Visualização e zoom",
+  "View mode": "Modo de visualização",
+  "Brain viewed from the side in 2D": "Cérebro visto de lado em 2D",
+  "3D brain: drag to rotate; Shift + drag to pan": "Cérebro em 3D: arraste para girar; Shift + arraste para mover",
+  "Group communities into orbits": "Agrupar comunidades em órbitas",
+  "Orbits": "Órbitas",
+  "Zoom in": "Aproximar",
+  "Zoom out": "Afastar",
+  "Fit all": "Enquadrar tudo",
+  "Decisions": "Decisões",
+  "What was ": "O que foi ",
+  "decided": "decidido",
+  "Decisions and learnings recorded in conversations with Claude and Codex, in chronological order. Each is a Markdown file in ": "Decisões e aprendizados registrados nas conversas com o Claude e o Codex, em ordem cronológica. Cada um é um markdown em ",
+  " or ": " ou ",
+  " in the project.": " do projeto.",
+  "Filter": "Filtrar",
+  "All": "Tudo",
+  "Changed ": "Mexido ",
+  "most recently": "por último",
+  "The most recently changed files in the folder.": "Os arquivos que mudaram mais recentemente na pasta.",
+  "Isolated files": "Arquivos sem vínculos",
+  "Files ": "Arquivos ",
+  "without links": "soltos",
+  "No connections in the full index: links, backlinks, similarities, tags or pending note links. Visual filters do not change this list.": "Sem conexões no índice completo: links, referências recebidas, semelhanças, tags e links para notas a criar. Os filtros do desenho não mudam esta lista.",
+  "Review files and connect what makes sense. An isolated file is not necessarily safe to delete.": "Revise e conecte o que fizer sentido. Um arquivo solto não significa que pode ser apagado.",
+  "Index changes": "Mudanças do índice",
+  "What ": "O que ",
+  "changed": "mudou",
+  "Comparison of the two latest distinct index versions. Changes made before enabling this feature have no history.": "Comparação entre as duas últimas versões diferentes do índice. Alterações anteriores à ativação deste recurso não têm histórico.",
+  "In the graph, enable “Recently changed” to highlight files added or changed since the previous index in emerald. Isolated files remain red and tags yellow. Link changes appear in this list.": "No grafo, ative “Alterados recentes” para destacar em esmeralda os arquivos adicionados ou alterados desde a indexação anterior. Arquivos soltos continuam vermelhos e tags, amarelas. Os detalhes das mudanças de vínculos aparecem nesta lista.",
+  "History": "Histórico",
+  "Close history": "Fechar histórico",
+  "Restore this version": "Restaurar esta versão",
+  "Selected item": "Item selecionado",
+  "Created by ": "Criado por ",
+  "Note": "Nota",
+  "Edit": "Editar",
+  "Open in default app": "Abrir no app padrão",
+  "Show in Finder": "Mostrar no Finder",
+  "Version history": "Histórico de versões",
+  "Delete file": "Excluir arquivo",
+  "Close note (Esc)": "Fechar nota (Esc)",
+  "Reader content": "Conteúdo do leitor",
+  "Connections": "Conexões",
+  "Dependency map": "Mapa de dependências",
+  "Close note creation": "Fechar criação de nota",
+  "Title": "Título",
+  "What would you like to record?": "O que você quer registrar?",
+  "Template": "Modelo",
+  "Decision": "Decisão",
+  "Learning": "Aprendizado",
+  "Project folder": "Pasta no projeto",
+  "architecture, backend": "arquitetura, backend",
+  "Open editor": "Abrir editor",
+  "Cancel": "Cancelar",
+  "Edit note": "Editar nota",
+  "Close editor": "Fechar editor",
+  "Markdown editing": "Edição Markdown",
+  "Text": "Texto",
+  "Preview": "Prévia",
+  "New file path": "Caminho do novo arquivo",
+  "Markdown content": "Conteúdo Markdown",
+  "Files to link": "Arquivos para vincular",
+  "Backlinks and suggestions": "Backlinks e sugestões",
+  "Save": "Salvar",
+  "Reload from disk": "Recarregar do disco",
+  "Previous version": "Versão anterior",
+  "Close": "Fechar",
+  "Search AtlasBrain": "Buscar no AtlasBrain",
+  "Ask a question or enter a keyword — e.g. what did we decide about pricing?": "Pergunte ou digite uma palavra — ex.: o que decidi sobre preços?",
+  "Search": "Buscar",
+  "navigate": "navegar",
+  "open": "abrir",
+  "close": "fechar",
+  "Open a folder as a brain": "Abrir uma pasta como cérebro",
+  "The folder gets an ": "A pasta ganha um ",
+  " and is indexed on your computer. In a Git repository, only files visible to Git are included.": " e é indexada no seu computador. Num repositório git, só entra o que o git vê.",
+  "Choose in Finder…": "Escolher no Finder…",
+  "or enter a path": "ou digite o caminho",
+  "~/Documents/GitHub/my-project": "~/Documents/GitHub/meu-projeto",
+  "Folder path": "Caminho da pasta",
+  "complete": "completar",
+  "Open folder": "Abrir pasta",
+  "3D brain · drag to rotate · Shift to pan": "Cérebro em 3D · arraste para girar · Shift para mover",
+  "Community orbits · hover to follow connections": "Órbitas por comunidade · passe o mouse para seguir as conexões",
+  "Brain from the side · click to select · double-click to open": "Cérebro de lado · clique para selecionar · duplo clique para abrir",
+  "Return to the graph to change the view": "Volte ao grafo para mudar a visualização",
+  "Return to the graph to change the layout": "Volte ao grafo para mudar a organização",
+  "Orbits · each group represents a community": "Órbitas · cada grupo reúne uma comunidade",
+  "Return to the graph to use the 3D view": "Volte ao grafo para usar a perspectiva 3D",
+  "Brain-shaped graph in 3D. Drag to rotate, Shift + drag to pan.": "Grafo em forma de cérebro em 3D. Arraste para girar, Shift e arraste para mover.",
+  "Brain-shaped graph from the side. Use search to navigate with the keyboard.": "Grafo em forma de cérebro visto de lado. Use a busca para navegar pelo teclado.",
+  "3D · drag to rotate · Shift to pan": "3D · arraste para girar · Shift para mover",
+  "Choose 50 to 800 nodes per page": "Escolha de 50 a 800 nós por página",
+  " visible connections": " conexões visíveis",
+  "<button class=\"chip selection-action\" id=\"selectionClear\" title=\"Clear selection\" aria-label=\"Clear selection\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m6 6 12 12M18 6 6 18\"/></svg></button></div>": "<button class=\"chip selection-action\" id=\"selectionClear\" title=\"Limpar seleção\" aria-label=\"Limpar seleção\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m6 6 12 12M18 6 6 18\"/></svg></button></div>",
+  " · isolated in the full index": " · sem vínculos no índice completo",
+  "<button class=\"chip selection-action\" id=\"selectionRead\" title=\"Read file\" aria-label=\"Read file\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6\"/></svg></button><button class=\"chip selection-action\" id=\"selectionLinks\" title=\"View connections\" aria-label=\"View connections\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"6\" cy=\"12\" r=\"3\"/><circle cx=\"18\" cy=\"5\" r=\"3\"/><circle cx=\"18\" cy=\"19\" r=\"3\"/><path d=\"m9 10 6-3M9 14l6 3\"/></svg></button>": "<button class=\"chip selection-action\" id=\"selectionRead\" title=\"Ler arquivo\" aria-label=\"Ler arquivo\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6\"/></svg></button><button class=\"chip selection-action\" id=\"selectionLinks\" title=\"Ver conexões\" aria-label=\"Ver conexões\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"6\" cy=\"12\" r=\"3\"/><circle cx=\"18\" cy=\"5\" r=\"3\"/><circle cx=\"18\" cy=\"19\" r=\"3\"/><path d=\"m9 10 6-3M9 14l6 3\"/></svg></button>",
+  "<button class=\"chip selection-action delete-action\" id=\"selectionDelete\" title=\"Delete file\" aria-label=\"Delete file\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7\"/></svg></button>": "<button class=\"chip selection-action delete-action\" id=\"selectionDelete\" title=\"Excluir arquivo\" aria-label=\"Excluir arquivo\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7\"/></svg></button>",
+  "<p>Building the graph…</p>": "<p>Montando o grafo…</p>",
+  "\"/></svg><h2>Could not read the index</h2><p>The local server stopped responding.</p><button class=\"chip\" onclick=\"loadGraph()\">Try again</button>": "\"/></svg><h2>Não consegui ler o índice</h2><p>O servidor local parou de responder.</p><button class=\"chip\" onclick=\"loadGraph()\">Tentar de novo</button>",
+  "<h2>No results for these filters</h2><p>Clear or adjust the filters to broaden your search.</p>": "<h2>Nenhum resultado para estes filtros</h2><p>Limpe ou ajuste os filtros para ampliar a busca.</p>",
+  "\"/></svg><h2>The folder is still empty</h2><p>Ask Claude or Codex to record a decision in this project, or create notes in <code>.atlasbrain/</code>. The graph appears automatically.</p>": "\"/></svg><h2>A pasta ainda está vazia</h2><p>Peça ao Claude ou ao Codex para registrar uma decisão neste projeto, ou crie notas em <code>.atlasbrain/</code>. O grafo aparece sozinho.</p>",
+  "Could not build the map": "Não consegui montar o mapa",
+  "used by its dependents": "usado por quem usa",
+  "← used by (": "← usado por (",
+  "uses (": "usa (",
+  "which in turn uses": "que por sua vez usa",
+  "<p>This file has no imports or importers in the project.</p>": "<p>Este arquivo não importa nem é importado por nenhum outro arquivo do projeto.</p>",
+  "<button data-sair>← graph</button><i>›</i><span style=\"font-family:var(--font);font-size:13px;color:var(--fg)\">Dependencies of ": "<button data-sair>← grafo</button><i>›</i><span style=\"font-family:var(--font);font-size:13px;color:var(--fg)\">Dependências de ",
+  "</span><span>click to navigate · dashed = inferred · Esc to return</span>": "</span><span>clique para navegar · tracejado = inferido · Esc volta</span>",
+  " of ": " de ",
+  " files": " arquivos",
+  " · page ": " · página ",
+  " aria-label=\"Previous page\">←</button><button data-page=\"1\" ": " aria-label=\"Página anterior\">←</button><button data-page=\"1\" ",
+  " aria-label=\"Next page\">→</button>": " aria-label=\"Próxima página\">→</button>",
+  "” is referenced but does not exist as a note yet": "” é citada, mas ainda não existe como nota",
+  "Permanently delete “": "Excluir definitivamente “",
+  "”?\n\nThe file and its local editor versions will be deleted. AtlasBrain cannot undo this action.": "”?\n\nO arquivo e suas versões locais do editor serão apagados. Esta ação não pode ser desfeita pelo AtlasBrain.",
+  "File permanently deleted": "Arquivo excluído definitivamente",
+  "Could not delete the file": "Não consegui excluir o arquivo",
+  "<p class=\"lede\" style=\"margin-top:14px\">Looking for notes similar to this one…</p>": "<p class=\"lede\" style=\"margin-top:14px\">Procurando o que se parece com esta nota…</p>",
+  "<p class=\"lede\">Could not calculate connections.</p>": "<p class=\"lede\">Não consegui calcular as conexões.</p>",
+  "<p class=\"lede\" style=\"margin-top:14px\">No semantic connections yet (this note has no vector; connections appear after the next indexing).</p>": "<p class=\"lede\" style=\"margin-top:14px\">Sem conexões por significado ainda (esta nota não tem vetor; aparece depois da próxima indexação).</p>",
+  "<p class=\"lede\" style=\"margin:12px 0 4px;font-size:12.5px\">Similar in meaning to this note, even without a direct link. Select and copy them as context for any chat.</p>": "<p class=\"lede\" style=\"margin:12px 0 4px;font-size:12.5px\">Parecidas em significado com esta nota, mesmo sem link entre elas. Marque e copie como contexto para colar em qualquer chat.</p>",
+  "\" aria-label=\"Include ": "\" aria-label=\"Incluir ",
+  " in context\">\n      <button data-ref=\"": " no contexto\">\n      <button data-ref=\"",
+  "<div class=\"conbar\"><button class=\"btn brand\" id=\"bCopiar\">Copy context</button><span id=\"conSel\">this note + 0 selected</span></div>": "<div class=\"conbar\"><button class=\"btn brand\" id=\"bCopiar\">Copiar contexto</button><span id=\"conSel\">esta nota + 0 selecionada(s)</span></div>",
+  "this note + ": "esta nota + ",
+  " selected": " selecionada(s)",
+  "# AtlasBrain context (": "# Contexto do AtlasBrain (",
+  " file": " arquivo",
+  "\n[…truncated]": "\n[…cortado]",
+  "Context copied: ": "Contexto copiado: ",
+  " file(s), ~": " arquivo(s), ~",
+  "The browser blocked clipboard access": "O navegador bloqueou a área de transferência",
+  "Note not found in the index": "Nota não encontrada no índice",
+  "<span class=\"pill brand\">decision</span>": "<span class=\"pill brand\">decisão</span>",
+  "<span class=\"pill brand\">learning</span>": "<span class=\"pill brand\">aprendizado</span>",
+  "<span class=\"pill\">edited ": "<span class=\"pill\">editada ",
+  " · inferred": " · inferido",
+  "Used / referenced by": "Usada / citada por",
+  "Depends on / links to": "Depende de / aponta para",
+  "Similar content": "Parecidas pelo conteúdo",
+  "Referenced but not created yet": "Citadas mas ainda não existem",
+  "\">Create ": "\">Criar ",
+  "History · ": "Histórico · ",
+  "Loading…": "Carregando…",
+  "No previous versions yet.": "Ainda não há versões anteriores.",
+  "Content matches the current version.": "Conteúdo igual à versão atual.",
+  "Could not load history: ": "Não consegui carregar o histórico: ",
+  "Restore this version? The current version will also be preserved.": "Restaurar esta versão? A versão atual também será preservada.",
+  "Version restored": "Versão restaurada",
+  "Opening in default app": "Abrindo no app padrão",
+  "Showing in Finder": "Mostrando no Finder",
+  "Wait for saving to finish": "Aguarde o salvamento",
+  "There are unsaved changes. Discard them?": "Há alterações não salvas. Deseja descartá-las?",
+  "Saving…": "Salvando…",
+  "Conflict · text preserved": "Conflito · texto preservado",
+  "Unsaved changes": "Alterações não salvas",
+  "New file · not saved yet": "Novo arquivo · ainda não salvo",
+  "Saved": "Salvo",
+  "The file will be created when you save.": "O arquivo será criado ao salvar.",
+  "Could not open this Markdown file in the editor (200 KB limit, UTF-8 required).": "Não consegui abrir este Markdown no editor (limite de 200 KB e UTF-8).",
+  "Replace unsaved changes with the ": "Substituir as alterações não salvas pela versão ",
+  "previous version?": "anterior?",
+  "current version on disk?": "atual do disco?",
+  "Current version loaded from disk.": "Versão atual carregada do disco.",
+  "Previous version loaded for review. Click Save to restore it.": "Versão anterior carregada para revisão. Clique em Salvar para restaurá-la.",
+  "Could not load the requested version. Your text was preserved.": "Não consegui carregar a versão solicitada. Seu texto foi preservado.",
+  "Saving and updating the index…": "Salvando e atualizando o índice…",
+  "Submitted version saved. Newer edits still need saving.": "Versão enviada salva. Ainda há alterações posteriores para salvar.",
+  "File saved. The index is busy; the file will appear in the graph after the automatic update.": "Arquivo salvo. O índice está ocupado; ele aparecerá no grafo após a atualização automática.",
+  "Note saved · graph updated": "Nota salva · grafo atualizado",
+  "The file changed or the name already exists. Your text was preserved; reload the current version or choose another name.": "O arquivo mudou ou o nome já existe. Seu texto foi preservado; recarregue a versão atual ou escolha outro nome.",
+  "## Context\n\n\n## Decision\n\n\n## Reason\n\n\n## Consequences\n\n": "## Contexto\n\n\n## Decisão\n\n\n## Motivo\n\n\n## Consequências\n\n",
+  "## Learning\n\n\n## Evidence\n\n\n## Application\n\n": "## Aprendizado\n\n\n## Evidências\n\n\n## Aplicação\n\n",
+  "Could not check this link.": "Não consegui verificar este vínculo.",
+  "<p>Finding links…</p>": "<p>Buscando vínculos…</p>",
+  "<h4>Backlinks and suggested connections</h4><p>Links from the saved index. Suggestions based on names and folders need your review.</p>": "<h4>Backlinks e conexões sugeridas</h4><p>Vínculos do índice salvo. Sugestões por nomes e pastas precisam da sua revisão.</p>",
+  "\">Read here</button><div class=\"md candidate-preview\" id=\"": "\">Ler aqui</button><div class=\"md candidate-preview\" id=\"",
+  "\" disabled>Add [[link]] to text</button>": "\" disabled>Adicionar [[link]] ao texto</button>",
+  "<p>No backlinks or candidates found.</p>": "<p>Nenhum backlink ou candidato encontrado.</p>",
+  "This name cannot be inserted as a wikilink": "Este nome não pode ser inserido como wikilink",
+  "Link added to the draft. Save to update the graph.": "Vínculo adicionado ao rascunho. Salve para atualizar o grafo.",
+  "Could not open this file; your text was preserved.": "Não consegui abrir este arquivo; o texto foi preservado.",
+  "<p>Save the note to view backlinks and suggestions from the index.</p>": "<p>Salve a nota para consultar backlinks e sugestões do índice.</p>",
+  "<div class=\"pempty\">Search by keyword (“budget”) or idea (“what did we decide about clinics?”). Search understands meaning as well as exact text.</div>": "<div class=\"pempty\">Busque por palavra (“orçamento”) ou por ideia (“o que decidimos sobre clínicas?”). A busca entende significado, não só texto igual.</div>",
+  "<div class=\"pempty\">No results for “": "<div class=\"pempty\">Nada encontrado para “",
+  "<p class=\"lede\">Could not load decisions. <button class=\"chip\" onclick=\"loadDecisions()\">Try again</button></p>": "<p class=\"lede\">Não consegui carregar as decisões. <button class=\"chip\" onclick=\"loadDecisions()\">Tentar de novo</button></p>",
+  "\"/></svg><h2>No records yet</h2><p>When you finalize a decision in a conversation with Claude or Codex, it becomes a note here. You can also ask: “record this decision in AtlasBrain”.</p></div>": "\"/></svg><h2>Nenhum registro ainda</h2><p>Quando uma decisão for fechada numa conversa com o Claude ou o Codex, ela vira uma nota e aparece aqui. Você também pode pedir direto: “registra essa decisão no AtlasBrain”.</p></div>",
+  "no date": "sem data",
+  "Indexing in progress": "Indexação em andamento",
+  " pending · indexed ": " pendentes · índice ",
+  "Index up to date · ": "Índice atualizado · ",
+  "<p class=\"lede\">Revision ": "<p class=\"lede\">Revisão ",
+  " files · ": " arquivos · ",
+  " pending</p>": " pendentes</p>",
+  "<button class=\"chip\" id=\"morePending\">More pending files</button>": "<button class=\"chip\" id=\"morePending\">Mais pendentes</button>",
+  "Index status unavailable": "Estado do índice indisponível",
+  "Could not read pending files": "Não consegui ler os pendentes",
+  " changes · ": " mudanças · ",
+  "The first version was recorded. The comparison appears after an indexed change.": "A primeira versão foi registrada. A comparação aparece após uma alteração indexada.",
+  "no provenance": "sem procedência",
+  "\">Load more</button>": "\">Carregar mais</button>",
+  "<p class=\"lede\">Could not load changes.</p>": "<p class=\"lede\">Não consegui carregar as mudanças.</p>",
+  "Finding suggestions…": "Buscando sugestões…",
+  "<p>Suggestions based on names and folders. Review both files before recording a link. A declared link is not an extracted code dependency.</p>": "<p>Hipóteses por nomes/pastas. Revise os dois arquivos antes de registrar. Um vínculo declarado não representa uma dependência extraída do código.</p>",
+  " · INFERRED · heuristic confidence ": " · INFERRED · confiança heurística ",
+  "\">Read candidate</button><input aria-label=\"Reason for linking to ": "\">Ler candidato</button><input aria-label=\"Motivo do vínculo com ",
+  "\" placeholder=\"Describe the link after review\"><button class=\"chip\" data-register=\"": "\" placeholder=\"Descreva o vínculo após revisar\"><button class=\"chip\" data-register=\"",
+  "\">Record reviewed link</button></article>": "\">Registrar vínculo revisado</button></article>",
+  "<p>No candidate with enough evidence.</p>": "<p>Nenhum candidato com evidência suficiente.</p>",
+  "Enter a reason after reviewing the files": "Informe o motivo após revisar os arquivos",
+  "Declared link recorded": "Vínculo declarado registrado",
+  "Could not load suggestions.": "Não consegui carregar sugestões.",
+  " isolated</p>": " sem vínculos</p>",
+  "\">Review suggested links</button><div class=\"suggestions\" hidden></div>": "\">Revisar sugestões de vínculos</button><div class=\"suggestions\" hidden></div>",
+  "<p class=\"lede\">Could not load isolated files.</p>": "<p class=\"lede\">Não consegui carregar os arquivos soltos.</p>",
+  "Could not load isolated files": "Não consegui carregar os arquivos soltos",
+  "<p class=\"lede\">Could not load.</p>": "<p class=\"lede\">Não consegui carregar.</p>",
+  "<p class=\"lede\">Nothing here yet.</p>": "<p class=\"lede\">Nada por aqui ainda.</p>",
+  "<option disabled>──────────</option><option value=\"__abrir__\">＋ Open another folder…</option>": "<option disabled>──────────</option><option value=\"__abrir__\">＋ Abrir outra pasta…</option>",
+  "#open": "#abrir",
+  "<b>project</b>": "<b>projeto</b>",
+  "Opening the macOS folder picker…": "Abrindo o seletor de pastas do macOS…",
+  "Could not open Finder: ": "Não consegui abrir o Finder: ",
+  "Choose or enter a folder.": "Escolha ou digite uma pasta.",
+  "Checking the folder…": "Verificando a pasta…",
+  "\"/></svg><h2>Could not open ": "\"/></svg><h2>Não deu para abrir ",
+  "</p><button class=\"chip\" onclick=\"abrirDialogo()\">Choose another folder</button>": "</p><button class=\"chip\" onclick=\"abrirDialogo()\">Escolher outra pasta</button>",
+  "Reading": "Lendo",
+  "Indexing": "Indexando",
+  "Listing folder files…": "Listando os arquivos da pasta…",
+  " files in the initial index. Large projects take a few minutes; later updates are incremental.": " arquivos na primeira indexação. Projetos grandes levam alguns minutos; depois é incremental.",
+  "</b> indexed</span><span><b>": "</b> no índice</span><span><b>",
+  "</b> links</span><span><b>": "</b> ligações</span><span><b>",
+  "</b> decisions</span><span>indexed ": "</b> decisões</span><span>índice ",
+  "Pulse enabled": "Pulso ativado",
+  "Pulse disabled": "Pulso desativado",
+  "<option value=\"\">All languages</option>": "<option value=\"\">Todas as linguagens</option>",
+  "imports": "importa",
+  "calls": "chama",
+  "inherits": "herda",
+  "mentions": "cita",
+  "Isolated": "Soltos",
+  "isolated": "sem vínculos",
+  "Read file": "Ler arquivo",
+  "View connections": "Ver conexões",
+  "Clear selection": "Limpar seleção",
+  "Building the graph…": "Montando o grafo…",
+  "Could not read the index": "Não consegui ler o índice",
+  "The local server stopped responding.": "O servidor local parou de responder.",
+  "Try again": "Tentar de novo",
+  "No results for these filters": "Nenhum resultado para estes filtros",
+  "Clear or adjust the filters to broaden your search.": "Limpe ou ajuste os filtros para ampliar a busca.",
+  "The folder is still empty": "A pasta ainda está vazia",
+  "Ask Claude or Codex to record a decision in this project, or create notes in ": "Peça ao Claude ou ao Codex para registrar uma decisão neste projeto, ou crie notas em ",
+  ". The graph appears automatically.": ". O grafo aparece sozinho.",
+  "This file has no imports or importers in the project.": "Este arquivo não importa nem é importado por nenhum outro arquivo do projeto.",
+  "← graph": "← grafo",
+  "Dependencies of ": "Dependências de ",
+  "click to navigate · dashed = inferred · Esc to return": "clique para navegar · tracejado = inferido · Esc volta",
+  "Previous page": "Página anterior",
+  "Next page": "Próxima página",
+  "The file and its local editor versions will be deleted. AtlasBrain cannot undo this action.": "O arquivo e suas versões locais do editor serão apagados. Esta ação não pode ser desfeita pelo AtlasBrain.",
+  "Looking for notes similar to this one…": "Procurando o que se parece com esta nota…",
+  "Could not calculate connections.": "Não consegui calcular as conexões.",
+  "No semantic connections yet (this note has no vector; connections appear after the next indexing).": "Sem conexões por significado ainda (esta nota não tem vetor; aparece depois da próxima indexação).",
+  "Similar in meaning to this note, even without a direct link. Select and copy them as context for any chat.": "Parecidas em significado com esta nota, mesmo sem link entre elas. Marque e copie como contexto para colar em qualquer chat.",
+  "Include ": "Incluir ",
+  " in context": " no contexto",
+  "Copy context": "Copiar contexto",
+  "AtlasBrain context": "Contexto do AtlasBrain",
+  "[…truncated]": "[…cortado]",
+  "edited ": "editada ",
+  "Create ": "Criar ",
+  "## Context": "## Contexto",
+  "## Decision": "## Decisão",
+  "## Reason": "## Motivo",
+  "## Consequences": "## Consequências",
+  "## Learning": "## Aprendizado",
+  "## Evidence": "## Evidências",
+  "## Application": "## Aplicação",
+  "Finding links…": "Buscando vínculos…",
+  "Links to this note": "Aponta para esta nota",
+  "Suggestion · ": "Sugestão · ",
+  "Backlinks and suggested connections": "Backlinks e conexões sugeridas",
+  "Links from the saved index. Suggestions based on names and folders need your review.": "Vínculos do índice salvo. Sugestões por nomes e pastas precisam da sua revisão.",
+  "Read here": "Ler aqui",
+  "Add [[link]] to text": "Adicionar [[link]] ao texto",
+  "No backlinks or candidates found.": "Nenhum backlink ou candidato encontrado.",
+  "Save the note to view backlinks and suggestions from the index.": "Salve a nota para consultar backlinks e sugestões do índice.",
+  "Search by keyword (“budget”) or idea (“what did we decide about clinics?”). Search understands meaning as well as exact text.": "Busque por palavra (“orçamento”) ou por ideia (“o que decidimos sobre clínicas?”). A busca entende significado, não só texto igual.",
+  "No results for “": "Nada encontrado para “",
+  "Could not load decisions.": "Não consegui carregar as decisões.",
+  "No records yet": "Nenhum registro ainda",
+  "When you finalize a decision in a conversation with Claude or Codex, it becomes a note here. You can also ask: “record this decision in AtlasBrain”.": "Quando uma decisão for fechada numa conversa com o Claude ou o Codex, ela vira uma nota e aparece aqui. Você também pode pedir direto: “registra essa decisão no AtlasBrain”.",
+  "Revision ": "Revisão ",
+  " pending": " pendentes",
+  "More pending files": "Mais pendentes",
+  "Load more": "Carregar mais",
+  "Could not load changes.": "Não consegui carregar as mudanças.",
+  "Suggestions based on names and folders. Review both files before recording a link. A declared link is not an extracted code dependency.": "Hipóteses por nomes/pastas. Revise os dois arquivos antes de registrar. Um vínculo declarado não representa uma dependência extraída do código.",
+  "heuristic confidence ": "confiança heurística ",
+  "Read candidate": "Ler candidato",
+  "Reason for linking to ": "Motivo do vínculo com ",
+  "Describe the link after review": "Descreva o vínculo após revisar",
+  "Record reviewed link": "Registrar vínculo revisado",
+  "No candidate with enough evidence.": "Nenhum candidato com evidência suficiente.",
+  "Review suggested links": "Revisar sugestões de vínculos",
+  "Could not load isolated files.": "Não consegui carregar os arquivos soltos.",
+  "Could not load.": "Não consegui carregar.",
+  "Nothing here yet.": "Nada por aqui ainda.",
+  "Open another folder…": "Abrir outra pasta…",
+  "project": "projeto",
+  "Could not open ": "Não deu para abrir ",
+  "Choose another folder": "Escolher outra pasta",
+  " indexed": " no índice",
+  " links": " ligações",
+  " decisions": " decisões",
+  "indexed ": "índice ",
+  "Review whether the file belongs to a project flow and document its links; no indexed connections does not prove unused code.": "Revisar se o arquivo faz parte de um fluxo do projeto e documentar seus vínculos; ausência de conexões no índice não prova código sem uso.",
+  "Add a topic tag or a link to a related note after reviewing its content.": "Adicionar uma tag de assunto ou um link para uma nota relacionada, após revisar o conteúdo.",
+  "A note already existed: updated `": "Já existia nota sobre isso: atualizei `",
+  "` with new information:\n": "` com o que era novo:\n",
+  "No note found for '": "Nenhuma nota encontrada para '",
+  "'. Use search to locate it.": "'. Use `buscar` para localizar.",
+  "No results for: ": "Nada encontrado para: ",
+  " result(s) for “": " resultado(s) para “",
+  "” · read all ≈ ": "” · ler todos ≈ ",
+  "   Reasons: ": "   Motivos: ",
+  "Section “": "Seção “",
+  "” not found in `": "” não encontrada em `",
+  "`. Available: ": "`. Disponíveis: ",
+  "\n\n[… truncated at ": "\n\n[… cortado em ",
+  " characters": " caracteres",
+  ". Request a section with section: ": ". Peça uma parte com `secao`: ",
+  " · modified ": " · modificado ",
+  "**Revision:** ": "**Revisão:** ",
+  "**Links to:** ": "**Aponta para:** ",
+  "**Used/referenced by:** ": "**Usado/citado por:** ",
+  "## Neighbors of ": "## Vizinhança de ",
+  "Links to": "Aponta para",
+  "Referenced/used by": "Citada por / usada por",
+  "\n**Similar content (inferred):**\n": "\n**Parecidas pelo conteúdo (inferido):**\n",
+  " (similarity ": " (similaridade ",
+  "\n**Shared tags:**\n": "\n**Mesmas tags:**\n",
+  " shared tag(s))": " tag(s) em comum)",
+  "\n**Pending note links:** ": "\n**Links para notas que ainda não existem:** ",
+  "\nIsolated note: no links, backlinks, tags or semantic neighbors.": "\nNota isolada: sem links, backlinks, tags ou semelhantes.",
+  "No path between `": "Não há caminho entre `",
+  "` and `": "` e `",
+  "` in direction ": "` na direção ",
+  "Path with ": "Caminho com ",
+  " hop(s) · direction ": " salto(s) · direção ",
+  " · evidence L": " · evidência L",
+  "# Second-brain map": "# Mapa do segundo cérebro",
+  "**Files:** ": "**Arquivos:** ",
+  " · **links:** ": " · **ligações:** ",
+  "\n## Hubs (most connected notes)": "\n## Hubs (notas mais conectadas)",
+  " connections)": " conexões)",
+  "\n## Topic communities": "\n## Agrupamentos de assuntos",
+  "- **Group ": "- **Grupo ",
+  " notes): ": " notas): ",
+  "\n**Isolated notes (no connections):** ": "\n**Notas órfãs (sem nenhuma conexão):** ",
+  ": index missing": ": índice ausente",
+  ": index unavailable (": ": índice indisponível (",
+  "No links, backlinks, similarity, tags or pending wikilinks in the full index; does not prove a file is unused.": "Sem links, backlinks, similaridade, tags ou wikilinks pendentes no índice completo; não significa arquivo sem uso.",
+  "No tags yet.": "Nenhuma tag ainda.",
+  "No note with #": "Nenhuma nota com #",
+  "Invalid folder: must be inside the project brain.": "Pasta inválida: precisa ficar dentro do segundo cérebro.",
+  "Note created: `": "Nota criada: `",
+  "Empty query.": "Consulta vazia.",
+  "No file with “": "Nenhum arquivo com “",
+  "” in its name or symbols. Try search (content and meaning).": "” no nome ou nos símbolos. Tente `buscar` (conteúdo e significado).",
+  " — defines ": " — define ",
+  "No symbol “": "Nenhum símbolo “",
+  "” in the index. Try find_files or search.": "” no índice. Tente `arquivos` ou `buscar`.",
+  "**Definition of `": "**Definição de `",
+  "**Definitions of `": "**Definições de `",
+  "  Used in (": "  Usado em (",
+  " inside `": " dentro de `",
+  " additional usages; use query_graph.": " usos adicionais; use `consultar_grafo`.",
+  "  No resolved usage in the index; this does not prove dead code.": "  Nenhum uso resolvido no índice; isso não comprova código morto.",
+  "Multiple definitions share this name. Use the ID to select one; references without a unique target remain ambiguous.": "Há definições homônimas. Use o ID para consultar uma delas; referências sem destino único permanecem ambíguas.",
+  " ambiguous reference(s) have no link:": " referência(s) ambígua(s) ficaram sem ligação:",
+  "No file or symbol found for “": "Não achei arquivo nem símbolo “",
+  "”. Try find_files or search.": "”. Tente `arquivos` ou `buscar`.",
+  "\n**Defines (": "\n**Define (",
+  "Imported by": "Importado por",
+  "Called by": "Chamado por",
+  "Referenced in notes/decisions": "Citado em notas/decisões",
+  "References": "Cita",
+  "\n**Rationale / code notes:**": "\n**Porquê / notas no código:**",
+  "\n**Similar content (INFERRED):** ": "\n**Parecidos pelo conteúdo (INFERRED):** ",
+  " (superseded `": " (substituiu `",
+  "\nNotice: ": "\nAtenção: ",
+  "Decision recorded: `": "Decisão registrada: `",
+  "Learning recorded: `": "Aprendizado registrado: `",
+  "Updated `": "Atualizei `",
+  "` with:\n": "` com:\n",
+  "No decisions recorded yet.": "Nenhuma decisão registrada ainda.",
+  "no project": "sem projeto",
+  "Same title, active decisions with different numbers. Review their content before superseding.": "Mesmo título, decisões ativas com números diferentes. Revise o conteúdo antes de substituir.",
+  "Supply the prepared group when submitting a summary.": "Informe o grupo preparado para enviar um resumo.",
+  "Index busy or unavailable; retry after indexing.": "Índice ocupado ou indisponível; tente novamente após a indexação.",
+  "depth must be between 0 and 6.": "profundidade deve estar entre 0 e 6.",
+  "tokens must be between 128 and 16000.": "tokens deve estar entre 128 e 16000.",
+  "direction must be incoming, outgoing or both.": "direcao deve ser entrada, saida ou ambas.",
+  "mode must be bfs or dfs.": "modo deve ser bfs ou dfs.",
+  "Valid relations: ": "Relações válidas: ",
+  "[TRUNCATED: context limit reached; narrow the query or increase tokens/depth.]": "[TRUNCADO: limite de contexto atingido; reduza a consulta ou aumente tokens/profundidade.]",
+  "Could not find `": "Não achei `",
+  "` in the graph. Use find_files, symbol_location or search.": "` no grafo. Use `arquivos`, `onde` ou `buscar`.",
+  "` is ambiguous; specify a path or ID:\n": "` é ambíguo; informe o caminho ou ID:\n",
+  " additional options.": " opções adicionais.",
+  "No results for `": "Nenhum resultado para `",
+  "Graph: ": "Grafo: ",
+  " · up to ": " · até ",
+  " hop(s) ": " salto(s) ",
+  " hop(s).": " salto(s).",
+  " hop(s): ": " salto(s): ",
+  " · direction ": " · direção ",
+  "Arrows follow the original relation. INFERRED is a hypothesis. Tokens estimated using UTF-8/4.": "Setas seguem a relação original. INFERRED é hipótese. Tokens estimados por UTF-8/4.",
+  "NODE ": "NÓ ",
+  " ambiguous reference(s) in these files have no edge:": " referência(s) ambígua(s) nesses arquivos ficaram sem aresta:",
+  "Potential impact of ": "Impacto potencial de ",
+  "Static dependencies do not guarantee breakage or complete coverage.": "Dependências estáticas; não é garantia de quebra nem de cobertura completa.",
+  "INFERRED included.": "INFERRED incluídas.",
+  "EXTRACTED relations only; INFERRED excluded.": "Somente relações EXTRACTED; INFERRED ficam de fora.",
+  "No dependents found within these limits.": "Nenhum dependente encontrado dentro desses limites.",
+  " ambiguous reference(s) may hide dependents:": " referência(s) ambígua(s) podem ocultar dependentes:",
+  " (mixed)": " (misto)",
+  "# atlasbrain — report\n\nNo indexed files yet.\n": "# atlasbrain — relatório\n\nAinda não há arquivos indexados.\n",
+  "# atlasbrain — report for ": "# atlasbrain — relatório de ",
+  "_Generated at ": "_Gerado em ",
+  ". Local file, rebuilt with each indexing pass._": ". Arquivo local, recriado a cada indexação._",
+  " symbols · ": " símbolos · ",
+  " file-to-file links** (": " ligações entre arquivos** (",
+  "). Provenance: ": "). Procedência: ",
+  " extracted from code/text, ": " extraídas do código/texto, ",
+  " inferred, ": " inferidas, ",
+  " ambiguous.": " ambíguas.",
+  "**Symbol graph:** ": "**Grafo de símbolos:** ",
+  " resolved calls/inheritance (": " chamadas/heranças resolvidas (",
+  " same-file calls); ": " chamadas no mesmo arquivo); ",
+  " ambiguous references without an edge.": " referências ambíguas sem aresta.",
+  "_Direction and parallel relations are preserved in queries; communities and the interface use the file projection._": "_Direção e relações paralelas são preservadas nas consultas; comunidades e interface usam a projeção por arquivos._",
+  "## Hubs — highly connected files": "## God nodes — por onde tudo passa",
+  " connections (": " conexões (",
+  "## Subsystems (communities)": "## Subsistemas (comunidades)",
+  "## Surprising connections": "## Conexões surpreendentes",
+  "_Links between distant project areas (different folders and subsystems)._": "_Ligações entre partes distantes do projeto (outra pasta e outro subsistema)._",
+  "- none yet": "- nenhuma por enquanto",
+  "## Rationale in code": "## O porquê no código",
+  "_NOTE / WHY / HACK / DECISION comments extracted from the AST._": "_Comentários NOTE / WHY / HACK / DECISION extraídos da AST._",
+  "- none found": "- nenhum encontrado",
+  "- …and ": "- …e ",
+  " TODO/FIXME comments (use explain on a file to inspect them)": " TODO/FIXME espalhados (use `explicar` num arquivo para ver os dele)",
+  "## Decisions linked to code": "## Decisões ligadas ao código",
+  "## Questions the graph can answer": "## Perguntas que o grafo responde bem",
+  "How does `": "Como `",
+  "` connect to `": "` se conecta a `",
+  "`? → graph_path": "`? → `caminho`",
+  "What depends on `": "O que depende de `",
+  "` and what could break if it changes? → explain": "` e o que quebra se eu mudar? → `explicar`",
+  "Why is `": "Por que `",
+  "` linked to `": "` está ligado a `",
+  "`? → explain": "`? → `explicar`",
+  "Which decisions affect `": "Quais decisões afetam `",
+  "`? → decisions + explain": "`? → `decisoes` + `explicar`",
+  "Where is <symbol> defined and used? → symbol_location": "Onde está definido `<símbolo>` e quem usa? → `onde`",
+  "Compares indexable file sizes and dates with the index; does not reindex or rule out changes with identical metadata.": "Compara tamanho e data dos arquivos indexáveis com o índice; não reindexa nem prova ausência de mudanças com metadados idênticos.",
+  "Similar names": "Nomes semelhantes",
+  "Files in the same folder": "Arquivos na mesma pasta",
+  "Similar names or folders do not prove dependency. Review both files before recording a link.": "Proximidade de nomes/pastas não prova dependência. Revise ambos antes de registrar.",
+  "Choose two distinct files and a reason of up to 2000 characters": "Escolha dois arquivos distintos e um motivo de até 2000 caracteres",
+  "File not found in the index": "Arquivo não encontrado no índice",
+  "Insufficient budget; increase tokens or use a more specific tool.": "Orçamento insuficiente; aumente tokens ou use uma ferramenta específica.",
+  "Describe the task": "Descreva a tarefa",
+  "Invalid objective": "Objetivo inválido",
+  "explicit focus": "foco explícito",
+  "search relevance": "relevância de busca",
+  "explicit checkbox": "checkbox explícito",
+  "Focus not found: ": "Foco não encontrado: ",
+  "Focus on historical decision: ": "Foco em decisão histórica: ",
+  " files pending indexing": " arquivos pendentes de indexação",
+  "Indexing in progress; context may change": "Indexação em andamento; o contexto pode mudar",
+  "Inferred relations exist; check the code before changing it": "Há relações inferidas; confirme no código antes de alterar",
+  "Stale summary: ": "Síntese desatualizada: ",
+  "Context selected by search relevance; not an exhaustive analysis. Use impact/explain for details.": "Contexto selecionado por relevância de busca; não é uma análise exaustiva. Use impacto/explicar para aprofundar.",
+  "File larger than 200 KB": "Arquivo maior que 200 KB",
+  "File exceeds the editor limit (200 KB)": "Arquivo maior que o limite do editor (200 KB)",
+  "File not found": "Arquivo não encontrado",
+  "Hidden files and generated folders cannot be edited": "Arquivos ocultos e pastas geradas não podem ser editados",
+  "Path outside the project": "Caminho fora do projeto",
+  "Invalid path": "Caminho inválido",
+  "Invalid content": "Conteúdo inválido",
+  "Content exceeds 200 KB": "Conteúdo maior que 200 KB",
+  "Invalid history": "Histórico inválido",
+  "Invalid operation identifier": "Identificador de operação inválido",
+  "Identifier already used for another operation": "Identificador já usado para outra operação",
+  "A file with this name already exists": "Já existe um arquivo com esse nome",
+  "A file with this name already exists. Choose another.": "Já existe um arquivo com esse nome. Escolha outro.",
+  "Symbolic links cannot be edited": "Links simbólicos não podem ser editados",
+  "Invalid section name": "Nome da seção inválido",
+  "The file was removed or no longer exists": "O arquivo foi removido ou não existe mais",
+  "The file changed while saving. Reload before saving.": "O arquivo mudou durante o salvamento. Recarregue antes de salvar.",
+  "The file changed outside the editor. Reload the current version before saving.": "O arquivo mudou fora do editor. Recarregue a versão atual antes de salvar.",
+  "The editor only accepts Markdown": "O editor aceita apenas Markdown",
+  "The editor only accepts UTF-8 files": "O editor aceita arquivos UTF-8",
+  "The editor only accepts valid UTF-8 content": "O editor aceita conteúdo UTF-8 válido",
+  "The report is generated automatically": "O relatório é gerado automaticamente",
+  "Operation interrupted: inspect the file before trying another identifier": "Operação interrompida: confira o arquivo antes de tentar com outro identificador",
+  "Invalid recovery folder": "Pasta de recuperação inválida",
+  "Invalid brain folder": "Pasta do cérebro inválida",
+  "Internal folders cannot be edited": "Pastas internas não podem ser editadas",
+  "Repeated section: use the full editor to disambiguate": "Seção repetida: use a edição completa para desambiguar",
+  "Use a relative path within the project": "Use um caminho relativo dentro do projeto",
+  "Previous version unavailable": "Versão anterior indisponível",
+  "Invalid version": "Versão inválida",
+  "Version not found": "Versão não encontrada"
+};
+const DISPLAY_VALUES={
+  "codigo": [
+    "code",
+    "código"
+  ],
+  "nota": [
+    "note",
+    "nota"
+  ],
+  "documento": [
+    "document",
+    "documento"
+  ],
+  "arquivo": [
+    "file",
+    "arquivo"
+  ],
+  "vinculo": [
+    "link",
+    "vínculo"
+  ],
+  "aprendizado": [
+    "learning",
+    "aprendizado"
+  ],
+  "decisao": [
+    "decision",
+    "decisão"
+  ],
+  "fantasma": [
+    "pending note",
+    "nota a criar"
+  ],
+  "pasta": [
+    "folder",
+    "pasta"
+  ],
+  "ativa": [
+    "active",
+    "ativa"
+  ],
+  "substituida": [
+    "superseded",
+    "substituída"
+  ],
+  "substituída": [
+    "superseded",
+    "substituída"
+  ],
+  "revogada": [
+    "revoked",
+    "revogada"
+  ],
+  "cancelada": [
+    "cancelled",
+    "cancelada"
+  ],
+  "conversa": [
+    "conversation",
+    "conversa"
+  ],
+  "adicionado": [
+    "added",
+    "adicionado"
+  ],
+  "adicionada": [
+    "added",
+    "adicionada"
+  ],
+  "alterado": [
+    "changed",
+    "alterado"
+  ],
+  "alterada": [
+    "changed",
+    "alterada"
+  ],
+  "removido": [
+    "removed",
+    "removido"
+  ],
+  "removida": [
+    "removed",
+    "removida"
+  ],
+  "importa": [
+    "imports",
+    "importa"
+  ],
+  "chama": [
+    "calls",
+    "chama"
+  ],
+  "herda": [
+    "inherits",
+    "herda"
+  ],
+  "contem": [
+    "contains",
+    "contém"
+  ],
+  "menciona": [
+    "mentions",
+    "menciona"
+  ],
+  "correspondência exata": [
+    "exact match",
+    "correspondência exata"
+  ],
+  "semântica": [
+    "semantic",
+    "semântica"
+  ],
+  "palavras-chave": [
+    "keywords",
+    "palavras-chave"
+  ],
+  "estrutura": [
+    "structure",
+    "estrutura"
+  ]
+};
+let locale='en';try{if(localStorage.getItem('atlasbrain:language')==='pt-BR')locale='pt-BR'}catch{}
+function t(message){return locale==='pt-BR'?(PT_BR[message]??message):message}
+function tr(strings,...values){return strings.map((s,i)=>t(s)+(i<values.length?values[i]:'')).join('')}
+function displayValue(value){const item=DISPLAY_VALUES[value];return item?item[locale==='pt-BR'?1:0]:value}
+const staticTranslations=[];
+function initializeTranslations(){
+ const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let node;
+ while(node=walker.nextNode()){if(node.parentElement.closest('script,style,code,pre,textarea'))continue;const message=node.nodeValue;if(PT_BR[message])staticTranslations.push({node,message,last:message})}
+ for(const node of document.querySelectorAll('[title],[aria-label],[placeholder]'))for(const attribute of ['title','aria-label','placeholder']){const message=node.getAttribute(attribute);if(PT_BR[message])staticTranslations.push({node,attribute,message,last:message})}
+ applyTranslations();
+}
+function applyTranslations(){
+ document.documentElement.lang=locale;
+ for(const item of staticTranslations){const current=item.attribute?item.node.getAttribute(item.attribute):item.node.nodeValue;if(current!==item.last)continue;const next=t(item.message);if(item.attribute)item.node.setAttribute(item.attribute,next);else item.node.nodeValue=next;item.last=next}
+}
+initializeTranslations();
+
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const STAR='M32 4Q35.5 28.5 60 32Q35.5 35.5 32 60Q28.5 35.5 4 32Q28.5 28.5 32 4Z';
-const fmtDate=d=>{const x=new Date(/^\d{4}-\d{2}-\d{2}$/.test(d)?d+'T12:00:00':d);return isNaN(x)?'':x.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}).replace('.','')};
-const rel=new Intl.RelativeTimeFormat('pt-BR',{numeric:'auto'});
+const fmtDate=d=>{const x=new Date(/^\d{4}-\d{2}-\d{2}$/.test(d)?d+'T12:00:00':d);return isNaN(x)?'':x.toLocaleDateString(locale,{day:'2-digit',month:'short'}).replace('.','')};
+let rel=new Intl.RelativeTimeFormat(locale,{numeric:'auto'});
 function ago(ts){const s=(ts*1000-Date.now())/1000;const u=[[60,'second'],[3600,'minute'],[86400,'hour'],[604800,'day'],[2629800,'week'],[31557600,'month'],[Infinity,'year']];
   let prev=1;for(const[lim,unit]of u){if(Math.abs(s)<lim)return rel.format(Math.round(s/prev),unit);prev=lim}}
-function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2200)}
+function toast(msg){const el=$('#toast');el.textContent=systemText(msg);el.classList.add('show');clearTimeout(el._h);el._h=setTimeout(()=>el.classList.remove('show'),2200)}
 const VPARAM=new URLSearchParams(location.search).get('v');
 async function api(path){if(VPARAM)path+=(path.includes('?')?'&':'?')+'v='+encodeURIComponent(VPARAM);
   const r=await fetch(path,{headers:{'X-atlasbrain':'1'}});if(!r.ok)throw new Error(r.status);return r.json()}
 async function post(path,body){if(VPARAM)path+=(path.includes('?')?'&':'?')+'v='+encodeURIComponent(VPARAM);const r=await fetch(path,{method:'POST',headers:{'X-atlasbrain':'1','Content-Type':'application/json'},body:JSON.stringify(body||{})});
-  const j=await r.json().catch(()=>({}));if(!r.ok){const error=new Error(j.erro||r.status);error.status=r.status;throw error}return j}
+  const j=await r.json().catch(()=>({}));if(!r.ok){const error=new Error(systemText(j.erro||r.status));error.status=r.status;throw error}return j}
 
 /* ================= GRAFO ================= */
 const cv=$('#cv'),ctx=cv.getContext('2d');
@@ -476,10 +1207,10 @@ function syncViewMode(){
   $('#mode2d').setAttribute('aria-pressed',String(!view3d&&!radialMode));
   $('#mode3d').setAttribute('aria-pressed',String(view3d));
   $('#radial').setAttribute('aria-pressed',String(radialMode));
-  $('#graphhint').textContent=view3d?'Cérebro em 3D · arraste para girar · Shift para mover':radialMode?'Órbitas por comunidade · passe o mouse para seguir as conexões':'Cérebro de lado · clique para selecionar · duplo clique para abrir';
+  $('#graphhint').textContent=view3d?t("3D brain · drag to rotate · Shift to pan"):radialMode?t("Community orbits · hover to follow connections"):t("Brain from the side · click to select · double-click to open");
 }
 function selectViewMode(mode){
-  if(modo==='deps'){toast('Volte ao grafo para mudar a visualização');return}
+  if(modo==='deps'){toast(t("Return to the graph to change the view"));return}
   if((mode==='3d'&&view3d)||(mode==='radial'&&radialMode)||(mode==='2d'&&!view3d&&!radialMode))return;
   if(view3d)set3d(false);
   if(radialMode)setRadial(false);
@@ -490,10 +1221,10 @@ function selectViewMode(mode){
 }
 function setRadial(enabled){
   if(radialMode===enabled)return;
-  if(modo==='deps'){toast('Volte ao grafo para mudar a organização');return}
+  if(modo==='deps'){toast(t("Return to the graph to change the layout"));return}
   if(view3d)set3d(false);
   radialMode=enabled;syncViewMode();
-  if(enabled){freePositions.clear();arrangeRadial();toast('Órbitas · cada grupo reúne uma comunidade')}
+  if(enabled){freePositions.clear();arrangeRadial();toast(t("Orbits · each group represents a community"))}
   else{for(const n of N){const p=freePositions.get(n.id);if(p){n.x=p.x;n.y=p.y}}freePositions.clear();radialGroups=[];alpha=0;ticks=0}
   fit();needs=true;
 }
@@ -534,6 +1265,7 @@ function cortexPulseIntensity(distance,phase){
   const x=1-delta/.12;return x*x*(3-2*x);
 }
 function cortexPulseState(is3d,now=performance.now()){
+  if(!pulseEnabled)return null;
   if(RM||selected>=0||hover>=0||radialMode||modo==='deps'||N.length<2)return null;
   const {sx,sy}=brainDimensions(N.length),cx=-.08*sx,cy=-.16*sy;
   const raw=N.map(n=>{const p=is3d?brainPoint3d(n):n;return Math.hypot(p.x-cx,p.y-cy,p.z||0)});
@@ -575,12 +1307,12 @@ function drawCortexPulseEdges(points,pulse,is3d,radius){
 }
 function set3d(enabled){
   if(view3d===enabled)return;
-  if(enabled&&modo==='deps'){toast('Volte ao grafo para usar a perspectiva 3D');return}
+  if(enabled&&modo==='deps'){toast(t("Return to the graph to use the 3D view"));return}
   if(enabled&&radialMode)setRadial(false);
   view3d=enabled;orbitDrag=null;hover=-1;
   syncViewMode();
-  cv.setAttribute('aria-label',enabled?'Grafo em forma de cérebro em 3D. Arraste para girar, Shift e arraste para mover.':'Grafo em forma de cérebro visto de lado. Use a busca para navegar pelo teclado.');
-  if(enabled){cam2d={...camT};fit();toast('3D · arraste para girar · Shift para mover')}
+  cv.setAttribute('aria-label',enabled?t("Brain-shaped graph in 3D. Drag to rotate, Shift + drag to pan."):t("Brain-shaped graph from the side. Use search to navigate with the keyboard."));
+  if(enabled){cam2d={...camT};fit();toast(t("3D · drag to rotate · Shift to pan"))}
   else if(cam2d){Object.assign(camT,cam2d);cam2d=null}else fit()
   needs=true;
 }
@@ -589,16 +1321,27 @@ const graphFilters={pasta:'',ext:'',kind:'',origem:'',relacao:''};
 const storageKey='atlasbrain:view:'+ (new URLSearchParams(location.search).get('v')||'default');
 let savedView=null,saveTimer=null,restoring=true;
 try{savedView=JSON.parse(localStorage.getItem(storageKey)||'null');if(savedView&&(!Array.isArray(savedView.positions)||!savedView.positions.every(p=>Array.isArray(p)&&p.length===3&&Number.isFinite(p[1])&&Number.isFinite(p[2]))))savedView=null;}catch{}
+const DEFAULT_GRAPH_LIMIT=500,MIN_GRAPH_LIMIT=50,MAX_GRAPH_LIMIT=800;
+function validGraphLimit(value){const n=Number(value);return Number.isInteger(n)&&n>=MIN_GRAPH_LIMIT&&n<=MAX_GRAPH_LIMIT?n:DEFAULT_GRAPH_LIMIT}
+let graphLimit=validGraphLimit(savedView?.graphLimit),pulseEnabled=savedView?.pulseEnabled===true;
+function persistGraphLimit(){try{const state=JSON.parse(localStorage.getItem(storageKey)||'null')||{};state.graphLimit=graphLimit;state.pulseEnabled=pulseEnabled;state.positions??=[];localStorage.setItem(storageKey,JSON.stringify(state))}catch{}}
+async function changeGraphLimit(value){const n=Number(value);const input=$('#graphPageSize');
+  if(!Number.isInteger(n)||n<MIN_GRAPH_LIMIT||n>MAX_GRAPH_LIMIT){input.value=graphLimit;toast(t("Choose 50 to 800 nodes per page"));return}
+  if(n===graphLimit)return;
+  const focus=N[selected]?.path||null;graphLimit=n;graphPage=0;persistGraphLimit();
+  if(modo==='deps'){sairDeps();return}
+  await loadGraph(true,focus);saveView();
+}
 syncViewMode();
 function saveView(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{
   if(restoring||modo==='deps'||!N.length)return;
-  try{localStorage.setItem(storageKey,JSON.stringify({layoutVersion:4,orbitVersion:2,mode:view3d?'3d':radialMode?'radial':'2d',layers,filters:graphFilters,prefixo,graphPage,cam:{...camT},orbit:{...orbit},positions:N.map(n=>{const p=radialMode?freePositions.get(n.id)||n:n;return [n.id,p.x,p.y]})}))}catch{}
+  try{localStorage.setItem(storageKey,JSON.stringify({layoutVersion:4,orbitVersion:2,graphLimit,pulseEnabled,mode:view3d?'3d':radialMode?'radial':'2d',layers,filters:graphFilters,prefixo,graphPage,cam:{...camT},orbit:{...orbit},positions:N.map(n=>{const p=radialMode?freePositions.get(n.id)||n:n;return [n.id,p.x,p.y]})}))}catch{}
 },250)}
 let changeFiles=new Map(),selectionSignature='';
 function updateSelectionPanel(){const n=N[selected];const visible=!!n&&!$('#reader').classList.contains('open')&&view==='grafo';
   const signature=visible?[n.id,n.deg,n.path].join('|'):'';if(signature===selectionSignature)return;selectionSignature=signature;
   const panel=$('#selectionPanel');panel.hidden=!visible;if(!visible)return;
-  panel.innerHTML=`<strong>${esc(n.label)}</strong><p>${esc(n.path||n.kind)}</p><p>${esc(n.kind)} · ${n.deg} conexões visíveis${n.isolated?' · sem vínculos no índice completo':''}</p><div class="layers">${n.path?'<button class="chip selection-action" id="selectionRead" title="Ler arquivo" aria-label="Ler arquivo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6"/></svg></button><button class="chip selection-action" id="selectionLinks" title="Ver conexões" aria-label="Ver conexões"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><path d="m9 10 6-3M9 14l6 3"/></svg></button>':''}${n.path&&!['tag','fantasma'].includes(n.kind)?'<button class="chip selection-action delete-action" id="selectionDelete" title="Excluir arquivo" aria-label="Excluir arquivo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg></button>':''}<button class="chip selection-action" id="selectionClear" title="Limpar seleção" aria-label="Limpar seleção"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>`;
+  panel.innerHTML=tr`<strong>${esc(n.label)}</strong><p>${esc(n.path||n.kind)}</p><p>${esc(displayValue(n.kind))} · ${n.deg} visible connections${n.isolated?t(" · isolated in the full index"):''}</p><div class="layers">${n.path?t("<button class=\"chip selection-action\" id=\"selectionRead\" title=\"Read file\" aria-label=\"Read file\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6\"/></svg></button><button class=\"chip selection-action\" id=\"selectionLinks\" title=\"View connections\" aria-label=\"View connections\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"6\" cy=\"12\" r=\"3\"/><circle cx=\"18\" cy=\"5\" r=\"3\"/><circle cx=\"18\" cy=\"19\" r=\"3\"/><path d=\"m9 10 6-3M9 14l6 3\"/></svg></button>"):''}${n.path&&!['tag','fantasma'].includes(n.kind)?t("<button class=\"chip selection-action delete-action\" id=\"selectionDelete\" title=\"Delete file\" aria-label=\"Delete file\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7\"/></svg></button>"):''}<button class="chip selection-action" id="selectionClear" title="Clear selection" aria-label="Clear selection"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>`;
   if(n.path){$('#selectionRead').onclick=()=>openGraphNode(selected);$('#selectionLinks').onclick=async()=>{await openNote(n.path);$('#tabCon').click()}}
   if($('#selectionDelete'))$('#selectionDelete').onclick=()=>deleteFile(n.path);
   $('#selectionClear').onclick=clearSelection;
@@ -616,16 +1359,17 @@ addEventListener('resize',resize);
 function gStatus(html){$('#gstatus').innerHTML=html||''}
 async function loadGraph(keepCam,focusPath=null){
   const request=++graphRequest;
-  if(!N.length)gStatus('<p>Montando o grafo…</p>');
+  if(!N.length)gStatus(t("<p>Building the graph…</p>"));
   let d;
-  try{d=await api(`/api/graph?similar=${+layers.similar}&tags=${+layers.tags}&ghosts=${+layers.ghosts}&orphans=${+layers.orphans}&prefixo=${encodeURIComponent(prefixo)}&pagina=${graphPage}&foco=${encodeURIComponent(focusPath||'')}&${new URLSearchParams(graphFilters)}`)}
-  catch(e){if(request!==graphRequest)return;gStatus(`<svg viewBox="0 0 64 64"><path fill="#879DA6" d="${STAR}"/></svg><h2>Não consegui ler o índice</h2><p>O servidor local parou de responder.</p><button class="chip" onclick="loadGraph()">Tentar de novo</button>`);return}
+  try{d=await api(`/api/graph?similar=${+layers.similar}&tags=${+layers.tags}&ghosts=${+layers.ghosts}&orphans=${+layers.orphans}&prefixo=${encodeURIComponent(prefixo)}&pagina=${graphPage}&limite=${graphLimit}&foco=${encodeURIComponent(focusPath||'')}&${new URLSearchParams(graphFilters)}`)}
+  catch(e){if(request!==graphRequest)return;gStatus(tr`<svg viewBox="0 0 64 64"><path fill="#879DA6" d="${STAR}"/></svg><h2>Could not read the index</h2><p>The local server stopped responding.</p><button class="chip" onclick="loadGraph()">Try again</button>`);return}
   if(request!==graphRequest)return;
   if(acompanhando)return;  // pasta ainda indexando: o status fica na tela, não o grafo de outro cérebro
   const selectedId=keepCam?N[selected]?.id:null;
   const old=new Map(N.map(n=>[n.id,n]));
   let nodes=d.nodes;
   const restoredPositions=new Map(savedView?.positions?.map(p=>[p[0],{x:p[1],y:p[2]}])||[]);
+  if(modo==='deps')$$('.layers,.legend').forEach(x=>x.style.visibility='');
   modo=d.modo;totalArquivos=d.total;vaultNome=d.vault;graphPage=d.pagina||0;graphPages=d.paginas||1;graphItems=d.itens||0;graphStart=d.inicio||0;graphEnd=d.fim||0;renderCrumbs();
   if(nodes.length>MAX_NOS)nodes=nodes.sort((a,b)=>b.deg-a.deg).slice(0,MAX_NOS);
   const idx=new Map(nodes.map((n,j)=>[n.i,j]));
@@ -639,7 +1383,7 @@ async function loadGraph(keepCam,focusPath=null){
   adj=N.map(()=>new Set());E.forEach(e=>{adj[e.a].add(e.b);adj[e.b].add(e.a)});
   const hubs=[...N.keys()].sort((a,b)=>N[b].deg-N[a].deg).slice(0,14);N.forEach(n=>n.hub=false);hubs.forEach(i=>N[i].hub=N[i].deg>1);
   hover=-1;selected=selectedId?N.findIndex(n=>n.id===selectedId):-1;focusSet=selected>=0?new Set([selected,...adj[selected]]):null;projected=[];if(view3d&&!keepCam)cam2d=null;
-  if(!N.length){$('#selectionPanel').hidden=true;if(Object.values(graphFilters).some(Boolean)){gStatus('<h2>Nenhum resultado para estes filtros</h2><p>Limpe ou ajuste os filtros para ampliar a busca.</p>');needs=true;return}gStatus(`<svg viewBox="0 0 64 64"><path fill="#1EB880" d="${STAR}"/></svg><h2>A pasta ainda está vazia</h2><p>Peça ao Claude ou ao Codex para registrar uma decisão neste projeto, ou crie notas em <code>.atlasbrain/</code>. O grafo aparece sozinho.</p>`);return}
+  if(!N.length){$('#selectionPanel').hidden=true;if(Object.values(graphFilters).some(Boolean)){gStatus(t("<h2>No results for these filters</h2><p>Clear or adjust the filters to broaden your search.</p>"));needs=true;return}gStatus(tr`<svg viewBox="0 0 64 64"><path fill="#1EB880" d="${STAR}"/></svg><h2>The folder is still empty</h2><p>Ask Claude or Codex to record a decision in this project, or create notes in <code>.atlasbrain/</code>. The graph appears automatically.</p>`);return}
   gStatus('');
   alpha=0;ticks=0;resize();
   arrangeBrain();
@@ -879,16 +1623,24 @@ function draw(){
   ctx.shadowBlur=0;
   drawNearbyLabels(false);
 }
+let lastRotationTime=null,lastGraphInteraction=0;
+function rotateIdle3d(time){
+  const delta=lastRotationTime===null?0:Math.min(50,Math.max(0,time-lastRotationTime));lastRotationTime=time;
+  if(RM||document.hidden||view!=='grafo'||!view3d||radialMode||modo==='deps'||N.length<2||selected>=0||hover>=0||orbitDrag||drag||pan||pinch||time-lastGraphInteraction<1600||
+    document.querySelector('.reader.open,.pal.open,dialog[open]')||document.activeElement?.closest('.graphcontrols'))return false;
+  if(!delta)return false;orbit.yaw=(orbit.yaw+delta*.00012)%(Math.PI*2);return true;
+}
 function frame(time=performance.now()){
-  if(view!=='grafo'||document.hidden){updateSelectionPanel();requestAnimationFrame(frame);return}
+  if(view!=='grafo'||document.hidden){lastRotationTime=null;updateSelectionPanel();requestAnimationFrame(frame);return}
   updateSelectionPanel();
+  const rotating=rotateIdle3d(time);
   const moving=tick();
   const ease=RM?1:.14;let camMoving=false;
   for(const p of['x','y','k']){const d=camT[p]-cam[p];if(Math.abs(d)>(p==='k'?1e-4:.05)){cam[p]+=d*ease;camMoving=true}else cam[p]=camT[p]}
   const hoverAnim=N.some((n,i)=>Math.abs(n.h-((i===hover||i===selected)?1:0))>.01);
-  const pulseFrame=!RM&&!radialMode&&modo!=='deps'&&selected<0&&hover<0&&N.length>1&&time-lastPulseDraw>=33;
+  const pulseFrame=pulseEnabled&&!RM&&!radialMode&&modo!=='deps'&&selected<0&&hover<0&&N.length>1&&time-lastPulseDraw>=33;
   if(pulseFrame)lastPulseDraw=time;
-  if(moving||camMoving||hoverAnim||needs||pulseFrame||(!RM&&(hover>=0?adj[hover]?.size:adj[selected]?.size)&&!document.hidden)){draw();needs=false}
+  if(moving||camMoving||hoverAnim||needs||pulseFrame||rotating||(!RM&&(hover>=0?adj[hover]?.size:adj[selected]?.size)&&!document.hidden)){draw();needs=false}
   requestAnimationFrame(frame);
 }
 function fit(){if(!N.length)return;let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;const radius=view3d?volumeRadius():0;N.forEach(n=>{const p=view3d?project3d(n,radius):n;x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y)});
@@ -901,11 +1653,11 @@ function zoomAt(f,sx=W/2,sy=H/2){const k=Math.min(6,Math.max(.02,camT.k*f));cons
 
 // ponteiro: arrastar nó, pan, pinça
 let drag=null,pan=null,moved=false;const ptrs=new Map();let pinch=null;
-cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.offsetX,y:e.offsetY});moved=false;
+cv.addEventListener('pointerdown',e=>{lastGraphInteraction=performance.now();cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.offsetX,y:e.offsetY});moved=false;
   if(ptrs.size===2){const[a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y)};drag=null;pan=null;orbitDrag=null;return}
   if(view3d){orbitDrag={x:e.clientX,y:e.clientY,yaw:orbit.yaw,pitch:orbit.pitch,pan:e.shiftKey,cx:camT.x,cy:camT.y};cv.classList.add('dragging');return}
   const i=pick(e.offsetX,e.offsetY);if(i>=0){drag=N[i];alpha=Math.max(alpha,.25);ticks=Math.min(ticks,MAX_TICKS-150)}else pan={x:e.clientX-camT.x,y:e.clientY-camT.y};cv.classList.add('dragging')});
-cv.addEventListener('pointermove',e=>{
+cv.addEventListener('pointermove',e=>{lastGraphInteraction=performance.now();
   pointer={x:e.offsetX,y:e.offsetY};needs=true;
   if(ptrs.has(e.pointerId))ptrs.set(e.pointerId,{x:e.offsetX,y:e.offsetY});
   if(pinch&&ptrs.size===2){const[a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);zoomAt(d/pinch.d,(a.x+b.x)/2,(a.y+b.y)/2);pinch.d=d;moved=true;return}
@@ -915,20 +1667,20 @@ cv.addEventListener('pointermove',e=>{
   if(drag){moved=true;const p=toWorld(e.offsetX,e.offsetY);drag.x=p.x;drag.y=p.y;drag.vx=drag.vy=0;alpha=Math.max(alpha,.08);return}
   if(pan){const nx=e.clientX-pan.x,ny=e.clientY-pan.y;if(Math.abs(nx-camT.x)+Math.abs(ny-camT.y)>2)moved=true;camT.x=cam.x=nx;camT.y=cam.y=ny;needs=true;return}
   const h=pick(e.offsetX,e.offsetY);if(h!==hover){hover=h;cv.style.cursor=h>=0?'pointer':'grab';needs=true}});
-cv.addEventListener('pointerup',e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;
+cv.addEventListener('pointerup',e=>{lastGraphInteraction=performance.now();ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;
   if(!moved){const i=pick(e.offsetX,e.offsetY);if(i>=0)selectNode(i);else{closeReader();clearSelection()}}
   drag=null;pan=null;orbitDrag=null;cv.classList.remove('dragging');saveView()});
 cv.addEventListener('dblclick',e=>{if(moved||e.button!==0)return;const i=pick(e.offsetX,e.offsetY);if(i>=0){e.preventDefault();openGraphNode(i)}});
 cv.addEventListener('pointercancel',e=>{ptrs.delete(e.pointerId);pinch=null;drag=null;pan=null;orbitDrag=null;cv.classList.remove('dragging')});
 cv.addEventListener('pointerleave',()=>{hover=-1;pointer=null;needs=true});
-cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(Math.exp(-e.deltaY*.0016),e.offsetX,e.offsetY);saveView()},{passive:false});
+cv.addEventListener('wheel',e=>{lastGraphInteraction=performance.now();e.preventDefault();zoomAt(Math.exp(-e.deltaY*.0016),e.offsetX,e.offsetY);saveView()},{passive:false});
 $('#mode2d').onclick=()=>selectViewMode('2d');
 $('#mode3d').onclick=()=>selectViewMode('3d');
 $('#radial').onclick=()=>selectViewMode('radial');
 $('#zin').onclick=()=>zoomAt(1.35);$('#zout').onclick=()=>zoomAt(1/1.35);$('#zfit').onclick=()=>{fit();saveView()};
 
 const DEP_X=300,DEP_Y=30;let depCentro=null,depCols=[],depTopo=0;
-async function abrirDeps(path){let d;try{d=await api('/api/dependencias?path='+encodeURIComponent(path))}catch{toast('Não consegui montar o mapa');return}
+async function abrirDeps(path){let d;try{d=await api('/api/dependencias?path='+encodeURIComponent(path))}catch{toast(t("Could not build the map"));return}
   if(view3d)set3d(false);
   if(radialMode)setRadial(false);
   modo='deps';depCentro=path;searchSet=null;focusSet=null;hover=-1;
@@ -939,34 +1691,37 @@ async function abrirDeps(path){let d;try{d=await api('/api/dependencias?path='+e
       N.push({id:'f'+n.id,path:n.path,label:lado===0?n.path:n.label,kind:'codigo',tipo:null,c:Math.abs(lado),deg:0,x:lado*DEP_X,y,vx:0,vy:0,r:lado===0?10:5.5,h:0,lado})})}
   E=d.edges.filter(e=>idx.has(e.src)&&idx.has(e.dst)).map(e=>({a:idx.get(e.src),b:idx.get(e.dst),kind:e.kind,conf:e.conf,w:1}));
   adj=N.map(()=>new Set());E.forEach(e=>{adj[e.a].add(e.b);adj[e.b].add(e.a)});
+  N.forEach((n,i)=>n.deg=adj[i].size);
   const n1=l=>(cols[l]||[]).length;
-  depCols=[[-2,n1(-2)?'usado por quem usa':''],[-1,n1(-1)?`← usado por (${n1(-1)})`:''],[1,n1(1)?`usa (${n1(1)}) →`:''],[2,n1(2)?'que por sua vez usa':'']].filter(x=>x[1]);
-  alpha=0;selected=N.findIndex(n=>n.lado===0);gStatus(d.edges.length?'':'<p>Este arquivo não importa nem é importado por nenhum outro arquivo do projeto.</p>');
+  depCols=[[-2,n1(-2)?t("used by its dependents"):''],[-1,n1(-1)?tr`← used by (${n1(-1)})`:''],[1,n1(1)?tr`uses (${n1(1)}) →`:''],[2,n1(2)?t("which in turn uses"):'']].filter(x=>x[1]);
+  alpha=0;selected=N.findIndex(n=>n.lado===0);gStatus(d.edges.length?'':t("<p>This file has no imports or importers in the project.</p>"));
   $$('.layers,.legend').forEach(x=>x.style.visibility='hidden');
-  $('#crumbs').innerHTML=`<button data-sair>← grafo</button><i>›</i><span style="font-family:var(--font);font-size:13px;color:var(--fg)">Dependências de ${esc(path.split('/').pop())}</span><span>clique para navegar · tracejado = inferido · Esc volta</span>`;
+  $('#crumbs').innerHTML=tr`<button data-sair>← graph</button><i>›</i><span style="font-family:var(--font);font-size:13px;color:var(--fg)">Dependencies of ${esc(path.split('/').pop())}</span><span>click to navigate · dashed = inferred · Esc to return</span>`;
   fit();needs=true}
 function sairDeps(){if(modo!=='deps')return;clearSelection();modo='arquivos';depCentro=null;gStatus('');$$('.layers,.legend').forEach(x=>x.style.visibility='');N=[];E=[];loadGraph()}
 $('#bDeps').onclick=()=>{if(current){setView('grafo');abrirDeps(current)}};
 function entrar(p){prefixo=p;graphPage=0;closeReader();clearSelection();searchSet=null;N=[];E=[];void loadGraph().then(saveView)}
 function renderCrumbs(){const c=$('#crumbs');const partes=prefixo?prefixo.split('/'):[];
   c.innerHTML=`<button data-p="">${esc(vaultNome)}</button>`+partes.map((x,j)=>`<i>›</i><button data-p="${esc(partes.slice(0,j+1).join('/'))}">${esc(x)}</button>`).join('')+
-    `<span> · ${graphStart}${graphPages>1?'–'+graphEnd:''} de ${graphItems} arquivos${graphPages>1?' · página '+(graphPage+1)+'/'+graphPages:''}</span>`+
-    (graphPages>1?`<button data-page="-1" ${graphPage===0?'disabled':''} aria-label="Página anterior">←</button><button data-page="1" ${graphPage===graphPages-1?'disabled':''} aria-label="Próxima página">→</button>`:'')}
+    tr`<span> · ${graphStart}${graphEnd>graphStart?'–'+graphEnd:''} of ${graphItems} files${graphPages>1?t(" · page ")+(graphPage+1)+'/'+graphPages:''}</span>`+
+    (graphPages>1?tr`<button data-page="-1" ${graphPage===0?'disabled':''} aria-label="Previous page">←</button><button data-page="1" ${graphPage===graphPages-1?'disabled':''} aria-label="Next page">→</button>`:'')}
 function selectNode(i){const n=N[i];if(!n)return;
   selected=i;focusSet=new Set([i,...adj[i]]);searchSet=null;needs=true;
-  updateSelectionPanel();if(n.kind==='fantasma')toast(`“${n.label}” é citada, mas ainda não existe como nota`)}
+  updateSelectionPanel();if(n.kind==='fantasma')toast(tr`“${n.label}” is referenced but does not exist as a note yet`)}
 
 let deletingFile=false;
 async function deleteFile(path){
   if(deletingFile||!canLeaveEditor())return;
-  if(!confirm(`Excluir definitivamente “${path}”?\n\nO arquivo e suas versões locais do editor serão apagados. Esta ação não pode ser desfeita pelo AtlasBrain.`))return;
+  if(!confirm(tr`Permanently delete “${path}”?
+
+The file and its local editor versions will be deleted. AtlasBrain cannot undo this action.`))return;
   deletingFile=true;
-  try{const result=await post('/api/arquivo/excluir',{path});closeReader();clearSelection();await loadGraph(true);await loadChanges(0,true);toast(result.aviso||'Arquivo excluído definitivamente')}
-  catch(e){toast(e.message||'Não consegui excluir o arquivo')}
+  try{const result=await post('/api/arquivo/excluir',{path});closeReader();clearSelection();await loadGraph(true);await loadChanges(0,true);toast(result.aviso||t("File permanently deleted"))}
+  catch(e){toast(e.message||t("Could not delete the file"))}
   finally{deletingFile=false}
 }
 function openGraphNode(i){const n=N[i];if(!n)return;
-  if(n.kind==='fantasma'){toast(`“${n.label}” é citada, mas ainda não existe como nota`);return}
+  if(n.kind==='fantasma'){toast(tr`“${n.label}” is referenced but does not exist as a note yet`);return}
   if(n.path)openNote(n.path);
 }
 
@@ -1009,49 +1764,49 @@ function aba(qual){abaAtual=qual;$('#tabNota').setAttribute('aria-selected',qual
   $('#rbody').hidden=qual!=='nota';$('#rcon').hidden=qual!=='con'}
 $('#tabNota').onclick=()=>aba('nota');
 $('#tabCon').onclick=()=>{aba('con');carregarConexoes()};
-async function carregarConexoes(){const box=$('#rcon');if(!current)return;box.innerHTML='<p class="lede" style="margin-top:14px">Procurando o que se parece com esta nota…</p>';
-  try{conexoesAtuais=await api('/api/conexoes?path='+encodeURIComponent(current))}catch{box.innerHTML='<p class="lede">Não consegui calcular as conexões.</p>';return}
-  if(!conexoesAtuais.length){box.innerHTML='<p class="lede" style="margin-top:14px">Sem conexões por significado ainda (esta nota não tem vetor; aparece depois da próxima indexação).</p>';return}
+async function carregarConexoes(){const box=$('#rcon');if(!current)return;box.innerHTML=t("<p class=\"lede\" style=\"margin-top:14px\">Looking for notes similar to this one…</p>");
+  try{conexoesAtuais=await api('/api/conexoes?path='+encodeURIComponent(current))}catch{box.innerHTML=t("<p class=\"lede\">Could not calculate connections.</p>");return}
+  if(!conexoesAtuais.length){box.innerHTML=t("<p class=\"lede\" style=\"margin-top:14px\">No semantic connections yet (this note has no vector; connections appear after the next indexing).</p>");return}
   const max=conexoesAtuais[0].score;
-  box.innerHTML='<p class="lede" style="margin:12px 0 4px;font-size:12.5px">Parecidas em significado com esta nota, mesmo sem link entre elas. Marque e copie como contexto para colar em qualquer chat.</p>'+
-    conexoesAtuais.map((c,i)=>`<div class="con"><input type="checkbox" data-i="${i}" aria-label="Incluir ${esc(c.title)} no contexto">
+  box.innerHTML=t("<p class=\"lede\" style=\"margin:12px 0 4px;font-size:12.5px\">Similar in meaning to this note, even without a direct link. Select and copy them as context for any chat.</p>")+
+    conexoesAtuais.map((c,i)=>tr`<div class="con"><input type="checkbox" data-i="${i}" aria-label="Include ${esc(c.title)} in context">
       <button data-ref="${esc(c.path)}"><b>${esc(c.title)}</b><small>${esc(c.path)}${c.heading&&c.heading!=='resumo do arquivo'?' › '+esc(c.heading):''} · ${Math.round(c.score*100)}%</small><p>${esc(c.trecho)}</p>
       <div class="barra"><i style="width:${Math.round(c.score/max*100)}%"></i></div></button></div>`).join('')+
-    `<div class="conbar"><button class="btn brand" id="bCopiar">Copiar contexto</button><span id="conSel">esta nota + 0 selecionada(s)</span></div>`;
-  box.querySelectorAll('input').forEach(x=>x.onchange=()=>{$('#conSel').textContent=`esta nota + ${box.querySelectorAll('input:checked').length} selecionada(s)`});
+    tr`<div class="conbar"><button class="btn brand" id="bCopiar">Copy context</button><span id="conSel">this note + 0 selected</span></div>`;
+  box.querySelectorAll('input').forEach(x=>x.onchange=()=>{$('#conSel').textContent=tr`this note + ${box.querySelectorAll('input:checked').length} selected`});
   $('#bCopiar').onclick=copiarContexto}
 $('#rcon').addEventListener('click',e=>{const b=e.target.closest('button[data-ref]');if(b)openNote(b.dataset.ref)});
 async function copiarContexto(){const sel=[...$('#rcon').querySelectorAll('input:checked')].map(x=>conexoesAtuais[+x.dataset.i].path);
-  const paths=[current,...sel];let md=`# Contexto do AtlasBrain (${paths.length} arquivo${paths.length>1?'s':''})\n`;
+  const paths=[current,...sel];let md=tr`# AtlasBrain context (${paths.length} file${paths.length>1?'s':''})\n`;
   for(const p of paths){try{const d=await api('/api/note?path='+encodeURIComponent(p));
-    const corpo=d.content.length>12000?d.content.slice(0,12000)+'\n[…cortado]':d.content;
+    const corpo=d.content.length>12000?d.content.slice(0,12000)+t("\n[…truncated]"):d.content;
     md+=`\n---\n## ${d.path}\n\n`+(d.kind==='nota'?corpo:'```\n'+corpo+'\n```')+'\n'}catch{}}
-  try{await navigator.clipboard.writeText(md);toast(`Contexto copiado: ${paths.length} arquivo(s), ~${Math.round(md.length/4).toLocaleString('pt-BR')} tokens`)}
-  catch{toast('O navegador bloqueou a área de transferência')}}
+  try{await navigator.clipboard.writeText(md);toast(tr`Context copied: ${paths.length} file(s), ~${Math.round(md.length/4).toLocaleString(locale)} tokens`)}
+  catch{toast(t("The browser blocked clipboard access"))}}
 function clearSelection(){selected=-1;focusSet=null;hover=-1;needs=true;updateSelectionPanel()}
 function closeReader(){$('#reader').classList.remove('open');$('#reader').setAttribute('aria-hidden','true');needs=true;current=null}
 async function openNote(path){
-  let d;try{d=await api('/api/note?path='+encodeURIComponent(path))}catch(e){toast('Nota não encontrada no índice');return}
+  let d;try{d=await api('/api/note?path='+encodeURIComponent(path))}catch(e){toast(t("Note not found in the index"));return}
   current=d.path;const fm=d.frontmatter||{};
   $('#rpath').textContent=d.path;
   const props=[];
-  if(fm.tipo==='decisao')props.push('<span class="pill brand">decisão</span>');
-  if(fm.tipo==='aprendizado')props.push('<span class="pill brand">aprendizado</span>');
-  if(fm.status)props.push(`<span class="pill">${esc(fm.status)}</span>`);
+  if(fm.tipo==='decisao')props.push(t("<span class=\"pill brand\">decision</span>"));
+  if(fm.tipo==='aprendizado')props.push(t("<span class=\"pill brand\">learning</span>"));
+  if(fm.status)props.push(`<span class="pill">${esc(displayValue(fm.status))}</span>`);
   if(fm.data)props.push(`<span class="pill">${esc(fmtDate(fm.data))}</span>`);
   if(fm.projeto)props.push(`<span class="pill">${esc(String(fm.projeto).replace(/[\[\]]/g,''))}</span>`);
-  if(fm.origem)props.push(`<span class="pill">${esc(fm.origem)}</span>`);
-  if(!fm.tipo&&d.mtime)props.push(`<span class="pill">editada ${esc(ago(d.mtime))}</span>`);
+  if(fm.origem)props.push(`<span class="pill">${esc(displayValue(fm.origem))}</span>`);
+  if(!fm.tipo&&d.mtime)props.push(tr`<span class="pill">edited ${esc(ago(d.mtime))}</span>`);
   const L=(t,xs,f)=>xs&&xs.length?`<div><h4>${t}</h4><div class="links">${xs.map(f).join('')}</div></div>`:'';
-  const REL={importa:'importa',chama:'chama',herda:'herda',menciona:'cita',wikilink:'link',mdlink:'link'};
-  const btn=x=>`<button data-ref="${esc(x.path)}" title="${esc((x.detalhe||'')+(x.conf?' · '+x.conf:''))}">${esc(x.path.includes('/')&&x.kind!=='wikilink'?x.path.split('/').pop():x.title)}<small>${esc(REL[x.kind]||'')}${x.conf==='INFERRED'?' · inferido':''}</small></button>`;
+  const REL={importa:t('imports'),chama:t('calls'),herda:t('inherits'),menciona:t('mentions'),wikilink:'link',mdlink:'link'};
+  const btn=x=>`<button data-ref="${esc(x.path)}" title="${esc((x.detalhe||'')+(x.conf?' · '+x.conf:''))}">${esc(x.path.includes('/')&&x.kind!=='wikilink'?x.path.split('/').pop():x.title)}<small>${esc(REL[x.kind]||'')}${x.conf==='INFERRED'?t(" · inferred"):''}</small></button>`;
   const body=d.kind==='nota'?md(d.content):`<h1>${esc(d.title)}</h1><pre><code>${esc(d.content.slice(0,60000))}</code></pre>`;
   $('#rbody').innerHTML=`<div class="props">${props.join('')}</div><div class="md">${body}</div>
     <div class="rel">
       ${d.tags.length?`<div><h4>Tags</h4><div class="md">${d.tags.map(t=>`<span class="tag">#${esc(t)}</span>`).join(' ')}</div></div>`:''}
-      ${L('Usada / citada por',d.backlinks,btn)}${L('Depende de / aponta para',d.links,btn)}
-      ${L('Parecidas pelo conteúdo',d.similares,x=>`<button data-ref="${esc(x.path)}">${esc(x.title)}<small>${Math.round(x.score*100)}%</small></button>`)}
-      ${L('Citadas mas ainda não existem',d.fantasmas,x=>`<button data-ref="${esc(x)}">Criar ${esc(x)}</button>`)}
+      ${L(t("Used / referenced by"),d.backlinks,btn)}${L(t("Depends on / links to"),d.links,btn)}
+      ${L(t("Similar content"),d.similares,x=>`<button data-ref="${esc(x.path)}">${esc(x.title)}<small>${Math.round(x.score*100)}%</small></button>`)}
+      ${L(t("Referenced but not created yet"),d.fantasmas,x=>tr`<button data-ref="${esc(x)}">Create ${esc(x)}</button>`)}
     </div><div class="editor-connections" id="readerSuggestions"></div>`;
   $('#rbody').scrollTop=0;
   notaAtual=d;$('#bHistory').hidden=!/\.(md|markdown)$/i.test(d.path);$('#bEdit').hidden=!/\.(md|markdown)$/i.test(d.path);$('#bDeps').hidden=d.kind!=='codigo';
@@ -1068,62 +1823,62 @@ $('#reader').addEventListener('click',e=>{const a=e.target.closest('[data-ref]')
 let historyChoice=null,historySession=0;
 async function showHistory(path){
  const session=++historySession;historyChoice=null;$('#restoreVersion').hidden=true;$('#historyDiff').hidden=true;$('#historyMessage').textContent='';
- $('#historyTitle').textContent='Histórico · '+path;$('#historyItems').textContent='Carregando…';
+ $('#historyTitle').textContent=t("History · ")+path;$('#historyItems').textContent=t("Loading…");
  if(!$('#historyDialog').open)$('#historyDialog').showModal();
  try{const data=await api('/api/historico?path='+encodeURIComponent(path));if(session!==historySession)return;
- const items=data.versoes;$('#historyItems').textContent=items.length?'':'Ainda não há versões anteriores.';
- for(const item of items){const button=document.createElement('button');button.className='chip';button.textContent=new Date(item.data*1000).toLocaleString('pt-BR')+' · '+item.bytes+' bytes';
- button.onclick=async()=>{try{const version=await api('/api/historico?path='+encodeURIComponent(path)+'&version='+encodeURIComponent(item.id));if(session!==historySession)return;historyChoice={path,version:item.id,revision:version.revision};$('#historyDiff').textContent=version.diff||'Conteúdo igual à versão atual.';$('#historyDiff').hidden=false;$('#restoreVersion').hidden=false}catch(e){button.disabled=false;$('#historyMessage').textContent=e.message}};
+ const items=data.versoes;$('#historyItems').textContent=items.length?'':t("No previous versions yet.");
+ for(const item of items){const button=document.createElement('button');button.className='chip';button.textContent=new Date(item.data*1000).toLocaleString(locale)+' · '+item.bytes+' bytes';
+ button.onclick=async()=>{try{const version=await api('/api/historico?path='+encodeURIComponent(path)+'&version='+encodeURIComponent(item.id));if(session!==historySession)return;historyChoice={path,version:item.id,revision:version.revision};$('#historyDiff').textContent=version.diff||t("Content matches the current version.");$('#historyDiff').hidden=false;$('#restoreVersion').hidden=false}catch(e){button.disabled=false;$('#historyMessage').textContent=e.message}};
  $('#historyItems').append(button)}
- }catch(e){$('#historyItems').textContent='Não consegui carregar o histórico: '+e.message}
+ }catch(e){$('#historyItems').textContent=t("Could not load history: ")+e.message}
 }
 $('#closeHistory').onclick=()=>{historySession++;$('#historyDialog').close()};
 $('#bHistory').onclick=()=>current&&showHistory(current);
-$('#restoreVersion').onclick=async()=>{if(!historyChoice||!confirm('Restaurar esta versão? A versão atual também será preservada.'))return;
+$('#restoreVersion').onclick=async()=>{if(!historyChoice||!confirm(t("Restore this version? The current version will also be preserved.")))return;
  const button=$('#restoreVersion');button.disabled=true;
- try{const choice=historyChoice;await post('/api/historico/restaurar',choice);await loadGraph(true);$('#historyDialog').close();await openNote(choice.path);toast('Versão restaurada')}
+ try{const choice=historyChoice;await post('/api/historico/restaurar',choice);await loadGraph(true);$('#historyDialog').close();await openNote(choice.path);toast(t("Version restored"))}
  catch(e){$('#historyMessage').textContent=e.message}finally{button.disabled=false}
 };
 $('#bDelete').onclick=()=>current&&deleteFile(current);
 $('#bClose').onclick=closeReader;
-$('#bOpen').onclick=()=>current&&api('/api/open?path='+encodeURIComponent(current)).then(()=>toast('Abrindo no app padrão'));
-$('#bReveal').onclick=()=>current&&api('/api/open?reveal=1&path='+encodeURIComponent(current)).then(()=>toast('Mostrando no Finder'));
+$('#bOpen').onclick=()=>current&&api('/api/open?path='+encodeURIComponent(current)).then(()=>toast(t("Opening in default app")));
+$('#bReveal').onclick=()=>current&&api('/api/open?reveal=1&path='+encodeURIComponent(current)).then(()=>toast(t("Showing in Finder")));
 
 /* ================= EDITOR MARKDOWN ================= */
 let editorSession=null,editorReturnFocus=null,previewTimer=null;
 function editorDirty(){return !!editorSession&&(editorSession.create||$('#editorText').value!==editorSession.original)}
-function canLeaveEditor(){if(editorSession?.saving){toast('Aguarde o salvamento');return false}return !editorDirty()||confirm('Há alterações não salvas. Deseja descartá-las?')}
+function canLeaveEditor(){if(editorSession?.saving){toast(t("Wait for saving to finish"));return false}return !editorDirty()||confirm(t("There are unsaved changes. Discard them?"))}
 function editorMessage(message,error=false){$('#editorMessage').textContent=message;$('#editorMessage').classList.toggle('error',error)}
-function editorState(){if(!editorSession)return;$('#editorState').textContent=editorSession.saving?'Salvando…':editorSession.conflict?'Conflito · texto preservado':editorDirty()?'Alterações não salvas':editorSession.create?'Novo arquivo · ainda não salvo':'Salvo';$('#saveEditor').disabled=!!editorSession.saving;$('#recoverEditor').hidden=!editorSession.recuperavel;$('#reloadEditor').hidden=editorSession.create;$('#editorPathLabel').hidden=!editorSession.create;}
+function editorState(){if(!editorSession)return;$('#editorState').textContent=editorSession.saving?t("Saving…"):editorSession.conflict?t("Conflict · text preserved"):editorDirty()?t("Unsaved changes"):editorSession.create?t("New file · not saved yet"):t("Saved");$('#saveEditor').disabled=!!editorSession.saving;$('#recoverEditor').hidden=!editorSession.recuperavel;$('#reloadEditor').hidden=editorSession.create;$('#editorPathLabel').hidden=!editorSession.create;}
 function editorTab(preview){hideWiki();$('#editorTextTab').setAttribute('aria-selected',String(!preview));$('#editorPreviewTab').setAttribute('aria-selected',String(preview));$('#editorText').hidden=preview;$('#editorPreview').hidden=!preview;if(preview)$('#editorPreview').innerHTML=md($('#editorText').value)}
-function startEditor(data){editorReturnFocus=document.activeElement;editorSession={...data,original:data.content,saving:false,conflict:false};$('#editorTitle').textContent=data.path;$('#editorPathLabel').hidden=!data.create;$('#editorPath').value=data.path;$('#editorText').value=data.content;editorMessage(data.create?'O arquivo será criado ao salvar.':'');editorTab(false);editorState();$('#noteEditor').classList.add('open');$('#editorText').focus();editorConnections(data.path,$('#editorConnections'),true)}
+function startEditor(data){editorReturnFocus=document.activeElement;editorSession={...data,original:data.content,saving:false,conflict:false};$('#editorTitle').textContent=data.path;$('#editorPathLabel').hidden=!data.create;$('#editorPath').value=data.path;$('#editorText').value=data.content;editorMessage(data.create?t("The file will be created when you save."):'');editorTab(false);editorState();$('#noteEditor').classList.add('open');$('#editorText').focus();editorConnections(data.path,$('#editorConnections'),true)}
 function closeEditor(){if(!canLeaveEditor())return;$('#noteEditor').classList.remove('open');editorSession=null;hideWiki();clearTimeout(previewTimer);editorReturnFocus?.focus?.()}
-async function editCurrent(){if(!current)return;if(!canLeaveEditor())return;try{const d=await api('/api/editor?path='+encodeURIComponent(current));startEditor(d)}catch(e){toast('Não consegui abrir este Markdown no editor (limite de 200 KB e UTF-8).')}}
+async function editCurrent(){if(!current)return;if(!canLeaveEditor())return;try{const d=await api('/api/editor?path='+encodeURIComponent(current));startEditor(d)}catch(e){toast(t("Could not open this Markdown file in the editor (200 KB limit, UTF-8 required)."))}}
 $('#bEdit').onclick=editCurrent;
 $('#closeEditor').onclick=closeEditor;$('#cancelEditor').onclick=closeEditor;
 $('#editorTextTab').onclick=()=>editorTab(false);$('#editorPreviewTab').onclick=()=>editorTab(true);
 $('#editorText').oninput=()=>{editorState();updateWiki();clearTimeout(previewTimer);if(!$('#editorPreview').hidden)previewTimer=setTimeout(()=>editorTab(true),150)};
-async function reloadEditor(previous=false){if(!editorSession||editorSession.saving)return;if(editorDirty()&&!confirm('Substituir as alterações não salvas pela versão '+(previous?'anterior?':'atual do disco?')))return;
+async function reloadEditor(previous=false){if(!editorSession||editorSession.saving)return;if(editorDirty()&&!confirm(t("Replace unsaved changes with the ")+(previous?t("previous version?"):t("current version on disk?"))))return;
  try{const d=await api('/api/editor?path='+encodeURIComponent(editorSession.path)+(previous?'&previous=1':''));$('#editorText').value=d.content;
- if(!previous){Object.assign(editorSession,d,{original:d.content,conflict:false});editorMessage('Versão atual carregada do disco.')}else{editorMessage('Versão anterior carregada para revisão. Clique em Salvar para restaurá-la.');}
- editorState();editorTab($('#editorText').hidden);}catch(e){editorMessage('Não consegui carregar a versão solicitada. Seu texto foi preservado.',true)}}
+ if(!previous){Object.assign(editorSession,d,{original:d.content,conflict:false});editorMessage(t("Current version loaded from disk."))}else{editorMessage(t("Previous version loaded for review. Click Save to restore it."));}
+ editorState();editorTab($('#editorText').hidden);}catch(e){editorMessage(t("Could not load the requested version. Your text was preserved."),true)}}
 $('#reloadEditor').onclick=()=>reloadEditor(false);$('#recoverEditor').onclick=()=>reloadEditor(true);
-async function saveEditor(){if(!editorSession||editorSession.saving)return;const session=editorSession,content=$('#editorText').value;session.saving=true;editorState();editorMessage('Salvando e atualizando o índice…');
+async function saveEditor(){if(!editorSession||editorSession.saving)return;const session=editorSession,content=$('#editorText').value;session.saving=true;editorState();editorMessage(t("Saving and updating the index…"));
  try{const d=await post('/api/editor',{path:session.create?$('#editorPath').value.trim():session.path,content,revision:session.revision,create:!!session.create});Object.assign(session,d,{original:content,create:false,saving:false,conflict:false});$('#editorTitle').textContent=session.path;editorState();
- if($('#editorText').value!==content){editorMessage('Versão enviada salva. Ainda há alterações posteriores para salvar.');return}
- if(d.indice?.skipped){editorMessage('Arquivo salvo. O índice está ocupado; ele aparecerá no grafo após a atualização automática.');loadIndexState();return}
+ if($('#editorText').value!==content){editorMessage(t("Submitted version saved. Newer edits still need saving."));return}
+ if(d.indice?.skipped){editorMessage(t("File saved. The index is busy; the file will appear in the graph after the automatic update."));loadIndexState();return}
  $('#noteEditor').classList.remove('open');editorSession=null;decisions=null;
  // Reveal the saved file even if the previous graph filters would hide it.
  for(const key in graphFilters)graphFilters[key]='';$$('.filterfields input,.filterfields select').forEach(e=>e.value='');prefixo='';
- setView('grafo');await loadGraph(true);if(!N.some(n=>n.path===session.path))await loadGraph(false,session.path);await openNote(session.path);loadOverview();loadIndexState();loadChanges(0,true);saveView();editorConnections(session.path,$('#readerSuggestions'));toast('Nota salva · grafo atualizado');
- }catch(e){session.saving=false;session.conflict=e.status===409;editorState();editorMessage(e.message==='409'?'O arquivo mudou ou o nome já existe. Seu texto foi preservado; recarregue a versão atual ou escolha outro nome.':e.message,true)}}
+ setView('grafo');await loadGraph(true);if(!N.some(n=>n.path===session.path))await loadGraph(false,session.path);await openNote(session.path);loadOverview();loadIndexState();loadChanges(0,true);saveView();editorConnections(session.path,$('#readerSuggestions'));toast(t("Note saved · graph updated"));
+ }catch(e){session.saving=false;session.conflict=e.status===409;editorState();editorMessage(e.message==='409'?t("The file changed or the name already exists. Your text was preserved; reload the current version or choose another name."):e.message,true)}}
 $('#saveEditor').onclick=saveEditor;
 function openCreate(ref=null){if(typeof ref!=='string')ref=null;if(!canLeaveEditor())return;if(editorSession){$('#noteEditor').classList.remove('open');editorSession=null}editorReturnFocus=document.activeElement;if(ref){const target=ref.split('|')[0].split('#')[0].trim().replace(/\.(md|markdown)$/i,'');$('#noteTitle').value=target.split('/').pop();$('#noteFolder').value=target.includes('/')?target.split('/').slice(0,-1).join('/'):(current?.split('/').slice(0,-1).join('/')||'.atlasbrain/Inbox');$('#noteTemplate').value='nota';$('#noteTags').value=''}$('#createNote').classList.add('open');$('#noteTitle').focus();$('#noteTitle').select()}
 function closeCreate(){$('#createNote').classList.remove('open');editorReturnFocus?.focus?.()}
 $('#newNote').onclick=openCreate;$('#closeCreate').onclick=closeCreate;$('#cancelCreate').onclick=closeCreate;
 $('#noteTemplate').onchange=()=>{const folders={nota:'Inbox',decisao:'Decisões',aprendizado:'Aprendizados'};if(/^\.atlasbrain\/(Inbox|Decisões|Aprendizados)$/.test($('#noteFolder').value))$('#noteFolder').value='.atlasbrain/'+folders[$('#noteTemplate').value]};
-$('#createNoteForm').onsubmit=e=>{e.preventDefault();const title=$('#noteTitle').value.trim();if(!title)return;const kind=$('#noteTemplate').value;const filename=title.replace(/[\/\\:*?"<>|\x00-\x1f]/g,'-').replace(/^\.+|[. ]+$/g,'').slice(0,140)||'Nota';const folder=$('#noteFolder').value.trim().replace(/\/$/,'');const tags=$('#noteTags').value.split(',').map(t=>t.trim().replace(/^#/, '')).filter(Boolean);const today=new Date(),date=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
- const body=kind==='decisao'?'## Contexto\n\n\n## Decisão\n\n\n## Motivo\n\n\n## Consequências\n\n':kind==='aprendizado'?'## Aprendizado\n\n\n## Evidências\n\n\n## Aplicação\n\n':'';
+$('#createNoteForm').onsubmit=e=>{e.preventDefault();const title=$('#noteTitle').value.trim();if(!title)return;const kind=$('#noteTemplate').value;const filename=title.replace(/[\/\\:*?"<>|\x00-\x1f]/g,'-').replace(/^\.+|[. ]+$/g,'').slice(0,140)||t("Note");const folder=$('#noteFolder').value.trim().replace(/\/$/,'');const tags=$('#noteTags').value.split(',').map(t=>t.trim().replace(/^#/, '')).filter(Boolean);const today=new Date(),date=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
+ const body=kind==='decisao'?t("## Context\n\n\n## Decision\n\n\n## Reason\n\n\n## Consequences\n\n"):kind==='aprendizado'?t("## Learning\n\n\n## Evidence\n\n\n## Application\n\n"):'';
  const content='---\ntitle: '+JSON.stringify(title)+'\ntipo: '+kind+'\ndata: '+date+(kind==='decisao'?'\nstatus: ativa':'')+'\ntags: '+JSON.stringify(tags)+'\n---\n# '+title+'\n\n'+body;
  closeCreate();startEditor({path:folder+'/'+filename+'.md',content,create:true,revision:null,recuperavel:false});};
 addEventListener('beforeunload',e=>{if(editorDirty()||editorSession?.saving||($('#createNote').classList.contains('open')&&$('#noteTitle').value.trim())){e.preventDefault();e.returnValue=''}});
@@ -1148,14 +1903,14 @@ $('#wikiOptions').onmousedown=e=>e.preventDefault();
 $('#editorText').addEventListener('keyup',e=>{if(!['ArrowDown','ArrowUp','Enter','Escape','Tab'].includes(e.key))updateWiki()});
 $('#editorText').addEventListener('click',updateWiki);
 $('#editorText').addEventListener('keydown',e=>{if($('#wikiOptions').hidden)return;if(['ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();linkSelection=(linkSelection+(e.key==='ArrowDown'?1:-1)+linkOptions.length)%linkOptions.length;renderWiki()}else if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();insertWiki(linkSelection)}else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();hideWiki()}});
-async function followReference(ref){const session=editorSession;try{const d=await api('/api/editor/links?ref='+encodeURIComponent(ref));if(session!==editorSession)return;if(d.nota){if(session&&!canLeaveEditor())return;if(session){$('#noteEditor').classList.remove('open');editorSession=null;hideWiki()}await openNote(d.nota.path)}else openCreate(ref)}catch{toast('Não consegui verificar este vínculo.')}}
-async function editorConnections(path,box,isEditor=false){const session=editorSession;box.innerHTML='<p>Buscando vínculos…</p>';try{const [note,suggestions]=await Promise.all([api('/api/note?path='+encodeURIComponent(path)),api('/api/sugestoes?path='+encodeURIComponent(path))]);if(isEditor&&session!==editorSession)return;
- const refs=[...note.backlinks.map(r=>({...r,group:'Aponta para esta nota'})),...suggestions.sugestoes.map(r=>({...r,group:'Sugestão · '+r.evidencias.join(' · '),suggested:true}))];
- box.innerHTML='<h4>Backlinks e conexões sugeridas</h4><p>Vínculos do índice salvo. Sugestões por nomes e pastas precisam da sua revisão.</p>'+(refs.map((r,i)=>`<details><summary>${esc(r.title)} <small>${esc(r.group)}</small></summary><p>${esc(r.path)}</p><button class="chip" data-inspect="${i}">Ler aqui</button><div class="md candidate-preview" id="${box.id}-preview-${i}"></div>${r.suggested?`<button class="chip" data-add-link="${i}" disabled>Adicionar [[link]] ao texto</button>`:''}</details>`).join('')||'<p>Nenhum backlink ou candidato encontrado.</p>');
+async function followReference(ref){const session=editorSession;try{const d=await api('/api/editor/links?ref='+encodeURIComponent(ref));if(session!==editorSession)return;if(d.nota){if(session&&!canLeaveEditor())return;if(session){$('#noteEditor').classList.remove('open');editorSession=null;hideWiki()}await openNote(d.nota.path)}else openCreate(ref)}catch{toast(t("Could not check this link."))}}
+async function editorConnections(path,box,isEditor=false){const session=editorSession;box.innerHTML=t("<p>Finding links…</p>");try{const [note,suggestions]=await Promise.all([api('/api/note?path='+encodeURIComponent(path)),api('/api/sugestoes?path='+encodeURIComponent(path))]);if(isEditor&&session!==editorSession)return;
+ const refs=[...note.backlinks.map(r=>({...r,group:'Aponta para esta nota'})),...suggestions.sugestoes.map(r=>({...r,group:'Sugestão · '+r.evidencias.map(systemText).join(' · '),suggested:true}))];
+ box.innerHTML=t("<h4>Backlinks and suggested connections</h4><p>Links from the saved index. Suggestions based on names and folders need your review.</p>")+(refs.map((r,i)=>tr`<details><summary>${esc(r.title)} <small>${esc(r.group)}</small></summary><p>${esc(r.path)}</p><button class="chip" data-inspect="${i}">Read here</button><div class="md candidate-preview" id="${box.id}-preview-${i}"></div>${r.suggested?tr`<button class="chip" data-add-link="${i}" disabled>Add [[link]] to text</button>`:''}</details>`).join('')||t("<p>No backlinks or candidates found.</p>"));
  box.onclick=async e=>{const inspect=e.target.closest('[data-inspect]'),add=e.target.closest('[data-add-link]');if(!inspect&&!add)return;const i=+(inspect?.dataset.inspect??add.dataset.addLink),r=refs[i];try{if(inspect){const d=await api('/api/note?path='+encodeURIComponent(r.path));if(isEditor&&session!==editorSession)return;const preview=box.querySelector('#'+box.id+'-preview-'+i);preview.innerHTML=d.kind==='nota'?md(d.content.slice(0,6000)):'<pre><code>'+esc(d.content.slice(0,6000))+'</code></pre>';const button=inspect.parentElement.querySelector('[data-add-link]');if(button)button.disabled=false;return}
- if(isEditor&&(session!==editorSession||session.saving))return;if(!isEditor){if(!canLeaveEditor())return;const d=await api('/api/editor?path='+encodeURIComponent(path));startEditor(d)}const target=r.path.replace(/\.(md|markdown)$/i,'');if(/[\[\]|#\n\r]/.test(target)){toast('Este nome não pode ser inserido como wikilink');return}const text=$('#editorText'),link='[['+target+']]';if(!text.value.includes(link))text.value+='\n\n'+link+'\n';editorTab(false);editorState();text.focus();editorMessage('Vínculo adicionado ao rascunho. Salve para atualizar o grafo.');
- }catch{toast('Não consegui abrir este arquivo; o texto foi preservado.')}};
- }catch{if(!isEditor||session===editorSession)box.innerHTML='<p>Salve a nota para consultar backlinks e sugestões do índice.</p>'}}
+ if(isEditor&&(session!==editorSession||session.saving))return;if(!isEditor){if(!canLeaveEditor())return;const d=await api('/api/editor?path='+encodeURIComponent(path));startEditor(d)}const target=r.path.replace(/\.(md|markdown)$/i,'');if(/[\[\]|#\n\r]/.test(target)){toast(t("This name cannot be inserted as a wikilink"));return}const text=$('#editorText'),link='[['+target+']]';if(!text.value.includes(link))text.value+='\n\n'+link+'\n';editorTab(false);editorState();text.focus();editorMessage(t("Link added to the draft. Save to update the graph."));
+ }catch{toast(t("Could not open this file; your text was preserved."))}};
+ }catch{if(!isEditor||session===editorSession)box.innerHTML=t("<p>Save the note to view backlinks and suggestions from the index.</p>")}}
 $('#editorPreview').onclick=e=>{const a=e.target.closest('[data-ref]');if(a){e.preventDefault();followReference(a.dataset.ref)}};
 
 /* ================= PALETA DE BUSCA ================= */
@@ -1164,9 +1919,9 @@ const icon=r=>r.kind==='documento'?'<svg viewBox="0 0 24 24" fill="none" stroke=
 function openPal(){lastFocus=document.activeElement;$('#pal').classList.add('open');$('#q').focus();$('#q').select();if(!$('#q').value)renderPal()}
 function closePal(){$('#pal').classList.remove('open');(lastFocus||document.body).focus?.()}
 function renderPal(){const box=$('#pres');const q=$('#q').value.trim();
-  if(!q){box.innerHTML='<div class="pempty">Busque por palavra (“orçamento”) ou por ideia (“o que decidimos sobre clínicas?”). A busca entende significado, não só texto igual.</div>';return}
-  if(!results.length){box.innerHTML=`<div class="pempty">Nada encontrado para “${esc(q)}”.</div>`;return}
-  box.innerHTML=results.map((r,i)=>`<div class="pr" role="option" id="po${i}" aria-selected="${i===sel}" data-i="${i}">${icon(r)}<div><b>${esc(r.title)}</b><small>${esc(r.path)}${r.heading?' › '+esc(r.heading):''}</small><p>${esc(r.snippet.replace(/(^|\s)#{1,6}\s/g,'$1').replace(/\[\[([^\]|]+)(\|[^\]]+)?\]\]/g,'$1').replace(/\s+/g,' ')).replace(/\*\*(.+?)\*\*/g,'<mark>$1</mark>')}</p>${r.motivos?.length?`<small>${esc(r.motivos.join(' · '))}</small>`:''}</div></div>`).join('');
+  if(!q){box.innerHTML=t("<div class=\"pempty\">Search by keyword (“budget”) or idea (“what did we decide about clinics?”). Search understands meaning as well as exact text.</div>");return}
+  if(!results.length){box.innerHTML=tr`<div class="pempty">No results for “${esc(q)}”.</div>`;return}
+  box.innerHTML=results.map((r,i)=>`<div class="pr" role="option" id="po${i}" aria-selected="${i===sel}" data-i="${i}">${icon(r)}<div><b>${esc(r.title)}</b><small>${esc(r.path)}${r.heading?' › '+esc(r.heading):''}</small><p>${esc(r.snippet.replace(/(^|\s)#{1,6}\s/g,'$1').replace(/\[\[([^\]|]+)(\|[^\]]+)?\]\]/g,'$1').replace(/\s+/g,' ')).replace(/\*\*(.+?)\*\*/g,'<mark>$1</mark>')}</p>${r.motivos?.length?`<small>${esc(r.motivos.map(displayValue).join(' · '))}</small>`:''}</div></div>`).join('');
   $('#q').setAttribute('aria-activedescendant','po'+sel);$('#po'+sel)?.scrollIntoView({block:'nearest'})}
 $('#q').addEventListener('input',()=>{clearTimeout(qTimer);qTimer=setTimeout(async()=>{const q=$('#q').value.trim();
   if(!q){results=[];searchSet=null;renderPal();needs=true;return}
@@ -1198,66 +1953,66 @@ $('#openPal').onclick=openPal;
 let view='grafo',decisions=null,dFilter='todos';
 function setView(v){view=v;$$('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.view===v));
   $$('.view').forEach(s=>s.hidden=s.id!=='v-'+v);
-  $$('.hud,.graphcontrols,.zoom,.legend').forEach(x=>x.style.display=v==='grafo'?'':'none');
+  $$('.hud,.graphcontrols,.pulse-toggle,.zoom,.legend').forEach(x=>x.style.display=v==='grafo'?'':'none');
   if(history.replaceState)history.replaceState(null,'','#'+v);
   if(v==='grafo'){resize()}else if(v==='decisoes')loadDecisions();else if(v==='soltos')loadSoltos();else if(v==='mudancas')loadChanges();else loadRecent()}
 $$('.tab').forEach(t=>t.onclick=()=>setView(t.dataset.view));
 
 async function loadDecisions(){const box=$('#dlist');
   if(!decisions)box.innerHTML='<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
-  try{decisions=await api('/api/decisions')}catch{box.innerHTML='<p class="lede">Não consegui carregar as decisões. <button class="chip" onclick="loadDecisions()">Tentar de novo</button></p>';return}
+  try{decisions=await api('/api/decisions')}catch{box.innerHTML=t("<p class=\"lede\">Could not load decisions. <button class=\"chip\" onclick=\"loadDecisions()\">Try again</button></p>");return}
   renderDecisions()}
 function renderDecisions(){const box=$('#dlist');const items=decisions.filter(d=>dFilter==='todos'||d.tipo===dFilter);
-  if(!items.length){box.innerHTML=`<div class="status" style="position:static;transform:none;text-align:left;max-width:520px;margin-top:20px"><svg viewBox="0 0 64 64"><path fill="#1EB880" d="${STAR}"/></svg><h2>Nenhum registro ainda</h2><p>Quando uma decisão for fechada numa conversa com o Claude ou o Codex, ela vira uma nota e aparece aqui. Você também pode pedir direto: “registra essa decisão no AtlasBrain”.</p></div>`;return}
+  if(!items.length){box.innerHTML=tr`<div class="status" style="position:static;transform:none;text-align:left;max-width:520px;margin-top:20px"><svg viewBox="0 0 64 64"><path fill="#1EB880" d="${STAR}"/></svg><h2>No records yet</h2><p>When you finalize a decision in a conversation with Claude or Codex, it becomes a note here. You can also ask: “record this decision in AtlasBrain”.</p></div>`;return}
   let html='',month='';
-  for(const d of items){const dt=new Date((d.data||'')+'T12:00:00');const m=isNaN(dt)?'sem data':dt.toLocaleDateString('pt-BR',{month:'long',year:'numeric'}).replace(/^./,c=>c.toUpperCase());
+  for(const d of items){const dt=new Date((d.data||'')+'T12:00:00');const m=isNaN(dt)?t("no date"):dt.toLocaleDateString(locale,{month:'long',year:'numeric'}).replace(/^./,c=>c.toUpperCase());
     if(m!==month){if(month)html+='</div>';html+=`<div class="month">${esc(m)}</div><div class="tl">`;month=m}
     const isD=d.tipo==='decisao';
     html+=`<button class="ev" data-path="${esc(d.path)}"><span class="d">${esc(fmtDate(d.data+'T12:00:00'))}</span>
       <span class="dot">${isD?`<svg viewBox="0 0 64 64"><path fill="${d.status&&d.status!=='ativa'?'#879DA6':'#3FEEC5'}" d="${STAR}"/></svg>`:'<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="4.5" fill="#081011" stroke="#6EF2AC" stroke-width="2"/></svg>'}</span>
       <span class="card"><h3>${esc(d.title)}</h3><p>${esc(d.resumo)}</p>
-      <span class="meta"><span class="pill ${isD?'brand':''}">${isD?'decisão':'aprendizado'}</span>${d.projeto?`<span class="pill">${esc(d.projeto)}</span>`:''}${d.status&&d.status!=='ativa'?`<span class="pill">${esc(d.status)}</span>`:''}${d.origem?`<span>${esc(d.origem)}</span>`:''}</span></span></button>`}
+      <span class="meta"><span class="pill ${isD?'brand':''}">${isD?t("decision"):t("learning")}</span>${d.projeto?`<span class="pill">${esc(d.projeto)}</span>`:''}${d.status&&d.status!=='ativa'?`<span class="pill">${esc(displayValue(d.status))}</span>`:''}${d.origem?`<span>${esc(displayValue(d.origem))}</span>`:''}</span></span></button>`}
   box.innerHTML=html+'</div>'}
 $('#dlist').addEventListener('click',e=>{const b=e.target.closest('.ev');if(b)openNote(b.dataset.path)});
 $$('.filters .chip').forEach(b=>b.onclick=()=>{dFilter=b.dataset.f;$$('.filters .chip').forEach(x=>x.setAttribute('aria-pressed',x===b));renderDecisions()});
 
-async function loadIndexState(){try{const d=await api('/api/estado?limite=10');$('#indexStatus').textContent=d.indexando?'Indexação em andamento':d.pendentes?`${d.pendentes} pendentes · índice ${ago(d.indexado)}`:`Índice atualizado · ${ago(d.indexado)}`;
- $('#indexDetails').innerHTML=`<p class="lede">Revisão ${d.revisao} · ${d.arquivos} arquivos · ${d.pendentes} pendentes</p>`+d.itens.map(r=>`<p class="lede">${esc(r.estado)} · ${esc(r.path)}</p>`).join('')+(d.mais?'<button class="chip" id="morePending">Mais pendentes</button>':'');
+async function loadIndexState(){try{const d=await api('/api/estado?limite=10');$('#indexStatus').textContent=d.indexando?t("Indexing in progress"):d.pendentes?tr`${d.pendentes} pending · indexed ${ago(d.indexado)}`:tr`Index up to date · ${ago(d.indexado)}`;
+ $('#indexDetails').innerHTML=tr`<p class="lede">Revision ${d.revisao} · ${d.arquivos} files · ${d.pendentes} pending</p>`+d.itens.map(r=>`<p class="lede">${esc(displayValue(r.estado))} · ${esc(r.path)}</p>`).join('')+(d.mais?t("<button class=\"chip\" id=\"morePending\">More pending files</button>"):'');
  if(d.mais)$('#morePending').onclick=()=>loadPending(d.itens.length);
-}catch{$('#indexStatus').textContent='Estado do índice indisponível'}}
-async function loadPending(offset){try{const d=await api('/api/estado?offset='+offset);$('#morePending')?.remove();$('#indexDetails').insertAdjacentHTML('beforeend',d.itens.map(r=>`<p class="lede">${esc(r.estado)} · ${esc(r.path)}</p>`).join('')+(d.mais?'<button class="chip" id="morePending">Mais pendentes</button>':''));if(d.mais)$('#morePending').onclick=()=>loadPending(offset+d.itens.length)}catch{toast('Não consegui ler os pendentes')}}
+}catch{$('#indexStatus').textContent=t("Index status unavailable")}}
+async function loadPending(offset){try{const d=await api('/api/estado?offset='+offset);$('#morePending')?.remove();$('#indexDetails').insertAdjacentHTML('beforeend',d.itens.map(r=>`<p class="lede">${esc(displayValue(r.estado))} · ${esc(r.path)}</p>`).join('')+(d.mais?t("<button class=\"chip\" id=\"morePending\">More pending files</button>"):''));if(d.mais)$('#morePending').onclick=()=>loadPending(offset+d.itens.length)}catch{toast(t("Could not read pending files"))}}
 $('#indexStatus').onclick=()=>setView('mudancas');
 async function loadChanges(offset=0,quiet=false){try{const d=await api('/api/mudancas?offset='+offset+'&limite=100');
- if(!offset){changeFiles=new Map();if(!quiet)$('#changeList').innerHTML=`<p class="lede">${d.disponivel?`${d.total} mudanças · ${new Date(d.base*1000).toLocaleString('pt-BR')} → ${new Date(d.atual*1000).toLocaleString('pt-BR')}`:'A primeira versão foi registrada. A comparação aparece após uma alteração indexada.'}</p>`;}
+ if(!offset){changeFiles=new Map();if(!quiet)$('#changeList').innerHTML=`<p class="lede">${d.disponivel?tr`${d.total} changes · ${new Date(d.base*1000).toLocaleString(locale)} → ${new Date(d.atual*1000).toLocaleString(locale)}`:t("The first version was recorded. The comparison appears after an indexed change.")}</p>`;}
  for(const r of d.itens){if(r.tipo==='arquivo'&&r.acao!=='removido')changeFiles.set(r.path,r.acao);}
  needs=true;if(quiet){if(d.mais&&offset<4000)await loadChanges(offset+d.itens.length,true);return;}
- $('#changeList').querySelector('[data-change-more]')?.remove();$('#changeList').insertAdjacentHTML('beforeend',d.itens.map(r=>`<div class="suggestions"><b class="${r.acao.startsWith('removid')?'change-removed':r.acao.startsWith('adicionad')?'change-added':'change-edited'}">${esc(r.tipo)} ${esc(r.acao)}</b><p>${esc(r.path||r.de+' → '+r.para)}</p>${r.relacao?`<p>${esc(r.relacao)} · ${esc(r.origem||'sem procedência')}</p>`:''}${r.acao!=='removido'?`<button class="chip" data-path="${esc(r.path||r.de)}">Abrir</button>`:''}</div>`).join('')+(d.mais?`<button class="chip" data-change-more="${offset+d.itens.length}">Carregar mais</button>`:''));
- }catch{if(!quiet)$('#changeList').innerHTML='<p class="lede">Não consegui carregar as mudanças.</p>'}}
+ $('#changeList').querySelector('[data-change-more]')?.remove();$('#changeList').insertAdjacentHTML('beforeend',d.itens.map(r=>`<div class="suggestions"><b class="${r.acao.startsWith('removid')?'change-removed':r.acao.startsWith('adicionad')?'change-added':'change-edited'}">${esc(displayValue(r.tipo))} ${esc(displayValue(r.acao))}</b><p>${esc(r.path||r.de+' → '+r.para)}</p>${r.relacao?`<p>${esc(displayValue(r.relacao))} · ${esc(r.origem||t("no provenance"))}</p>`:''}${r.acao!=='removido'?`<button class="chip" data-path="${esc(r.path||r.de)}">${t("Open")}</button>`:''}</div>`).join('')+(d.mais?tr`<button class="chip" data-change-more="${offset+d.itens.length}">Load more</button>`:''));
+ }catch{if(!quiet)$('#changeList').innerHTML=t("<p class=\"lede\">Could not load changes.</p>")}}
 $('#changeList').onclick=e=>{const b=e.target.closest('[data-path]');if(b)openNote(b.dataset.path);const more=e.target.closest('[data-change-more]');if(more)loadChanges(+more.dataset.changeMore)};
-async function showSuggestions(path,box){box.hidden=false;box.textContent='Buscando sugestões…';try{const d=await api('/api/sugestoes?path='+encodeURIComponent(path));
- box.innerHTML='<p>Hipóteses por nomes/pastas. Revise os dois arquivos antes de registrar. Um vínculo declarado não representa uma dependência extraída do código.</p>'+ (d.sugestoes.map(r=>`<article><b>${esc(r.title)}</b><p>${esc(r.path)} · INFERRED · confiança heurística ${Math.round(r.confianca*100)}%</p><p>${esc(r.evidencias.join(' · '))}</p><button class="chip" data-review="${esc(r.path)}">Ler candidato</button><input aria-label="Motivo do vínculo com ${esc(r.title)}" placeholder="Descreva o vínculo após revisar"><button class="chip" data-register="${esc(r.path)}">Registrar vínculo revisado</button></article>`).join('')||'<p>Nenhum candidato com evidência suficiente.</p>');
- box.onclick=async e=>{const review=e.target.closest('[data-review]');if(review){openNote(review.dataset.review);return}const b=e.target.closest('[data-register]');if(!b)return;const reason=b.closest('article').querySelector('input').value.trim();if(!reason){toast('Informe o motivo após revisar os arquivos');return}b.disabled=true;try{await post('/api/vinculo',{de:path,para:b.dataset.register,motivo:reason});toast('Vínculo declarado registrado');loadSoltos();loadGraph(true);loadIndexState()}catch(err){toast(err.message);b.disabled=false}};
- }catch{box.textContent='Não consegui carregar sugestões.'}}
+async function showSuggestions(path,box){box.hidden=false;box.textContent=t("Finding suggestions…");try{const d=await api('/api/sugestoes?path='+encodeURIComponent(path));
+ box.innerHTML=t("<p>Suggestions based on names and folders. Review both files before recording a link. A declared link is not an extracted code dependency.</p>")+ (d.sugestoes.map(r=>tr`<article><b>${esc(r.title)}</b><p>${esc(r.path)} · INFERRED · heuristic confidence ${Math.round(r.confianca*100)}%</p><p>${esc(r.evidencias.map(systemText).join(' · '))}</p><button class="chip" data-review="${esc(r.path)}">Read candidate</button><input aria-label="Reason for linking to ${esc(r.title)}" placeholder="Describe the link after review"><button class="chip" data-register="${esc(r.path)}">Record reviewed link</button></article>`).join('')||t("<p>No candidate with enough evidence.</p>"));
+ box.onclick=async e=>{const review=e.target.closest('[data-review]');if(review){openNote(review.dataset.review);return}const b=e.target.closest('[data-register]');if(!b)return;const reason=b.closest('article').querySelector('input').value.trim();if(!reason){toast(t("Enter a reason after reviewing the files"));return}b.disabled=true;try{await post('/api/vinculo',{de:path,para:b.dataset.register,motivo:reason});toast(t("Declared link recorded"));loadSoltos();loadGraph(true);loadIndexState()}catch(err){toast(err.message);b.disabled=false}};
+ }catch{box.textContent=t("Could not load suggestions.")}}
 async function loadSoltos(offset=0){const box=$('#olist');
   if(!offset)box.innerHTML='<div class="skel" style="margin-left:0"></div>';
   try{const d=await api(`/api/soltos?offset=${offset}&limite=50`);
     $('#nSoltos').textContent=d.total||'';
-    if(!offset)box.innerHTML=`<p class="lede">${d.total} arquivo${d.total===1?'':'s'} sem vínculos</p>`;
+    if(!offset)box.innerHTML=tr`<p class="lede">${d.total} file${d.total===1?'':'s'} isolated</p>`;
     box.querySelector('[data-more]')?.remove();
-    box.insertAdjacentHTML('beforeend',d.itens.map(r=>`<button class="row" data-path="${esc(r.path)}"><span class="t" style="color:#FF6B78">● ${esc(r.kind)}</span><b>${esc(r.title)}</b><small>${esc(r.path)}</small><small>${esc(r.sugestao)}</small></button><button class="chip" data-suggest="${esc(r.path)}">Revisar sugestões de vínculos</button><div class="suggestions" hidden></div>`).join(''));
-    if(d.mais)box.insertAdjacentHTML('beforeend',`<button class="chip" data-more="${offset+d.itens.length}">Carregar mais</button>`);
-  }catch{if(!offset)box.innerHTML='<p class="lede">Não consegui carregar os arquivos soltos.</p>';toast('Não consegui carregar os arquivos soltos')}
+    box.insertAdjacentHTML('beforeend',d.itens.map(r=>tr`<button class="row" data-path="${esc(r.path)}"><span class="t" style="color:#FF6B78">● ${esc(r.kind)}</span><b>${esc(r.title)}</b><small>${esc(r.path)}</small><small>${esc(systemText(r.sugestao))}</small></button><button class="chip" data-suggest="${esc(r.path)}">Review suggested links</button><div class="suggestions" hidden></div>`).join(''));
+    if(d.mais)box.insertAdjacentHTML('beforeend',tr`<button class="chip" data-more="${offset+d.itens.length}">Load more</button>`);
+  }catch{if(!offset)box.innerHTML=t("<p class=\"lede\">Could not load isolated files.</p>");toast(t("Could not load isolated files"))}
 }
 $('#olist').addEventListener('click',e=>{const suggest=e.target.closest('[data-suggest]');if(suggest){showSuggestions(suggest.dataset.suggest,suggest.nextElementSibling);return}const more=e.target.closest('[data-more]');if(more){loadSoltos(Number(more.dataset.more));return}const b=e.target.closest('[data-path]');if(b)openNote(b.dataset.path)});
 async function loadRecent(){const box=$('#rlist');box.innerHTML='<div class="skel" style="margin-left:0"></div>';
-  let o;try{o=await api('/api/overview')}catch{box.innerHTML='<p class="lede">Não consegui carregar.</p>';return}
-  box.innerHTML=o.recentes.map(r=>`<button class="row" data-path="${esc(r.path)}"><span class="t">${esc(ago(r.mtime))}</span><b>${esc(r.title)}</b><small>${esc(r.path)}</small></button>`).join('')||'<p class="lede">Nada por aqui ainda.</p>'}
+  let o;try{o=await api('/api/overview')}catch{box.innerHTML=t("<p class=\"lede\">Could not load.</p>");return}
+  box.innerHTML=o.recentes.map(r=>`<button class="row" data-path="${esc(r.path)}"><span class="t">${esc(ago(r.mtime))}</span><b>${esc(r.title)}</b><small>${esc(r.path)}</small></button>`).join('')||t("<p class=\"lede\">Nothing here yet.</p>")}
 $('#rlist').addEventListener('click',e=>{const b=e.target.closest('.row');if(b)openNote(b.dataset.path)});
 
 async function loadBrains(){try{const b=await api('/api/brains');const sel=$('#vault');
   const lista=b.cerebros.some(c=>c.path===b.atual)?b.cerebros:[...b.cerebros,{path:b.atual,nome:b.atual.split('/').pop()}];
   sel.innerHTML=lista.map(c=>`<option value="${esc(c.path)}" ${c.path===b.atual?'selected':''}>${esc(c.global?'Global · '+c.nome:c.nome)}</option>`).join('')+
-    '<option disabled>──────────</option><option value="__abrir__">＋ Abrir outra pasta…</option>';
+    t("<option disabled>──────────</option><option value=\"__abrir__\">＋ Open another folder…</option>");
   sel.dataset.atual=b.atual;acompanhar(b);
   document.title=`${b.atual.split('/').pop()} · AtlasBrain`}catch{}}
 $('#vault').addEventListener('change',e=>{const v=e.target.value;if(!canLeaveEditor()){e.target.value=e.target.dataset.atual;return}
@@ -1269,7 +2024,7 @@ let sugs=[],sugSel=-1,sugT;
 function abrirDialogo(){lastFocus=document.activeElement;$('#abrir').classList.add('open');msg('');$('#caminho').focus()}
 function fecharDialogo(){$('#abrir').classList.remove('open');(lastFocus||document.body).focus?.()}
 function msg(t,erro){const m=$('#abrirMsg');m.textContent=t;m.classList.toggle('erro',!!erro)}
-function renderSugs(){$('#sugs').innerHTML=sugs.map((x,i)=>`<div class="sug" role="option" aria-selected="${i===sugSel}" data-i="${i}">${esc(x.path.replace(/^\/Users\/[^/]+/,'~'))}${x.projeto?'<b>projeto</b>':''}</div>`).join('')}
+function renderSugs(){$('#sugs').innerHTML=sugs.map((x,i)=>`<div class="sug" role="option" aria-selected="${i===sugSel}" data-i="${i}">${esc(x.path.replace(/^\/Users\/[^/]+/,'~'))}${x.projeto?t("<b>project</b>"):''}</div>`).join('')}
 $('#caminho').addEventListener('input',()=>{clearTimeout(sugT);sugT=setTimeout(async()=>{const v=$('#caminho').value.trim();
   if(!v){sugs=[];renderSugs();return}try{sugs=await api('/api/pastas?p='+encodeURIComponent(v))}catch{sugs=[]}sugSel=-1;renderSugs()},120)});
 $('#caminho').addEventListener('keydown',e=>{
@@ -1280,11 +2035,11 @@ $('#caminho').addEventListener('keydown',e=>{
 $('#sugs').addEventListener('click',e=>{const d=e.target.closest('.sug');if(!d)return;const x=sugs[+d.dataset.i];$('#caminho').value=x.path.replace(/^\/Users\/[^/]+/,'~');$('#caminho').focus()});
 $('#abrir').addEventListener('click',e=>{if(e.target.id==='abrir')fecharDialogo()});
 $('#abrirOk').onclick=()=>confirmar($('#caminho').value.trim());
-$('#escolher').onclick=async()=>{const b=$('#escolher');b.disabled=true;msg('Abrindo o seletor de pastas do macOS…');
+$('#escolher').onclick=async()=>{const b=$('#escolher');b.disabled=true;msg(t("Opening the macOS folder picker…"));
   try{const r=await post('/api/escolher');if(r.cancelado){msg('')}else{$('#caminho').value=r.path.replace(/^\/Users\/[^/]+/,'~');confirmar(r.path)}}
-  catch(err){msg('Não consegui abrir o Finder: '+err.message,true)}finally{b.disabled=false}};
-async function confirmar(p){if(!p){msg('Escolha ou digite uma pasta.',true);return}
-  $('#abrirOk').disabled=true;msg('Verificando a pasta…');
+  catch(err){msg(t("Could not open Finder: ")+err.message,true)}finally{b.disabled=false}};
+async function confirmar(p){if(!p){msg(t("Choose or enter a folder."),true);return}
+  $('#abrirOk').disabled=true;msg(t("Checking the folder…"));
   try{const r=await post('/api/cerebros',{path:p});location.href='/?v='+encodeURIComponent(r.path)+'#grafo'}
   catch(err){msg(err.message,true)}finally{$('#abrirOk').disabled=false}}
 
@@ -1293,13 +2048,13 @@ let acompanhando=null;
 function acompanhar(b){const t=(b.trabalhos||{})[b.atual];
   if(!t||t.estado==='pronto'){if(acompanhando){acompanhando=null;gStatus('');N=[];loadGraph();loadOverview()}return}
   const nome=esc(b.atual.split('/').pop());
-  if(t.estado==='erro'){gStatus(`<svg viewBox="0 0 64 64"><path fill="#879DA6" d="${STAR}"/></svg><h2>Não deu para abrir ${nome}</h2><p>${esc(t.msg||'')}</p><button class="chip" onclick="abrirDialogo()">Escolher outra pasta</button>`);acompanhando=null;return}
+  if(t.estado==='erro'){gStatus(tr`<svg viewBox="0 0 64 64"><path fill="#879DA6" d="${STAR}"/></svg><h2>Could not open ${nome}</h2><p>${esc(t.msg||'')}</p><button class="chip" onclick="abrirDialogo()">Choose another folder</button>`);acompanhando=null;return}
   N=[];E=[];needs=true;
-  gStatus(`<svg viewBox="0 0 64 64"><path fill="#1EB880" d="${STAR}"/></svg><h2>${t.estado==='contando'?'Lendo':'Indexando'} ${nome}</h2><p>${t.estado==='contando'?'Listando os arquivos da pasta…':`${t.arquivos} arquivos na primeira indexação. Projetos grandes levam alguns minutos; depois é incremental.`}</p>`);
+  gStatus(`<svg viewBox="0 0 64 64"><path fill="#1EB880" d="${STAR}"/></svg><h2>${t.estado==='contando'?t("Reading"):t("Indexing")} ${nome}</h2><p>${t.estado==='contando'?t("Listing folder files…"):tr`${t.arquivos} files in the initial index. Large projects take a few minutes; later updates are incremental.`}</p>`);
   acompanhando=setTimeout(async()=>{try{acompanhar(await api('/api/brains'))}catch{}},2500)}
 async function loadOverview(){try{const o=await api('/api/overview');
   $('#nDec').textContent=o.decisoes||'';
-  $('#stats').innerHTML=`<span><b>${o.arquivos}</b> no índice</span><span><b>${o.ligacoes}</b> ligações</span><span><b>${o.decisoes}</b> decisões</span><span>índice ${esc(ago(o.indexado))}</span>`}catch{}}
+  $('#stats').innerHTML=tr`<span><b>${o.arquivos}</b> indexed</span><span><b>${o.ligacoes}</b> links</span><span><b>${o.decisoes}</b> decisions</span><span>indexed ${esc(ago(o.indexado))}</span>`}catch{}}
 
 /* ================= TECLADO ================= */
 addEventListener('keydown',e=>{
@@ -1315,18 +2070,37 @@ addEventListener('keydown',e=>{
   else if(e.key==='d'&&current&&notaAtual?.kind==='codigo'){setView('grafo');abrirDeps(current)}
 });
 
+
+const SYSTEM_TEXT = Object.fromEntries(Object.entries(PT_BR).map(([en,pt])=>[pt,en]));
+function systemText(message){const english=SYSTEM_TEXT[message]||message;return t(english)}
+async function setLanguage(language){
+ locale=language==='pt-BR'?'pt-BR':'en';try{localStorage.setItem('atlasbrain:language',locale)}catch{}
+ applyTranslations();rel=new Intl.RelativeTimeFormat(locale,{numeric:'auto'});
+ syncViewMode();selectionSignature='';updateSelectionPanel();if(modo!=='deps')renderCrumbs();
+ if(decisions)renderDecisions();renderPal();renderSugs();editorState();
+ loadOverview();loadBrains();loadIndexState();
+ if(view==='soltos')loadSoltos();else if(view==='recentes')loadRecent();else if(view==='mudancas')loadChanges();
+ if(current){const path=current;await openNote(path)}
+ if(modo==='deps'&&depCentro)await abrirDeps(depCentro);
+ if(editorSession)editorConnections(editorSession.path,$('#editorConnections'),true);
+ needs=true;
+}
+$('#language').value=locale;$('#language').onchange=e=>setLanguage(e.target.value);
+
 /* ================= INÍCIO ================= */
 resize();
 const start=(location.hash||'#grafo').slice(1);
 setView(['grafo','decisoes','recentes','soltos','mudancas'].includes(start)?start:'grafo');
 if(savedView){Object.assign(layers,savedView.layers||{});Object.assign(graphFilters,savedView.filters||{});prefixo=savedView.layoutVersion===4&&typeof savedView.prefixo==='string'?savedView.prefixo:'';graphPage=savedView.layoutVersion===4&&Number.isInteger(savedView.graphPage)&&savedView.graphPage>=0?savedView.graphPage:0;}
+$('#pulseToggle').setAttribute('aria-pressed',String(pulseEnabled));$('#pulseToggle').onclick=()=>{pulseEnabled=!pulseEnabled;$('#pulseToggle').setAttribute('aria-pressed',String(pulseEnabled));pulseEpoch=performance.now();needs=true;persistGraphLimit();saveView();toast(pulseEnabled?t("Pulse enabled"):t("Pulse disabled"))};
+$('#graphPageSize').value=graphLimit;$('#graphPageSize').onchange=e=>changeGraphLimit(e.target.value);
 for(const [key,id] of Object.entries({pasta:'filterFolder',ext:'filterExt',kind:'filterKind',origem:'filterOrigin',relacao:'filterRelation'})){
   if(key!=='ext')$('#'+id).value=graphFilters[key];
   $('#'+id).onchange=()=>{graphFilters[key]=$('#'+id).value.trim();prefixo='';graphPage=0;loadGraph(true);saveView()};
 }
 $('#clearFilters').onclick=()=>{for(const key in graphFilters)graphFilters[key]='';$$('.filterfields input,.filterfields select').forEach(e=>e.value='');prefixo='';graphPage=0;loadGraph(true);saveView()};
 $$('[data-layer]').forEach(b=>b.setAttribute('aria-pressed',String(layers[b.dataset.layer])));
-api('/api/filtros').then(d=>{$('#filterExt').innerHTML='<option value="">Todas as linguagens</option>'+d.extensoes.map(e=>`<option value="${esc(e)}">${esc(e)}</option>`).join('');$('#filterExt').value=graphFilters.ext}).catch(()=>{});
+api('/api/filtros').then(d=>{$('#filterExt').innerHTML=t("<option value=\"\">All languages</option>")+d.extensoes.map(e=>`<option value="${esc(e)}">${esc(e)}</option>`).join('');$('#filterExt').value=graphFilters.ext}).catch(()=>{});
 const restoreCamera=!!savedView&&savedView.layoutVersion===4;
 loadGraph(restoreCamera).then(()=>{if(savedView){if(savedView.mode==='3d')set3d(true);if(savedView.mode==='radial')setRadial(true);if(restoreCamera&&savedView.cam&&['x','y','k'].every(k=>Number.isFinite(savedView.cam[k]))){Object.assign(camT,savedView.cam);camT.k=Math.max(.02,Math.min(6,camT.k));}if(savedView.orbitVersion===2&&savedView.orbit&&Number.isFinite(savedView.orbit.yaw)&&Number.isFinite(savedView.orbit.pitch))Object.assign(orbit,savedView.orbit);}restoring=false;needs=true});
 loadOverview();loadBrains();loadIndexState();if(view==='grafo')loadChanges(0,true);requestAnimationFrame(frame);

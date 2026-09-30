@@ -1,0 +1,451 @@
+{
+  "dataset_sha256": "cdef0ffc42604645b5bd7fc20052cbf8d678238fc99efa4f407f8cb217a18f9f",
+  "search_sha256": "7e8b22ebf274a1c5166c169647c35b13a3c4f049c8d58cb7c3ce3d00e316fd5b",
+  "baseline_commit": "8cccda5b951d13ed2202224028c08f2dc73a52f3",
+  "embedding_enabled": true,
+  "repeats": 3,
+  "cases": 100,
+  "intents": 50,
+  "projects": [
+    {
+      "project": "atlasbrain",
+      "revision": "299",
+      "files": 138,
+      "index_stable": true,
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    },
+    {
+      "project": "olax",
+      "revision": "198",
+      "files": 3265,
+      "index_stable": true,
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    },
+    {
+      "project": "SabeTudo",
+      "revision": "3",
+      "files": 177,
+      "index_stable": true,
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    },
+    {
+      "project": "sushigame",
+      "revision": "29",
+      "files": 172,
+      "index_stable": true,
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    },
+    {
+      "project": "adsivos",
+      "revision": "3",
+      "files": 215,
+      "index_stable": true,
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    }
+  ],
+  "protocol": "Source-reviewed labels frozen before retrieval; PT/EN pairs and shared labelled sources stay in one split. Positive any-labelled-file ranks at k=10; negative empty folder/tag scopes measured separately. Warmed latency includes positive and negative queries on SQLite snapshots. Natural-language abstention and answer correctness are not measured.",
+  "results": {
+    "current": {
+      "overall": {
+        "cases": 100,
+        "positives": 80,
+        "negatives": 20,
+        "top1": 0.575,
+        "top3": 0.75,
+        "recall10": 0.8875,
+        "mrr10": 0.670218253968254,
+        "negative_empty_rate": 1.0,
+        "scope_violations": 0,
+        "p50_ms": 114.85256249989106,
+        "p95_ms": 401.03391599950555
+      },
+      "slices": {
+        "language": {
+          "en": {
+            "cases": 50,
+            "positives": 40,
+            "negatives": 10,
+            "top1": 0.625,
+            "top3": 0.8,
+            "recall10": 0.875,
+            "mrr10": 0.7154166666666667,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 113.5041249999631,
+            "p95_ms": 425.27720899943233
+          },
+          "pt": {
+            "cases": 50,
+            "positives": 40,
+            "negatives": 10,
+            "top1": 0.525,
+            "top3": 0.7,
+            "recall10": 0.9,
+            "mrr10": 0.6250198412698412,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 115.49899999954505,
+            "p95_ms": 396.1397080001916
+          }
+        },
+        "split": {
+          "calibracao": {
+            "cases": 42,
+            "positives": 32,
+            "negatives": 10,
+            "top1": 0.5625,
+            "top3": 0.71875,
+            "recall10": 0.875,
+            "mrr10": 0.6511656746031746,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 106.51164599994445,
+            "p95_ms": 335.4577089994564
+          },
+          "validacao": {
+            "cases": 58,
+            "positives": 48,
+            "negatives": 10,
+            "top1": 0.5833333333333334,
+            "top3": 0.7708333333333334,
+            "recall10": 0.8958333333333334,
+            "mrr10": 0.6829199735449736,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 131.87268699994092,
+            "p95_ms": 543.5752080002203
+          }
+        },
+        "kind": {
+          "codigo": {
+            "cases": 64,
+            "positives": 64,
+            "negatives": 0,
+            "top1": 0.515625,
+            "top3": 0.703125,
+            "recall10": 0.859375,
+            "mrr10": 0.6177207341269841,
+            "negative_empty_rate": null,
+            "scope_violations": 0,
+            "p50_ms": 159.4596659997478,
+            "p95_ms": 434.17754199981573
+          },
+          "filtro": {
+            "cases": 10,
+            "positives": 10,
+            "negatives": 0,
+            "top1": 0.7,
+            "top3": 0.9,
+            "recall10": 1.0,
+            "mrr10": 0.8083333333333333,
+            "negative_empty_rate": null,
+            "scope_violations": 0,
+            "p50_ms": 122.98087499993926,
+            "p95_ms": 816.2497919993257
+          },
+          "memoria": {
+            "cases": 6,
+            "positives": 6,
+            "negatives": 0,
+            "top1": 1.0,
+            "top3": 1.0,
+            "recall10": 1.0,
+            "mrr10": 1.0,
+            "negative_empty_rate": null,
+            "scope_violations": 0,
+            "p50_ms": 107.85937499940701,
+            "p95_ms": 313.62224999975297
+          },
+          "negativo": {
+            "cases": 20,
+            "positives": 0,
+            "negatives": 20,
+            "top1": null,
+            "top3": null,
+            "recall10": null,
+            "mrr10": null,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 0.18331250021219603,
+            "p95_ms": 2.073458000268147
+          }
+        },
+        "project": {
+          "SabeTudo": {
+            "cases": 20,
+            "positives": 16,
+            "negatives": 4,
+            "top1": 0.3125,
+            "top3": 0.75,
+            "recall10": 0.875,
+            "mrr10": 0.5395833333333333,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 153.43116650046795,
+            "p95_ms": 344.8640840006192
+          },
+          "adsivos": {
+            "cases": 20,
+            "positives": 16,
+            "negatives": 4,
+            "top1": 0.5625,
+            "top3": 0.6875,
+            "recall10": 0.8125,
+            "mrr10": 0.6220238095238095,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 126.19272899974021,
+            "p95_ms": 261.8207079995045
+          },
+          "atlasbrain": {
+            "cases": 20,
+            "positives": 16,
+            "negatives": 4,
+            "top1": 0.875,
+            "top3": 0.875,
+            "recall10": 1.0,
+            "mrr10": 0.8975694444444444,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 41.404292000152054,
+            "p95_ms": 122.07124999986263
+          },
+          "olax": {
+            "cases": 20,
+            "positives": 16,
+            "negatives": 4,
+            "top1": 0.5,
+            "top3": 0.6875,
+            "recall10": 0.9375,
+            "mrr10": 0.5992063492063492,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 242.10827049955697,
+            "p95_ms": 825.7040419994155
+          },
+          "sushigame": {
+            "cases": 20,
+            "positives": 16,
+            "negatives": 4,
+            "top1": 0.625,
+            "top3": 0.75,
+            "recall10": 0.8125,
+            "mrr10": 0.6927083333333334,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 126.06095850014754,
+            "p95_ms": 321.9354580005529
+          }
+        }
+      },
+      "paired_top3": {
+        "intents": 40,
+        "both_top3": 26,
+        "pt_only_top3": 2,
+        "en_only_top3": 6,
+        "neither_top3": 6
+      }
+    },
+    "before": {
+      "overall": {
+        "cases": 100,
+        "positives": 80,
+        "negatives": 20,
+        "top1": 0.5625,
+        "top3": 0.7375,
+        "recall10": 0.8625,
+        "mrr10": 0.654593253968254,
+        "negative_empty_rate": 1.0,
+        "scope_violations": 0,
+        "p50_ms": 127.44145799979378,
+        "p95_ms": 461.34141700076725
+      },
+      "slices": {
+        "language": {
+          "en": {
+            "cases": 50,
+            "positives": 40,
+            "negatives": 10,
+            "top1": 0.6,
+            "top3": 0.775,
+            "recall10": 0.85,
+            "mrr10": 0.6904166666666667,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 122.29639600036535,
+            "p95_ms": 421.65345900048123
+          },
+          "pt": {
+            "cases": 50,
+            "positives": 40,
+            "negatives": 10,
+            "top1": 0.525,
+            "top3": 0.7,
+            "recall10": 0.875,
+            "mrr10": 0.6187698412698412,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 134.55006249978396,
+            "p95_ms": 461.34141700076725
+          }
+        },
+        "split": {
+          "calibracao": {
+            "cases": 42,
+            "positives": 32,
+            "negatives": 10,
+            "top1": 0.5625,
+            "top3": 0.71875,
+            "recall10": 0.875,
+            "mrr10": 0.6511656746031746,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 114.50139550015592,
+            "p95_ms": 347.8631250000035
+          },
+          "validacao": {
+            "cases": 58,
+            "positives": 48,
+            "negatives": 10,
+            "top1": 0.5625,
+            "top3": 0.75,
+            "recall10": 0.8541666666666666,
+            "mrr10": 0.656878306878307,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 139.06681250000474,
+            "p95_ms": 500.3488330003165
+          }
+        },
+        "kind": {
+          "codigo": {
+            "cases": 64,
+            "positives": 64,
+            "negatives": 0,
+            "top1": 0.515625,
+            "top3": 0.703125,
+            "recall10": 0.859375,
+            "mrr10": 0.6177207341269841,
+            "negative_empty_rate": null,
+            "scope_violations": 0,
+            "p50_ms": 153.50445849981043,
+            "p95_ms": 471.7617500000415
+          },
+          "filtro": {
+            "cases": 10,
+            "positives": 10,
+            "negatives": 0,
+            "top1": 0.6,
+            "top3": 0.8,
+            "recall10": 0.8,
+            "mrr10": 0.6833333333333333,
+            "negative_empty_rate": null,
+            "scope_violations": 0,
+            "p50_ms": 127.44145799979378,
+            "p95_ms": 713.9153329999317
+          },
+          "memoria": {
+            "cases": 6,
+            "positives": 6,
+            "negatives": 0,
+            "top1": 1.0,
+            "top3": 1.0,
+            "recall10": 1.0,
+            "mrr10": 1.0,
+            "negative_empty_rate": null,
+            "scope_violations": 0,
+            "p50_ms": 118.4413960004349,
+            "p95_ms": 363.44566699972347
+          },
+          "negativo": {
+            "cases": 20,
+            "positives": 0,
+            "negatives": 20,
+            "top1": null,
+            "top3": null,
+            "recall10": null,
+            "mrr10": null,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 50.425124999947,
+            "p95_ms": 262.1859160008171
+          }
+        },
+        "project": {
+          "SabeTudo": {
+            "cases": 20,
+            "positives": 16,
+            "negatives": 4,
+            "top1": 0.3125,
+            "top3": 0.75,
+            "recall10": 0.875,
+            "mrr10": 0.5395833333333333,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 137.08610399999088,
+            "p95_ms": 355.71900000013557
+          },
+          "adsivos": {
+            "cases": 20,
+            "positives": 16,
+            "negatives": 4,
+            "top1": 0.5625,
+            "top3": 0.6875,
+            "recall10": 0.8125,
+            "mrr10": 0.6220238095238095,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 109.7481459996743,
+            "p95_ms": 218.1534580004154
+          },
+          "atlasbrain": {
+            "cases": 20,
+            "positives": 16,
+            "negatives": 4,
+            "top1": 0.8125,
+            "top3": 0.8125,
+            "recall10": 0.875,
+            "mrr10": 0.8194444444444444,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 51.11845800001902,
+            "p95_ms": 215.63004200015712
+          },
+          "olax": {
+            "cases": 20,
+            "positives": 16,
+            "negatives": 4,
+            "top1": 0.5,
+            "top3": 0.6875,
+            "recall10": 0.9375,
+            "mrr10": 0.5992063492063492,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 269.35458349998953,
+            "p95_ms": 918.5295410006802
+          },
+          "sushigame": {
+            "cases": 20,
+            "positives": 16,
+            "negatives": 4,
+            "top1": 0.625,
+            "top3": 0.75,
+            "recall10": 0.8125,
+            "mrr10": 0.6927083333333334,
+            "negative_empty_rate": 1.0,
+            "scope_violations": 0,
+            "p50_ms": 129.690229499829,
+            "p95_ms": 291.975832999924
+          }
+        }
+      },
+      "paired_top3": {
+        "intents": 40,
+        "both_top3": 26,
+        "pt_only_top3": 2,
+        "en_only_top3": 5,
+        "neither_top3": 7
+      }
+    }
+  }
+}

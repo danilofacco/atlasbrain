@@ -289,8 +289,13 @@ def criar_servidor(vault: Path, port: int = 8765, auto_index: bool = True, *, ha
                               (not ext or Path(d['path']).suffix==ext) and (not kind or d['kind']==kind) and
                               (show_orphans or not d.get('isolated') or d.get('tipo') in ('decisao','aprendizado'))}
                         G=G.subgraph(keep).copy()
-                    v = g.vista(G, q.get("prefixo", ""), limite=min(int(q.get("limite", 300)), 800),
-                                pagina=int(q.get("pagina", 0)), foco=q.get("foco", ""))
+                    try:
+                        limit = max(1, min(int(q.get("limite", 500)), 800))
+                        page = int(q.get("pagina", 0))
+                    except ValueError:
+                        return self._json({"erro": "Page size and page must be integers."}, 400)
+                    v = g.vista(G, q.get("prefixo", ""), limite=limit,
+                                pagina=page, foco=q.get("foco", ""))
                     self._json({"vault": vault.name, **v})
                 elif u.path in ("/api/conexoes", "/api/dependencias"):
                     with lock:
@@ -324,7 +329,7 @@ def criar_servidor(vault: Path, port: int = 8765, auto_index: bool = True, *, ha
                         if fm.get("tipo") not in ("decisao", "aprendizado"):
                             continue
                         resumo = r["preview"] or ""
-                        m = re.search(r"## Decisão\s+(.+?)(?:\s+## |$)", resumo)
+                        m = re.search(r"## (?:Decisão|Decision)\s+(.+?)(?:\s+## |$)", resumo)
                         out.append({"path": r["path"], "title": r["title"], "tipo": fm["tipo"],
                                     "data": str(fm.get("data") or ""), "projeto": (fm.get("projeto") or "").strip("[]"),
                                     "status": fm.get("status"), "origem": fm.get("origem"),

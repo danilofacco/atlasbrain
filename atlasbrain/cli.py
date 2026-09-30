@@ -194,21 +194,22 @@ def cmd_briefing(a):
         print(text)
 
 
-GUARD_TXT = ("Este projeto tem um AtlasBrain (grafo do código + decisões). Antes de varrer arquivos com "
-             "busca ou leitura, prefira as tools MCP do AtlasBrain: `arquivos` (onde algo mora), `onde` (definição e usos "
-             "de um símbolo), `explicar` (dependências de um arquivo) e `buscar` (conteúdo e significado). "
-             "Se o MCP estiver indisponível ou não encontrar o que precisa, use as ferramentas normais.")
+GUARD_TXT = ("This project has AtlasBrain (code graph and project memory). Before scanning files, "
+             "prefer its MCP tools: find_files (names/symbols), symbol_location (definitions/usages), "
+             "explain (dependencies) and search (content and meaning). "
+             "If MCP is unavailable or finds nothing useful, use ordinary file tools.")
 
 BLOCO_INICIO, BLOCO_FIM = "<!-- atlasbrain:inicio -->", "<!-- atlasbrain:fim -->"
 BLOCO = f"""{BLOCO_INICIO}
-## AtlasBrain — segundo cérebro do projeto
-Cada projeto tem um cérebro em `.atlasbrain/` (grafo do código, decisões e aprendizados), exposto pelo MCP `atlasbrain`.
-- Para localizar código, use antes de grep/glob: `arquivos` (pelo nome ou símbolo), `onde` (definição e usos),
-  `explicar` (o que um arquivo importa, quem depende dele, porquês e decisões), `caminho`, `relatorio`.
-- Para contexto e histórico: `buscar`, `decisoes`, `ler`, `relacionados`.
-- Relações INFERRED são pistas; EXTRACTED estão no código.
-- Quando uma decisão importante for fechada, registre com `registrar_decisao` (use `substitui` se ela muda
-  uma anterior); descobertas não óbvias com `registrar_aprendizado`.
+## AtlasBrain — project second brain
+Each project has a local `.atlasbrain/` brain (code graph, decisions and learnings), exposed by the `atlasbrain` MCP.
+- Before grep/glob, use `find_files` (names/symbols), `symbol_location` (definitions/usages),
+  `explain` (dependencies and rationale), `graph_path` and `report`.
+- For task context and history: `task_context`, `search`, `decisions`, `read` and `related`.
+- INFERRED relations are clues; EXTRACTED relations have code/text evidence.
+- Record important finalized decisions with `record_decision` (`supersedes` replaces an earlier decision);
+  record non-obvious discoveries with `record_learning`.
+- On a global endpoint, pass `project_folder` with the absolute folder where you are working.
 {BLOCO_FIM}
 """
 

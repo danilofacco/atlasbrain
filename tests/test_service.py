@@ -54,7 +54,7 @@ def test_shared_daemon_and_http_sessions(projeto, tmp_path, monkeypatch):
                     async with ClientSession(transport[0], transport[1]) as session:
                         await session.initialize()
                         tools = await session.list_tools()
-                        assert {'onde','soltos'} <= {t.name for t in tools.tools}
+                        assert {'symbol_location','isolated_files'} <= {t.name for t in tools.tools}
                         if vault == second:
                             await session.call_tool('criar_nota', {'titulo': 'Isolation sentinel', 'conteudo': 'Only belongs to the second project.'})
                         result = await session.call_tool('recentes', {})
@@ -121,8 +121,8 @@ def test_global_mcp_requires_project_folder_and_routes_to_it(tmp_path, monkeypat
                 async with ClientSession(transport[0], transport[1]) as session:
                     await session.initialize()
                     tools = {tool.name: tool for tool in (await session.list_tools()).tools}
-                    assert 'projetos' in tools
-                    assert 'pasta_projeto' in tools['relatorio'].input_schema['properties']
+                    assert 'projects' in tools and 'projetos' not in tools
+                    assert 'project_folder' in tools['report'].input_schema['properties']
                     missing = await session.call_tool('relatorio', {})
                     assert 'Informe `pasta_projeto`' in missing.content[0].text
                     assert 'relatório de SegundoCerebro' not in missing.content[0].text

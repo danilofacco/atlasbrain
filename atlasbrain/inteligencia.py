@@ -1,4 +1,6 @@
 """Shared, evidence-based reports for the browser and MCP."""
+
+from .localization import text as _text
 import difflib
 import hashlib
 import json
@@ -76,13 +78,13 @@ def status(con, vault, limite=30, offset=0):
     return dict(indexado=float(get_meta(con, 'last_indexed', '0')), revisao=int(get_meta(con, 'rev', '0')),
                 arquivos=len(indexed), indexando=indexing, pendentes=len(pending), itens=pending[offset:offset+limit],
                 offset=offset, mais=offset+limit<len(pending), atualizado=not pending and not indexing,
-                criterio='Compara tamanho e data dos arquivos indexáveis com o índice; não reindexa nem prova ausência de mudanças com metadados idênticos.')
+                criterio=_text('Compara tamanho e data dos arquivos indexáveis com o índice; não reindexa nem prova ausência de mudanças com metadados idênticos.'))
 
 
 def suggestions(con, path, limite=5):
     row = con.execute('SELECT path,title FROM notes WHERE path=?', (path,)).fetchone()
     if not row:
-        raise ValueError('Arquivo não encontrado no índice')
+        raise ValueError(_text('Arquivo não encontrado no índice'))
     linked = {r[0] for r in con.execute("SELECT b.path FROM links l JOIN notes b ON b.id=l.dst JOIN notes a ON a.id=l.src WHERE a.path=? AND l.kind!='similar' UNION SELECT a.path FROM links l JOIN notes a ON a.id=l.src JOIN notes b ON b.id=l.dst WHERE b.path=? AND l.kind!='similar'", (path, path))}
     result = []
     for r in con.execute('SELECT path,title FROM notes WHERE path!=? ORDER BY path', (path,)):
@@ -95,21 +97,21 @@ def suggestions(con, path, limite=5):
         score = round(min(.85, .35*same_folder + .5*similarity), 3)
         evidence = []
         if same_folder:
-            evidence.append('Arquivos na mesma pasta')
+            evidence.append(_text('Arquivos na mesma pasta'))
         if similarity >= .6:
-            evidence.append('Nomes semelhantes')
+            evidence.append(_text('Nomes semelhantes'))
         result.append(dict(path=r['path'], title=r['title'], confianca=score, origem='INFERRED', evidencias=evidence,
-                           aviso='Proximidade de nomes/pastas não prova dependência. Revise ambos antes de registrar.'))
+                           aviso=_text('Proximidade de nomes/pastas não prova dependência. Revise ambos antes de registrar.')))
     result.sort(key=lambda r: (-r['confianca'], r['path']))
     return dict(path=path, sugestoes=result[:max(1, min(int(limite), 20))])
 
 
 def register_link(con, vault, de, para, motivo):
     if de == para or not motivo.strip() or len(motivo) > 2000:
-        raise ValueError('Escolha dois arquivos distintos e um motivo de até 2000 caracteres')
+        raise ValueError(_text('Escolha dois arquivos distintos e um motivo de até 2000 caracteres'))
     for path in [de, para]:
         if not con.execute('SELECT 1 FROM notes WHERE path=?', (path,)).fetchone():
-            raise ValueError('Arquivo não encontrado no índice')
+            raise ValueError(_text('Arquivo não encontrado no índice'))
     import yaml
     from .config import notes_dir
     key = hashlib.sha256((de+'\0'+para).encode()).hexdigest()[:20]
@@ -157,15 +159,15 @@ def budget_report(data, tokens=2000):
         data['proximo_offset'] = data['offset'] + len(data['itens'])
         if data['truncado']: data['mais'] = True
     if len(encode()) > limit:
-        return json.dumps(dict(truncado=True, omitidos_por_orcamento=omitted, aviso='Orçamento insuficiente; aumente tokens ou use uma ferramenta específica.'), ensure_ascii=False)
+        return json.dumps(dict(truncado=True, omitidos_por_orcamento=omitted, aviso=_text('Orçamento insuficiente; aumente tokens ou use uma ferramenta específica.')), ensure_ascii=False)
     return encode()
 
 
 def task_context(ctx, tarefa, limite=8, foco=None, objetivo='implementar'):
     if not tarefa.strip():
-        raise ValueError('Descreva a tarefa')
+        raise ValueError(_text('Descreva a tarefa'))
     if objetivo not in ('implementar','investigar','revisar','documentar'):
-        raise ValueError('Objetivo inválido')
+        raise ValueError(_text('Objetivo inválido'))
     from . import graph
     target_limit = max(1, min(limite, 20))
     hits = ctx.searcher.search(tarefa[:2000], limit=max(20, min(50, target_limit * 4)))
@@ -189,14 +191,14 @@ def task_context(ctx, tarefa, limite=8, foco=None, objetivo='implementar'):
                 next_row = graph.find_note(ctx.con, str(fm['substituida_por']).strip('[]'))
                 successor = next_row['path'] if next_row else None
             historical_focus.append(dict(path=row['path'], status=fm.get('status'), substituta=successor))
-            risks.append('Foco em decisão histórica: '+row['path'])
+            risks.append(_text('Foco em decisão histórica: ')+row['path'])
             next_row = ctx.con.execute('SELECT path,frontmatter FROM notes WHERE path=?', (successor,)).fetchone() if successor else None
             if next_row and active(next_row) and next_row['path'] not in focus_paths:
                 focus_paths.append(next_row['path'])
         elif row and row['path'] not in focus_paths:
             focus_paths.append(row['path'])
         elif not row:
-            risks.append('Foco não encontrado: '+ref[:160])
+            risks.append(_text('Foco não encontrado: ')+ref[:160])
     paths = list(dict.fromkeys(focus_paths + paths))[:target_limit]
     from .consolidacao import coverage
     _, stale = coverage(ctx.con)
@@ -205,10 +207,10 @@ def task_context(ctx, tarefa, limite=8, foco=None, objetivo='implementar'):
         fm = json.loads(r['frontmatter'] or '{}')
         hit = next((h for h in hits if h['path']==path), {})
         entry = dict(path=path, title=r['title'], kind=r['kind'], trecho=hit.get('snippet',r['preview'] or '')[:700],
-                     motivo=['foco explícito'] if path in focus_paths else hit.get('motivos', ['relevância de busca']),
+                     motivo=[_text('foco explícito')] if path in focus_paths else hit.get('motivos', [_text('relevância de busca')]),
                      hash_indice=r['hash'], ler={'nota':path, **({'secao':hit['heading']} if hit.get('heading') else {})})
         if path in stale:
-            risks.append('Síntese desatualizada: '+path)
+            risks.append(_text('Síntese desatualizada: ')+path)
         if r['kind']=='nota':
             import re
             chunks=ctx.con.execute('SELECT text FROM chunks WHERE note_id=? AND ord>=0 ORDER BY ord LIMIT 20',(r['id'],)).fetchall()
@@ -216,7 +218,7 @@ def task_context(ctx, tarefa, limite=8, foco=None, objetivo='implementar'):
             for chunk in chunks:
                 for task in re.findall(r'^\s*[-*] \[ \] (.+)$', chunk[0], re.M):
                     if task not in seen and len(seen)<5:
-                        pending.append({'path':path,'tarefa':task[:300],'origem':'checkbox explícito'})
+                        pending.append({'path':path,'tarefa':task[:300],'origem':_text('checkbox explícito')})
                         seen.add(task)
         if fm.get('tipo') == 'decisao':
             if fm.get('status', 'ativa') == 'ativa':
@@ -244,13 +246,13 @@ def task_context(ctx, tarefa, limite=8, foco=None, objetivo='implementar'):
             decision_paths.add(r['path'])
     state = status(ctx.con, ctx.vault, limite=3)
     if state['indexando']:
-        risks.append('Indexação em andamento; o contexto pode mudar')
+        risks.append(_text('Indexação em andamento; o contexto pode mudar'))
     if state['pendentes']:
-        risks.append(f"{state['pendentes']} arquivos pendentes de indexação")
+        risks.append(f"{state['pendentes']}{_text(' arquivos pendentes de indexação')}")
     if any(d['origem']=='INFERRED' for d in dependencies):
-        risks.append('Há relações inferidas; confirme no código antes de alterar')
+        risks.append(_text('Há relações inferidas; confirme no código antes de alterar'))
     dependencies.sort(key=lambda d: (d['origem']=='INFERRED',
         d['direcao'] != ('entrada' if objetivo=='revisar' else 'saida')))
     return dict(tarefa=tarefa[:2000], objetivo=objetivo, foco=focus_paths, decisoes_historicas=historical_focus,
                 pendencias=pending, selecionados={'arquivos':len(files),'decisoes':len(decisions),'dependencias':len(dependencies),'pendencias':len(pending)}, arquivos=files, dependencias=dependencies, decisoes=decisions, riscos=risks,
-                indice=state, aviso='Contexto selecionado por relevância de busca; não é uma análise exaustiva. Use impacto/explicar para aprofundar.')
+                indice=state, aviso=_text('Contexto selecionado por relevância de busca; não é uma análise exaustiva. Use impacto/explicar para aprofundar.'))

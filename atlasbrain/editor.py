@@ -1,4 +1,6 @@
 """Markdown editing with optimistic revisions and one recoverable previous version."""
+
+from .localization import text as _text
 import fcntl
 import hashlib
 import json
@@ -26,35 +28,35 @@ class EditError(ValueError):
 
 def _file(vault, path, *, markdown_only=True):
     if not isinstance(path, str) or not path or '\\' in path or '\x00' in path:
-        raise EditError('Caminho inválido')
+        raise EditError(_text('Caminho inválido'))
     relative = PurePosixPath(path)
     if relative.is_absolute() or any(p in ('', '.', '..') for p in path.split('/')):
-        raise EditError('Use um caminho relativo dentro do projeto')
+        raise EditError(_text('Use um caminho relativo dentro do projeto'))
     if markdown_only and relative.suffix.lower() not in ('.md', '.markdown'):
-        raise EditError('O editor aceita apenas Markdown')
+        raise EditError(_text('O editor aceita apenas Markdown'))
     if relative.name.startswith('.') or any(p in IGNORE_DIRS for p in relative.parts[:-1]):
-        raise EditError('Arquivos ocultos e pastas geradas não podem ser editados')
+        raise EditError(_text('Arquivos ocultos e pastas geradas não podem ser editados'))
     if any(p.startswith('.') and p != BRAIN for p in relative.parts[:-1]):
-        raise EditError('Pastas internas não podem ser editadas')
+        raise EditError(_text('Pastas internas não podem ser editadas'))
     if tuple(p.lower() for p in relative.parts) == (BRAIN.lower(), 'relatorio.md'):
-        raise EditError('O relatório é gerado automaticamente')
+        raise EditError(_text('O relatório é gerado automaticamente'))
     file = vault.resolve()
     for part in relative.parts:
         file = file / part
         if file.is_symlink():
-            raise EditError('Links simbólicos não podem ser editados')
+            raise EditError(_text('Links simbólicos não podem ser editados'))
     if not file.resolve().is_relative_to(vault.resolve()):
-        raise EditError('Caminho fora do projeto')
+        raise EditError(_text('Caminho fora do projeto'))
     return file, relative.as_posix()
 
 
 def _decode(raw, max_bytes=MAX_BYTES):
     if len(raw) > max_bytes:
-        raise EditError('Arquivo maior que o limite do editor (200 KB)', 413)
+        raise EditError(_text('Arquivo maior que o limite do editor (200 KB)'), 413)
     try:
         return raw.decode('utf-8')
     except UnicodeDecodeError:
-        raise EditError('O editor aceita arquivos UTF-8')
+        raise EditError(_text('O editor aceita arquivos UTF-8'))
 
 
 def revision(raw):
@@ -63,10 +65,10 @@ def revision(raw):
 
 def _cache(vault):
     if (vault / BRAIN).is_symlink():
-        raise EditError('Pasta do cérebro inválida')
+        raise EditError(_text('Pasta do cérebro inválida'))
     root = data_dir(vault) / '.editor-backups'
     if root.is_symlink():
-        raise EditError('Pasta de recuperação inválida')
+        raise EditError(_text('Pasta de recuperação inválida'))
     root.mkdir(exist_ok=True)
     return root
 
@@ -107,16 +109,16 @@ def operation(vault, operation_id, payload, action):
     if not operation_id:
         return action()
     if not isinstance(operation_id, str) or len(operation_id) > 200:
-        raise EditError('Identificador de operação inválido')
+        raise EditError(_text('Identificador de operação inválido'))
     signature = revision(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode())
     with _lock(vault):
         file = _cache(vault) / ('operation-' + revision(operation_id.encode()) + '.json')
         if file.exists():
             receipt = json.loads(file.read_text())
             if receipt['signature'] != signature:
-                raise EditError('Identificador já usado para outra operação', 409)
+                raise EditError(_text('Identificador já usado para outra operação'), 409)
             if receipt['state'] != 'done':
-                raise EditError('Operação interrompida: confira o arquivo antes de tentar com outro identificador', 409)
+                raise EditError(_text('Operação interrompida: confira o arquivo antes de tentar com outro identificador'), 409)
             return receipt['result']
         receipt = dict(signature=signature, state='pending')
         _atomic(file, json.dumps(receipt).encode(), mode=0o600)
@@ -134,9 +136,9 @@ def read(vault, path, previous=False):
     file, path = _file(vault, path)
     source = _backup(vault, path) if previous else file
     if not source.is_file() or source.is_symlink():
-        raise EditError('Versão anterior indisponível' if previous else 'Arquivo não encontrado', 404)
+        raise EditError(_text('Versão anterior indisponível') if previous else _text('Arquivo não encontrado'), 404)
     if source.stat().st_size > MAX_BYTES:
-        raise EditError('Arquivo maior que o limite do editor (200 KB)',413)
+        raise EditError(_text('Arquivo maior que o limite do editor (200 KB)'),413)
     raw = source.read_bytes()
     return dict(path=path, content=_decode(raw), revision=revision(raw), previous=previous,
                 recuperavel=_backup(vault, path).is_file())
@@ -161,28 +163,28 @@ def _atomic(file, raw, mode=0o644, create=False):
 
 def save(vault, path, content, base_revision=None, create=False, *, max_bytes=MAX_BYTES):
     if not isinstance(content,str):
-        raise EditError('Conteúdo inválido')
+        raise EditError(_text('Conteúdo inválido'))
     try:
         raw = content.encode('utf-8')
     except UnicodeEncodeError:
-        raise EditError('O editor aceita conteúdo UTF-8 válido')
+        raise EditError(_text('O editor aceita conteúdo UTF-8 válido'))
     if len(raw)>max_bytes:
-        raise EditError('Conteúdo maior que 200 KB',413)
+        raise EditError(_text('Conteúdo maior que 200 KB'),413)
     with _lock(vault):
         file, path = _file(vault, path)
         old = None
         if create:
             if file.exists():
-                raise EditError('Já existe um arquivo com esse nome. Escolha outro.', 409)
+                raise EditError(_text('Já existe um arquivo com esse nome. Escolha outro.'), 409)
         else:
             if not file.is_file():
-                raise EditError('O arquivo foi removido ou não existe mais', 409)
+                raise EditError(_text('O arquivo foi removido ou não existe mais'), 409)
             if file.stat().st_size>max_bytes:
-                raise EditError('Arquivo maior que 200 KB',413)
+                raise EditError(_text('Arquivo maior que 200 KB'),413)
             old = file.read_bytes()
             _decode(old, max_bytes)
             if not base_revision or revision(old) != base_revision:
-                raise EditError('O arquivo mudou fora do editor. Recarregue a versão atual antes de salvar.', 409)
+                raise EditError(_text('O arquivo mudou fora do editor. Recarregue a versão atual antes de salvar.'), 409)
             if old == raw:
                 return dict(path=path, revision=revision(raw), recuperavel=_backup(vault,path).exists(), alterado=False)
         file.parent.mkdir(parents=True, exist_ok=True)
@@ -190,13 +192,13 @@ def save(vault, path, content, base_revision=None, create=False, *, max_bytes=MA
         _file(vault, path)
         if old is not None:
             if file.read_bytes() != old:
-                raise EditError('O arquivo mudou durante o salvamento. Recarregue antes de salvar.',409)
+                raise EditError(_text('O arquivo mudou durante o salvamento. Recarregue antes de salvar.'),409)
             _atomic(_backup(vault,path), old, mode=0o600)
             _snapshot(vault, path, old)
         try:
             _atomic(file, raw, mode=stat.S_IMODE(file.stat().st_mode) if old is not None else 0o644, create=create)
         except FileExistsError:
-            raise EditError('Já existe um arquivo com esse nome',409)
+            raise EditError(_text('Já existe um arquivo com esse nome'),409)
     return dict(path=path, revision=revision(raw), recuperavel=old is not None, alterado=True)
 
 
@@ -244,14 +246,14 @@ def delete(vault, path):
     with _lock(vault):
         file, path = _file(vault, path, markdown_only=False)
         if not file.is_file():
-            raise EditError('Arquivo não encontrado', 404)
+            raise EditError(_text('Arquivo não encontrado'), 404)
         backup = _backup(vault, path)
         history_dir = _cache(vault) / ('history-' + revision(path.encode()))
         if history_dir.is_symlink() or backup.is_symlink():
-            raise EditError('Pasta de recuperação inválida')
+            raise EditError(_text('Pasta de recuperação inválida'))
         versions = list(history_dir.glob('*.md')) if history_dir.exists() else []
         if any(p.is_symlink() or not p.is_file() for p in versions):
-            raise EditError('Histórico inválido')
+            raise EditError(_text('Histórico inválido'))
         for version in versions:
             version.unlink()
         if history_dir.exists():
@@ -265,7 +267,7 @@ def delete(vault, path):
 def _history_dir(vault, path):
     root = _cache(vault) / ('history-' + revision(path.encode()))
     if root.is_symlink():
-        raise EditError('Histórico inválido')
+        raise EditError(_text('Histórico inválido'))
     root.mkdir(exist_ok=True)
     return root
 
@@ -285,10 +287,10 @@ def history(vault, path, version=None):
         return {'path': path, 'versoes': [{'id': p.stem, 'data': int(p.stem)/1e9, 'bytes': p.stat().st_size}
                 for p in sorted(root.glob('*.md'), reverse=True)]}
     if not re.fullmatch(r'[0-9]{10,25}', str(version)):
-        raise EditError('Versão inválida')
+        raise EditError(_text('Versão inválida'))
     file = root / (str(version) + '.md')
     if not file.is_file() or file.is_symlink():
-        raise EditError('Versão não encontrada', 404)
+        raise EditError(_text('Versão não encontrada'), 404)
     content = _decode(file.read_bytes())
     current = read(vault, path)
     diff = ''.join(difflib.unified_diff(current['content'].splitlines(True), content.splitlines(True),
@@ -305,7 +307,7 @@ def restore(vault, path, version, base_revision):
 def section_content(content, section, text):
     """Replace exactly one H2 section, ignoring headings inside fenced code."""
     if not isinstance(section, str) or not section.strip() or '\n' in section:
-        raise EditError('Nome da seção inválido')
+        raise EditError(_text('Nome da seção inválido'))
     lines = content.splitlines(keepends=True)
     headings = []
     fence = None
@@ -330,7 +332,7 @@ def section_content(content, section, text):
             headings.append((i, len(match[1]), match[2]))
     matches = [h for h in headings if h[1] == 2 and h[2] == section.strip()]
     if len(matches) > 1:
-        raise EditError('Seção repetida: use a edição completa para desambiguar', 409)
+        raise EditError(_text('Seção repetida: use a edição completa para desambiguar'), 409)
     replacement = '## ' + section.strip() + '\n\n' + text.strip() + '\n\n'
     if not matches:
         return content.rstrip() + '\n\n' + replacement

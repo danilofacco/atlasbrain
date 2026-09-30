@@ -4,6 +4,8 @@ A AST não resolve tipos em runtime. Ligações sem binding explícito são INFE
 nomes com mais de um destino permanecem ambíguos e não entram como dependências.
 """
 
+from .localization import text as _text, value as _value
+
 import json
 import re
 from collections import defaultdict, deque
@@ -198,22 +200,22 @@ def escolher(G, alvo):
     if len(nodes) == 1:
         return nodes[0], None
     if not nodes:
-        return None, f'Não achei `{alvo}` no grafo. Use `arquivos`, `onde` ou `buscar`.'
-    return None, f'`{alvo}` é ambíguo; informe o caminho ou ID:\n' + '\n'.join(
-        '- ' + referencia(G, n) for n in nodes[:20]) + (f'\n… {len(nodes) - 20} opções adicionais.' if len(nodes) > 20 else '')
+        return None, f"{_text('Não achei `')}{alvo}{_text('` no grafo. Use `arquivos`, `onde` ou `buscar`.')}"
+    return None, f"`{alvo}{_text('` é ambíguo; informe o caminho ou ID:\n')}" + '\n'.join(
+        '- ' + referencia(G, n) for n in nodes[:20]) + (f"\n… {len(nodes) - 20}{_text(' opções adicionais.')}" if len(nodes) > 20 else '')
 
 
 def validar(profundidade, tokens, direcao, modo='bfs', relacoes=None):
     if not 0 <= profundidade <= 6:
-        return 'profundidade deve estar entre 0 e 6.'
+        return _text('profundidade deve estar entre 0 e 6.')
     if not 128 <= tokens <= 16000:
-        return 'tokens deve estar entre 128 e 16000.'
+        return _text('tokens deve estar entre 128 e 16000.')
     if direcao not in ('entrada', 'saida', 'ambas'):
-        return 'direcao deve ser entrada, saida ou ambas.'
+        return _text('direcao deve ser entrada, saida ou ambas.')
     if modo not in ('bfs', 'dfs'):
-        return 'modo deve ser bfs ou dfs.'
+        return _text('modo deve ser bfs ou dfs.')
     if relacoes is not None and set(relacoes) - RELACOES:
-        return 'Relações válidas: ' + ', '.join(sorted(RELACOES)) + '.'
+        return _text('Relações válidas: ') + ', '.join(sorted(RELACOES)) + '.'
     return None
 
 
@@ -257,7 +259,7 @@ def percorrer(G, seeds, profundidade, direcao, relacoes, modo='bfs', inferidas=T
 def limitar(lines, tokens, truncado=False):
     # Estimativa explícita; UTF-8/4 evita que acentos escondam respostas grandes.
     budget = tokens * 4
-    aviso = '[TRUNCADO: limite de contexto atingido; reduza a consulta ou aumente tokens/profundidade.]'
+    aviso = _text('[TRUNCADO: limite de contexto atingido; reduza a consulta ou aumente tokens/profundidade.]')
     reserve = len(aviso.encode()) + 1
     out, size = [], 0
     for line in (part for line in lines for part in line.splitlines()):
@@ -286,28 +288,28 @@ def consultar(ctx, consulta, modo='bfs', profundidade=2, tokens=2000, direcao='a
         paths = {r['path'] for r in hits}
         seeds = [n for n, d in G.nodes(data=True) if d['kind'] != 'simbolo' and d['path'] in paths]
     if not seeds:
-        return f'Nenhum resultado para `{consulta}`.'
+        return f"{_text('Nenhum resultado para `')}{consulta}`."
     kinds = RELACOES - {'similar'} if relacoes is None else set(relacoes)
     depths, edges, cut = percorrer(G, seeds, profundidade, direcao, kinds, modo)
-    lines = [f'Grafo: {modo.upper()} · direção {direcao} · até {profundidade} salto(s).',
-             'Setas seguem a relação original. INFERRED é hipótese. Tokens estimados por UTF-8/4.']
+    lines = [f"{_text('Grafo: ')}{modo.upper()}{_text(' · direção ')}{_value(direcao)}{_text(' · até ')}{profundidade}{_text(' salto(s).')}",
+             _text('Setas seguem a relação original. INFERRED é hipótese. Tokens estimados por UTF-8/4.')]
     # Intercalar nós e evidências permite que mesmo uma resposta curta preserve relações.
     emitted, shown_edges = set(), set()
     for n in depths:
         if n not in emitted:
-            lines.append('NÓ ' + referencia(G, n))
+            lines.append(_text('NÓ ') + referencia(G, n))
             emitted.add(n)
         for edge, attrs in edges.items():
             if n not in edge[:2] or edge in shown_edges:
                 continue
             a, b, _ = edge
-            lines.append(f"{referencia(G, a)} → {referencia(G, b)} · {attrs['kind']} · {attrs['conf']}" +
-                         (f" · evidência L{attrs['linha']}" if attrs.get('linha') else ''))
+            lines.append(f"{referencia(G, a)} → {referencia(G, b)} · {_value(attrs['kind'])} · {attrs['conf']}" +
+                         (f"{_text(' · evidência L')}{attrs['linha']}" if attrs.get('linha') else ''))
             emitted.update((a, b))
             shown_edges.add(edge)
     ambiguous = [a for a in G.graph['ambiguas'] if any(G.nodes[n]['path'] == a['path'] for n in depths)]
     if ambiguous:
-        lines.append(f'{len(ambiguous)} referência(s) ambígua(s) nesses arquivos ficaram sem aresta:')
+        lines.append(f"{len(ambiguous)}{_text(' referência(s) ambígua(s) nesses arquivos ficaram sem aresta:')}")
         lines.extend(f"- {a['path']}:{a['linha']} `{a['alvo']}`" for a in ambiguous[:10])
     return limitar(lines, tokens, cut)
 
@@ -331,21 +333,21 @@ def impacto(ctx, alvo, profundidade=3, tokens=2000, incluir_inferidas=False):
     depths, edges, overflow = percorrer(G, seeds[:300], profundidade, 'entrada', CODIGO,
                                        inferidas=incluir_inferidas)
     impacted = [n for n in depths if n not in seeds]
-    lines = [f'Impacto potencial de {referencia(G, node)} · até {profundidade} salto(s).',
-             'Dependências estáticas; não é garantia de quebra nem de cobertura completa.',
-             'INFERRED incluídas.' if incluir_inferidas else 'Somente relações EXTRACTED; INFERRED ficam de fora.']
+    lines = [f"{_text('Impacto potencial de ')}{referencia(G, node)}{_text(' · até ')}{profundidade}{_text(' salto(s).')}",
+             _text('Dependências estáticas; não é garantia de quebra nem de cobertura completa.'),
+             _text('INFERRED incluídas.') if incluir_inferidas else _text('Somente relações EXTRACTED; INFERRED ficam de fora.')]
     if not impacted:
-        lines.append('Nenhum dependente encontrado dentro desses limites.')
+        lines.append(_text('Nenhum dependente encontrado dentro desses limites.'))
     for n in sorted(impacted, key=lambda x: depths[x]):
-        lines.append(f'- {depths[n]} salto(s): {referencia(G, n)}')
+        lines.append(f"- {depths[n]}{_text(' salto(s): ')}{referencia(G, n)}")
         for (a, b, _), d in edges.items():
             if a == n:
-                lines.append(f"  {referencia(G, a)} → {referencia(G, b)} · {d['kind']} · {d['conf']}" +
-                             (f" · evidência L{d['linha']}" if d.get('linha') else ''))
+                lines.append(f"  {referencia(G, a)} → {referencia(G, b)} · {_value(d['kind'])} · {d['conf']}" +
+                             (f"{_text(' · evidência L')}{d['linha']}" if d.get('linha') else ''))
     relevant_paths = {G.nodes[n]['path'] for n in depths}
     ambiguous = [a for a in G.graph['ambiguas'] if a['path'] in relevant_paths or
                  any(c in depths for c in a['candidatos'])]
     if ambiguous:
-        lines.append(f'{len(ambiguous)} referência(s) ambígua(s) podem ocultar dependentes:')
+        lines.append(f"{len(ambiguous)}{_text(' referência(s) ambígua(s) podem ocultar dependentes:')}")
         lines.extend(f"- {a['path']}:{a['linha']} `{a['alvo']}`" for a in ambiguous[:10])
     return limitar(lines, tokens, cut or overflow)

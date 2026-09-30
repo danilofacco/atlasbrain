@@ -309,3 +309,21 @@ def test_migra_indice_antigo_sem_reprocessar(indexado):
     assert "content=" in con.execute("SELECT sql FROM sqlite_master WHERE name='chunks_fts'").fetchone()[0]
     assert len(con.execute("SELECT embedding FROM chunks WHERE embedding IS NOT NULL").fetchone()[0]) == 384 * 2
     assert Searcher(con).search("glossário")[0]["path"] == "notas/Glossário.md"  # busca continua funcionando
+
+
+def test_default_graph_page_size_and_custom_limits_keep_all_files():
+    G = nx.Graph()
+    for i in range(1051):
+        path = f"src/f{i:04}.md"
+        G.add_node(path, label=path, path=path, kind="nota", tipo=None)
+    default = g.vista(G)
+    assert default["limite"] == 500 and len(default["nodes"]) == 500
+    assert (default["paginas"], default["inicio"], default["fim"]) == (3, 1, 500)
+    for limit in (50, 375, 500, 800):
+        first = g.vista(G, limite=limit)
+        pages = [g.vista(G, limite=limit, pagina=i) for i in range(first["paginas"])]
+        paths = [n["path"] for page in pages for n in page["nodes"]]
+        assert len(paths) == len(set(paths)) == 1051
+        assert all(len(page["nodes"]) <= limit for page in pages)
+        focused = g.vista(G, limite=limit, foco="src/f1049.md")
+        assert any(n["path"] == "src/f1049.md" for n in focused["nodes"])

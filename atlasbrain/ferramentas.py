@@ -5,6 +5,8 @@ Ficam separadas do servidor para poderem ser RECARREGADAS em memória quando o c
 versão nova. `ctx` traz vault, con, searcher, db_lock e reindex().
 """
 
+from .localization import text as _text, value as _value
+
 import datetime as dt
 import json
 import re
@@ -28,37 +30,39 @@ def _fmt_note_ref(r) -> str:
 
 def _fmt_nao_criada(res: dict) -> str:
     if res.get("atualizada"):
-        return (f"Já existia nota sobre isso: atualizei `{res['path']}` com o que era novo:\n"
+        return (f"{_text('Já existia nota sobre isso: atualizei `')}{res['path']}{_text('` com o que era novo:\n')}"
                 + "\n".join(f"- {f}" for f in res["acrescentado"]))
     return res["motivo"]
 
 def _note_or_error(ctx, ref: str):
     row = g.find_note(ctx.con, ref)
     if row is None:
-        return None, f"Nenhuma nota encontrada para '{ref}'. Use `buscar` para localizar."
+        return None, f"""{_text("Nenhuma nota encontrada para '")}{ref}{_text("'. Use `buscar` para localizar.")}"""
     return row, None
 
 def buscar(ctx, consulta: str, limite: int = 8, detalhado: bool = False) -> str:
     """Busca por palavra-chave E por significado (aceita pergunta em linguagem natural).
     Filtros direto na consulta: pasta:lib/ai  tipo:decisao|aprendizado|codigo|nota|documento  tag:x
-    desde:2026-09  -excluir  "frase exata". Devolve um ÍNDICE compacto (#id, caminho, seção, ~tokens
+    desde:2026-09  -excluir  "frase exata". Os filtros restringem os candidatos antes
+    do limite de cada sinal; só filtros (ex.: tipo:decisao) também listam resultados.
+    Devolve um ÍNDICE compacto (#id, caminho, seção, ~tokens
     para ler): escolha o que abrir e use `ler` (com `secao` para trazer só a parte que interessa)
     ou `ler_varios`. `detalhado=True` traz trechos maiores."""
     with ctx.db_lock:
         res = ctx.searcher.search(consulta, limit=max(1, min(limite, 30)))
     if not res:
-        return f"Nada encontrado para: {consulta}"
+        return f"{_text('Nada encontrado para: ')}{consulta}"
     total = sum(r["tokens"] for r in res)
     mil = lambda n: f"{n:,}".replace(",", ".")  # só nos números: o trecho fica intacto
-    lines = [f"{len(res)} resultado(s) para “{consulta}” · ler todos ≈ {mil(total)} tokens"]
+    lines = [f"{len(res)}{_text(' resultado(s) para “')}{consulta}{_text('” · ler todos ≈ ')}{mil(total)} tokens"]
     for r in res:
         where = f" › {r['heading'][-60:]}" if r["heading"] and r["heading"] != "resumo do arquivo" else ""
         snip = " ".join(re.sub(r"(^|\s)#{1,6}\s", " ", r["snippet"]).split())
         snip = snip if detalhado else (snip[:110] + ("…" if len(snip) > 110 else ""))
         estado = f" · {r['status']}" if r.get('status') in ('substituída', 'substituida', 'revogada', 'cancelada') else ''
-        lines.append(f"#{r['id']} `{r['path']}`{where} · {r['kind']}{estado} · ~{mil(r['tokens'])} tok\n   {snip}")
+        lines.append(f"#{r['id']} `{r['path']}`{where} · {_value(r['kind'])}{estado} · ~{mil(r['tokens'])} tok\n   {snip}")
         if detalhado and r.get('motivos'):
-            lines.append('   Motivos: ' + ', '.join(r['motivos']))
+            lines.append(_text('   Motivos: ') + ', '.join(r['motivos']))
     return "\n".join(lines)
 
 def _conteudo(ctx, row) -> str:
@@ -83,26 +87,26 @@ def ler(ctx, nota: str, secao: str | None = None, max_caracteres: int = 12000) -
         if secao:
             trecho, nomes = extrair_secao(ctx.con, row, body, secao)
             if trecho is None:
-                return (f"Seção “{secao}” não encontrada em `{row['path']}`. Disponíveis: "
+                return (f"{_text('Seção “')}{secao}{_text('” não encontrada em `')}{row['path']}{_text('`. Disponíveis: ')}"
                         + ", ".join(nomes[:60]))
             body = trecho
         elif len(body) > max_caracteres:
             nomes = extrair_secao(ctx.con, row, body, "\x00")[1]
     cortado = len(body) > max_caracteres
     if cortado:
-        body = body[:max_caracteres] + f"\n\n[… cortado em {max_caracteres} de {len(body)} caracteres"
-        body += (". Peça uma parte com `secao`: " + ", ".join(nomes[:40]) + "]") if nomes else "]"
+        body = body[:max_caracteres] + f"{_text('\n\n[… cortado em ')}{max_caracteres}{_text(' de ')}{len(body)}{_text(' caracteres')}"
+        body += (_text('. Peça uma parte com `secao`: ') + ", ".join(nomes[:40]) + "]") if nomes else "]"
     mod = dt.datetime.fromtimestamp(row["mtime"]).strftime("%Y-%m-%d %H:%M")
-    footer = [f"\n---\n**#{row['id']}** `{row['path']}`" + (f" › {secao}" if secao else "") + f" · modificado {mod}"]
+    footer = [f"\n---\n**#{row['id']}** `{row['path']}`" + (f" › {secao}" if secao else "") + f"{_text(' · modificado ')}{mod}"]
     if file_revision:
-        footer.append("**Revisão:** " + file_revision)
+        footer.append(_text('**Revisão:** ') + file_revision)
     if not secao:
         if nb["tags"]:
             footer.append("**Tags:** " + " ".join("#" + t for t in nb["tags"]))
         if nb["links"]:
-            footer.append("**Aponta para:** " + ", ".join(f"`{x['path']}`" for x in nb["links"][:12]))
+            footer.append(_text('**Aponta para:** ') + ", ".join(f"`{x['path']}`" for x in nb["links"][:12]))
         if nb["backlinks"]:
-            footer.append("**Usado/citado por:** " + ", ".join(f"`{x['path']}`" for x in nb["backlinks"][:12]))
+            footer.append(_text('**Usado/citado por:** ') + ", ".join(f"`{x['path']}`" for x in nb["backlinks"][:12]))
     head = "" if secao or body.lstrip().startswith("#") or body.startswith("---") else f"# {row['title']}\n\n"
     return f"{head}{body}\n" + "\n".join(footer)
 
@@ -130,21 +134,21 @@ def relacionados(ctx, nota: str, limite: int = 12) -> str:
                 f"WHERE t.tag IN ({marks}) AND n.id!=? GROUP BY n.id ORDER BY c DESC LIMIT ?",
                 (*nb["tags"], row["id"], limite),
             ).fetchall()
-    out = [f"## Vizinhança de {_fmt_note_ref(row)}"]
-    fmt = lambda x: f"- {_fmt_note_ref(x)} · {x['kind']}" + (f" ({x['conf']})" if x.get("conf") else "") \
+    out = [f"{_text('## Vizinhança de ')}{_fmt_note_ref(row)}"]
+    fmt = lambda x: f"- {_fmt_note_ref(x)} · {_value(x['kind'])}" + (f" ({x['conf']})" if x.get("conf") else "") \
         + (f" — {x['detalhe']}" if x.get("detalhe") and x["kind"] != "wikilink" else "")
-    for name, items in (("Aponta para", nb["links"]), ("Citada por / usada por", nb["backlinks"])):
+    for name, items in ((_text('Aponta para'), nb["links"]), (_text('Citada por / usada por'), nb["backlinks"])):
         if items:
             out.append(f"\n**{name}:**\n" + "\n".join(fmt(x) for x in items[:limite]))
     if nb["similares"]:
-        out.append("\n**Parecidas pelo conteúdo (inferido):**\n" + "\n".join(
-            f"- {_fmt_note_ref(x)} (similaridade {x['score']:.2f})" for x in nb["similares"][:limite]))
+        out.append(_text('\n**Parecidas pelo conteúdo (inferido):**\n') + "\n".join(
+            f"- {_fmt_note_ref(x)}{_text(' (similaridade ')}{x['score']:.2f})" for x in nb["similares"][:limite]))
     if same_tag:
-        out.append("\n**Mesmas tags:**\n" + "\n".join(f"- {_fmt_note_ref(x)} ({x['c']} tag(s) em comum)" for x in same_tag))
+        out.append(_text('\n**Mesmas tags:**\n') + "\n".join(f"- {_fmt_note_ref(x)} ({x['c']}{_text(' tag(s) em comum)')}" for x in same_tag))
     if nb["fantasmas"]:
-        out.append("\n**Links para notas que ainda não existem:** " + ", ".join(f"[[{x}]]" for x in nb["fantasmas"]))
+        out.append(_text('\n**Links para notas que ainda não existem:** ') + ", ".join(f"[[{x}]]" for x in nb["fantasmas"]))
     if len(out) == 1:
-        out.append("\nNota isolada: sem links, backlinks, tags ou semelhantes.")
+        out.append(_text('\nNota isolada: sem links, backlinks, tags ou semelhantes.'))
     return "\n".join(out)
 
 def caminho(ctx, de: str, ate: str, direcao: str = "ambas", tokens: int = 2000) -> str:
@@ -174,13 +178,13 @@ def caminho(ctx, de: str, ate: str, direcao: str = "ambas", tokens: int = 2000) 
     try:
         path = nx.shortest_path(V, a, b)
     except nx.NetworkXNoPath:
-        return f"Não há caminho entre `{de}` e `{ate}` na direção {direcao}."
-    lines = [f"Caminho com {len(path) - 1} salto(s) · direção {direcao}.", t.referencia(G, a)]
+        return f"{_text('Não há caminho entre `')}{de}{_text('` e `')}{ate}{_text('` na direção ')}{_value(direcao)}."
+    lines = [f"{_text('Caminho com ')}{len(path) - 1}{_text(' salto(s) · direção ')}{_value(direcao)}.", t.referencia(G, a)]
     for src, dst in zip(path, path[1:]):
         for neighbor, (ea, eb, _), attrs in t.passos(G, src, direcao, t.RELACOES - {"similar"}):
             if neighbor == dst:
-                lines.append(f"{t.referencia(G, ea)} → {t.referencia(G, eb)} · {attrs['kind']} · {attrs['conf']}" +
-                             (f" · evidência L{attrs['linha']}" if attrs.get("linha") else ""))
+                lines.append(f"{t.referencia(G, ea)} → {t.referencia(G, eb)} · {_value(attrs['kind'])} · {attrs['conf']}" +
+                             (f"{_text(' · evidência L')}{attrs['linha']}" if attrs.get("linha") else ""))
     return t.limitar(lines, tokens)
 
 
@@ -216,13 +220,13 @@ def mapa(ctx, comunidades: int = 10, por_comunidade: int = 6) -> str:
     for n, c in comm.items():
         groups.setdefault(c, []).append(n)
     orphans = [n for n in G.nodes if G.degree(n) == 0]
-    out = ["# Mapa do segundo cérebro", "",
-           "**Arquivos:** " + ", ".join(f"{k[1]} {k[0]}" for k in kinds) + f" · **ligações:** {G.number_of_edges()}"]
-    out.append("\n## Hubs (notas mais conectadas)")
+    out = [_text('# Mapa do segundo cérebro'), "",
+           _text('**Arquivos:** ') + ", ".join(f"{k[1]} {k[0]}" for k in kinds) + f"{_text(' · **ligações:** ')}{G.number_of_edges()}"]
+    out.append(_text('\n## Hubs (notas mais conectadas)'))
     for n in g.hubs(G, 12):
         d = G.nodes[n]
-        out.append(f"- **{d['label']}** — `{d['path']}` ({G.degree(n)} conexões)")
-    out.append("\n## Agrupamentos de assuntos")
+        out.append(f"- **{d['label']}** — `{d['path']}` ({G.degree(n)}{_text(' conexões)')}")
+    out.append(_text('\n## Agrupamentos de assuntos'))
     shown = 0
     for c, members in sorted(groups.items(), key=lambda kv: -len(kv[1])):
         if len(members) < 2 or shown >= comunidades:
@@ -230,10 +234,10 @@ def mapa(ctx, comunidades: int = 10, por_comunidade: int = 6) -> str:
         shown += 1
         members.sort(key=lambda n: G.degree(n), reverse=True)
         names = ", ".join(f"{G.nodes[m]['label']}" for m in members[:por_comunidade])
-        out.append(f"- **Grupo {shown}** ({len(members)} notas): {names}")
+        out.append(f"{_text('- **Grupo ')}{shown}** ({len(members)}{_text(' notas): ')}{names}")
     if top_tags:
         out.append("\n## Tags\n" + " ".join(f"#{t['tag']}({t['c']})" for t in top_tags))
-    out.append(f"\n**Notas órfãs (sem nenhuma conexão):** {len(orphans)}")
+    out.append(f"{_text('\n**Notas órfãs (sem nenhuma conexão):** ')}{len(orphans)}")
     return "\n".join(out)
 
 def soltos(ctx, pasta: str = "", limite: int = 50, offset: int = 0) -> str:
@@ -253,7 +257,7 @@ def soltos(ctx, pasta: str = "", limite: int = 50, offset: int = 0) -> str:
         vault = Path(brain['path'])
         db_path = vault / config.BRAIN / 'index.db'
         if not db_path.is_file():
-            warnings.append(f"{brain['nome']}: índice ausente")
+            warnings.append(f"{brain['nome']}{_text(': índice ausente')}")
             continue
         try:
             con = sqlite3.connect(db_path.as_uri() + '?mode=ro', uri=True, timeout=5)
@@ -271,12 +275,12 @@ def soltos(ctx, pasta: str = "", limite: int = 50, offset: int = 0) -> str:
             finally:
                 con.close()
         except sqlite3.Error as exc:
-            warnings.append(f"{brain['nome']}: índice indisponível ({exc})")
+            warnings.append(f"{brain['nome']}{_text(': índice indisponível (')}{exc})")
     return json.dumps({
         'escopo': 'todos_projetos', 'total': total, 'offset': start, 'limite': limit,
         'mais': start + len(items) < total, 'itens': items, 'projetos': projects,
         'avisos': warnings,
-        'criterio': 'Sem links, backlinks, similaridade, tags ou wikilinks pendentes no índice completo; não significa arquivo sem uso.',
+        'criterio': _text('Sem links, backlinks, similaridade, tags ou wikilinks pendentes no índice completo; não significa arquivo sem uso.'),
     }, ensure_ascii=False)
 
 
@@ -285,12 +289,12 @@ def tags(ctx, tag: str | None = None, limite: int = 50) -> str:
     with ctx.db_lock:
         if not tag:
             rows = ctx.con.execute("SELECT tag, COUNT(*) c FROM tags GROUP BY tag ORDER BY c DESC LIMIT ?", (limite,)).fetchall()
-            return "\n".join(f"- #{r['tag']} ({r['c']})" for r in rows) or "Nenhuma tag ainda."
+            return "\n".join(f"- #{r['tag']} ({r['c']})" for r in rows) or _text('Nenhuma tag ainda.')
         rows = ctx.con.execute(
             "SELECT n.path, n.title FROM tags t JOIN notes n ON n.id=t.note_id WHERE t.tag=? OR t.tag LIKE ? ORDER BY n.mtime DESC LIMIT ?",
             (tag.lstrip("#").lower(), tag.lstrip("#").lower() + "/%", limite),
         ).fetchall()
-    return "\n".join(f"- {_fmt_note_ref(r)}" for r in rows) or f"Nenhuma nota com #{tag}."
+    return "\n".join(f"- {_fmt_note_ref(r)}" for r in rows) or f"{_text('Nenhuma nota com #')}{tag}."
 
 def recentes(ctx, limite: int = 15, pasta: str | None = None) -> str:
     """Arquivos modificados mais recentemente (o que o usuário anda trabalhando)."""
@@ -309,7 +313,7 @@ def _criar_nota(ctx, titulo: str, conteudo: str, pasta: str = "Inbox", tags: lis
     no conteúdo para ligar a notas existentes. Nunca sobrescreve: se o nome existir, cria outro."""
     folder = (notes_dir(ctx.vault) / pasta.strip("/")).resolve()
     if ctx.vault not in folder.parents and folder != ctx.vault:
-        return "Pasta inválida: precisa ficar dentro do segundo cérebro."
+        return _text('Pasta inválida: precisa ficar dentro do segundo cérebro.')
     folder.mkdir(parents=True, exist_ok=True)
     name = re.sub(r'[\\/:*?"<>|#^\[\]]', "", titulo).strip() or "Sem título"
     path = folder / f"{name}.md"
@@ -320,22 +324,22 @@ def _criar_nota(ctx, titulo: str, conteudo: str, pasta: str = "Inbox", tags: lis
     fm = {"title": titulo, "created": dt.datetime.now().isoformat(timespec="minutes")}
     if tags:
         fm["tags"] = [t.lstrip("#") for t in tags]
-    front = "---\n" + "\n".join(f"{k}: {json.dumps(v, ensure_ascii=False)}" for k, v in fm.items()) + "\n---\n\n"
+    front = "---\n" + "\n".join(f"{_value(k)}: {json.dumps(v, ensure_ascii=False)}" for k, v in fm.items()) + "\n---\n\n"
     editor.save(ctx.vault, path.relative_to(ctx.vault).as_posix(), front + conteudo.rstrip() + "\n", create=True)
     ctx.reindex()
-    return f"Nota criada: `{path.relative_to(ctx.vault)}`"
+    return f"{_text('Nota criada: `')}{path.relative_to(ctx.vault)}`"
 
 
 def arquivos(ctx, consulta: str, limite: int = 20) -> str:
     """Acha ARQUIVOS do projeto pelo nome/caminho ou pelos símbolos que definem (ex.: "checkout",
     "auth middleware", "useCart"). Mais rápido e preciso que grep/glob para localizar onde algo mora."""
     if not re.findall(r"[\w-]{2,}", consulta):
-        return "Consulta vazia."
+        return _text('Consulta vazia.')
     with ctx.db_lock:
         res = achar_arquivos(ctx.con, consulta, limite)
     if not res:
-        return f"Nenhum arquivo com “{consulta}” no nome ou nos símbolos. Tente `buscar` (conteúdo e significado)."
-    return "\n".join(f"- `{r['path']}` ({r['kind']})" + (f" — define {', '.join(r['simbolos'])}" if r["simbolos"] else "")
+        return f"{_text('Nenhum arquivo com “')}{consulta}{_text('” no nome ou nos símbolos. Tente `buscar` (conteúdo e significado).')}"
+    return "\n".join(f"- `{r['path']}` ({_value(r['kind'])})" + (f"{_text(' — define ')}{', '.join(r['simbolos'])}" if r["simbolos"] else "")
                      for r in res)
 
 def onde(ctx, simbolo: str) -> str:
@@ -348,25 +352,25 @@ def onde(ctx, simbolo: str) -> str:
     if not defs:
         defs = [n for n, d in G.nodes(data=True) if d["kind"] == "simbolo" and simbolo.casefold() in d["label"].casefold()]
     if not defs:
-        return f"Nenhum símbolo “{simbolo}” no índice. Tente `arquivos` ou `buscar`."
-    lines = [f"**Definição de `{simbolo}`:**" if len(defs) == 1 else
-             f"**Definições de `{simbolo}` ({len(defs)}):**"]
+        return f"{_text('Nenhum símbolo “')}{simbolo}{_text('” no índice. Tente `arquivos` ou `buscar`.')}"
+    lines = [f"{_text('**Definição de `')}{simbolo}`:**" if len(defs) == 1 else
+             f"{_text('**Definições de `')}{simbolo}` ({len(defs)}):**"]
     for n in defs[:20]:
         lines.append("- " + t.referencia(G, n))
         usages = [(a, d) for a, _, d in G.in_edges(n, data=True) if d["kind"] in ("chama", "herda")]
         if usages:
-            lines.append(f"  Usado em ({len(usages)}):")
-            lines.extend(f"  - {G.nodes[a]['path']}:{d['linha']} dentro de `{G.nodes[a]['label']}` · {d['kind']} · {d['conf']}"
+            lines.append(f"{_text('  Usado em (')}{len(usages)}):")
+            lines.extend(f"  - {G.nodes[a]['path']}:{d['linha']}{_text(' dentro de `')}{G.nodes[a]['label']}` · {_value(d['kind'])} · {d['conf']}"
                          for a, d in usages[:25])
             if len(usages) > 25:
-                lines.append(f"  … {len(usages) - 25} usos adicionais; use `consultar_grafo`.")
+                lines.append(f"  … {len(usages) - 25}{_text(' usos adicionais; use `consultar_grafo`.')}")
         else:
-            lines.append("  Nenhum uso resolvido no índice; isso não comprova código morto.")
+            lines.append(_text('  Nenhum uso resolvido no índice; isso não comprova código morto.'))
     if len(defs) > 1:
-        lines.append("Há definições homônimas. Use o ID para consultar uma delas; referências sem destino único permanecem ambíguas.")
+        lines.append(_text('Há definições homônimas. Use o ID para consultar uma delas; referências sem destino único permanecem ambíguas.'))
     ambiguous = [r for r in G.graph["ambiguas"] if any(n in r["candidatos"] for n in defs)]
     if ambiguous:
-        lines.append(f"{len(ambiguous)} referência(s) ambígua(s) ficaram sem ligação:")
+        lines.append(f"{len(ambiguous)}{_text(' referência(s) ambígua(s) ficaram sem ligação:')}")
         lines.extend(f"- {r['path']}:{r['linha']} `{r['alvo']}`" for r in ambiguous[:10])
     return t.limitar(lines, 4000, len(defs) > 20)
 
@@ -380,32 +384,32 @@ def explicar(ctx, alvo: str) -> str:
             sym = ctx.con.execute("SELECT n.path FROM simbolos s JOIN notes n ON n.id=s.note_id WHERE s.nome=? COLLATE NOCASE LIMIT 1",
                               (alvo,)).fetchone()
             if sym is None:
-                return f"Não achei arquivo nem símbolo “{alvo}”. Tente `arquivos` ou `buscar`."
+                return f"{_text('Não achei arquivo nem símbolo “')}{alvo}{_text('”. Tente `arquivos` ou `buscar`.')}"
             row = g.find_note(ctx.con, sym[0])
         nb = g.neighbors(ctx.con, row["id"])
         sims = ctx.con.execute("SELECT nome, tipo, linha, pai FROM simbolos WHERE note_id=? ORDER BY linha", (row["id"],)).fetchall()
         pq = ctx.con.execute("SELECT etiqueta, texto, linha FROM porques WHERE note_id=? ORDER BY linha", (row["id"],)).fetchall()
-    out = [f"## `{row['path']}` ({row['kind']})"]
+    out = [f"## `{row['path']}` ({_value(row['kind'])})"]
     if sims:
         top = [s for s in sims if not s["pai"]] or sims
-        out.append(f"\n**Define ({len(sims)}):** " + ", ".join(f"`{s['nome']}`:{s['linha']}" for s in top[:25])
+        out.append(f"{_text('\n**Define (')}{len(sims)}):** " + ", ".join(f"`{s['nome']}`:{s['linha']}" for s in top[:25])
                    + (" …" if len(top) > 25 else ""))
-    grupos = [("Importa", [x for x in nb["links"] if x["kind"] == "importa"]),
-              ("Chama", [x for x in nb["links"] if x["kind"] in ("chama", "herda")]),
-              ("Importado por", [x for x in nb["backlinks"] if x["kind"] == "importa"]),
-              ("Chamado por", [x for x in nb["backlinks"] if x["kind"] in ("chama", "herda")]),
-              ("Citado em notas/decisões", [x for x in nb["backlinks"] if x["kind"] in ("menciona", "wikilink", "mdlink")]),
-              ("Cita", [x for x in nb["links"] if x["kind"] in ("menciona", "wikilink", "mdlink")])]
+    grupos = [(_text('Importa'), [x for x in nb["links"] if x["kind"] == "importa"]),
+              (_text('Chama'), [x for x in nb["links"] if x["kind"] in ("chama", "herda")]),
+              (_text('Importado por'), [x for x in nb["backlinks"] if x["kind"] == "importa"]),
+              (_text('Chamado por'), [x for x in nb["backlinks"] if x["kind"] in ("chama", "herda")]),
+              (_text('Citado em notas/decisões'), [x for x in nb["backlinks"] if x["kind"] in ("menciona", "wikilink", "mdlink")]),
+              (_text('Cita'), [x for x in nb["links"] if x["kind"] in ("menciona", "wikilink", "mdlink")])]
     for nome, items in grupos:
         if items:
             out.append(f"\n**{nome} ({len(items)}):**")
             out += [f"- `{x['path']}`" + (f" — {x['detalhe']}" if x.get("detalhe") else "") + f" · {x.get('conf') or '?'}"
                     for x in items[:20]]
     if pq:
-        out.append("\n**Porquê / notas no código:**")
+        out.append(_text('\n**Porquê / notas no código:**'))
         out += [f"- L{p['linha']} {p['etiqueta']}: {p['texto']}" for p in pq[:15]]
     if nb["similares"]:
-        out.append("\n**Parecidos pelo conteúdo (INFERRED):** " + ", ".join(f"`{x['path']}`" for x in nb["similares"][:6]))
+        out.append(_text('\n**Parecidos pelo conteúdo (INFERRED):** ') + ", ".join(f"`{x['path']}`" for x in nb["similares"][:6]))
     return "\n".join(out)
 
 def relatorio(ctx) -> str:
@@ -413,6 +417,10 @@ def relatorio(ctx) -> str:
     código, decisões ligadas ao código e perguntas sugeridas. Leia antes de perguntas amplas."""
     from . import relatorio as rel
     f = ctx.vault / ".atlasbrain" / "RELATORIO.md"
+    from .localization import is_english
+    if is_english():
+        with ctx.db_lock:
+            return rel.gerar(ctx.con, ctx.vault)
     if f.exists():
         return f.read_text(encoding="utf-8")
     with ctx.db_lock:
@@ -436,10 +444,10 @@ def registrar_decisao(ctx, titulo: str, decisao: str, contexto: str = "", motivo
                                 projeto, tags, origem="conversa", forcar=forcar, substitui=substitui))
     if not res["criada"]:
         return _fmt_nao_criada(res)
-    extra = f" (substituiu `{res['substituiu']}`)" if res.get("substituiu") else ""
+    extra = f"{_text(' (substituiu `')}{res['substituiu']}`)" if res.get("substituiu") else ""
     if res.get("aviso"):
-        extra += f"\nAtenção: {res['aviso']}"
-    return f"Decisão registrada: `{res['path']}`{extra}"
+        extra += f"{_text('\nAtenção: ')}{res['aviso']}"
+    return f"{_text('Decisão registrada: `')}{res['path']}`{extra}"
 
 def registrar_aprendizado(ctx, titulo: str, conteudo: str, projeto: str | None = None,
                           tags: list[str] | None = None, forcar: bool = False, operacao: str | None = None) -> str:
@@ -448,7 +456,7 @@ def registrar_aprendizado(ctx, titulo: str, conteudo: str, projeto: str | None =
     with ctx.db_lock:
         res = editor.operation(ctx.vault, operacao, ['learning', titulo, conteudo, projeto, tags, forcar],
             lambda: _reg_aprendizado(ctx.vault, titulo, conteudo, projeto, tags, origem="conversa", forcar=forcar))
-    return f"Aprendizado registrado: `{res['path']}`" if res["criada"] else _fmt_nao_criada(res)
+    return f"{_text('Aprendizado registrado: `')}{res['path']}`" if res["criada"] else _fmt_nao_criada(res)
 
 
 def revisar_decisao(ctx, antiga: str, acao: str, motivo: str,
@@ -473,7 +481,7 @@ def atualizar_nota(ctx, nota: str, texto: str, so_novidades: bool = True, revisa
             lambda: _atualizar(ctx.vault, nota, texto, origem="conversa", so_novidades=so_novidades, revision=revisao))
     if not res["atualizada"]:
         return res["motivo"]
-    return f"Atualizei `{res['path']}` com:\n" + "\n".join(f"- {f}" for f in res["acrescentado"])
+    return f"{_text('Atualizei `')}{res['path']}{_text('` com:\n')}" + "\n".join(f"- {f}" for f in res["acrescentado"])
 
 def decisoes(ctx, projeto: str | None = None, limite: int = 30, incluir_substituidas: bool = False) -> str:
     """Decisões registradas (mais recentes primeiro): por padrão só as que valem hoje. Filtre por projeto
@@ -492,8 +500,8 @@ def decisoes(ctx, projeto: str | None = None, limite: int = 30, incluir_substitu
         items.append((str(fm.get("data", "")), r, fm))
     items.sort(key=lambda x: x[0], reverse=True)
     if not items:
-        return "Nenhuma decisão registrada ainda."
-    return "\n".join(f"- {d} **{r['title']}** — {fm.get('projeto') or 'sem projeto'} · {fm.get('status', 'ativa')} · `{r['path']}`"
+        return _text('Nenhuma decisão registrada ainda.')
+    return "\n".join(f"- {d} **{r['title']}** — {fm.get('projeto') or 'sem projeto'} · {_value(fm.get('status', 'ativa'))} · `{r['path']}`"
                      for d, r, fm in items[:limite])
 
 def importar_url(ctx, url: str, titulo: str | None = None, atualizar: bool = False) -> str:
@@ -639,7 +647,7 @@ def revisar_memoria(ctx, limite: int = 20) -> str:
             for b in group[i+1:]:
                 if conflito(a['preview'] or '', b['preview'] or ''):
                     candidates.append({'de':a['path'], 'para':b['path'], 'origem':'INFERRED',
-                                       'motivo':'Mesmo título, decisões ativas com números diferentes. Revise o conteúdo antes de substituir.'})
+                                       'motivo':_text('Mesmo título, decisões ativas com números diferentes. Revise o conteúdo antes de substituir.')})
     limit = max(1, min(limite, 100))
     return json.dumps({'possiveis_conflitos': candidates[:limit], 'substituicoes':replaced[:limit],
                        'total_conflitos':len(candidates), 'total_substituicoes':len(replaced)}, ensure_ascii=False)
@@ -663,7 +671,7 @@ def compactar_memoria(ctx, grupo: str | None = None, resumo: str | None = None,
     Sem resumo gera síntese extrativa local, sem modelo extra. Preserve ressalvas, números e divergências."""
     from . import consolidacao as c
     if resumo is not None and not grupo:
-        raise editor.EditError('Informe o grupo preparado para enviar um resumo.')
+        raise editor.EditError(_text('Informe o grupo preparado para enviar um resumo.'))
     with ctx.db_lock:
         result=c.consolidate(ctx.vault,grupo,resumo,revisoes) if grupo else c.automatic(ctx.vault)
     return json.dumps(result,ensure_ascii=False)
@@ -679,7 +687,7 @@ def renomear_nota(ctx, nota: str, destino: str, revisao_plano: str | None = None
     from . import renomear as r
     index_state=ctx.reindex()
     if index_state and (index_state.get('skipped') or index_state.get('erro')):
-        raise editor.EditError('Índice ocupado ou indisponível; tente novamente após a indexação.',409)
+        raise editor.EditError(_text('Índice ocupado ou indisponível; tente novamente após a indexação.'),409)
     with ctx.db_lock:
         row,err=_note_or_error(ctx,nota)
         if err:

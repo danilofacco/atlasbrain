@@ -1,5 +1,6 @@
 """Busca híbrida: palavra-chave (FTS5/BM25) + significado (embeddings), fundidas por RRF."""
 
+import json
 import re
 import threading
 
@@ -36,7 +37,7 @@ _SECUNDARIO = re.compile(r"(^|/)(__tests__|tests?|spec|__mocks__|fixtures|docs|s
                          r"|\.(test|spec)\.[jt]sx?$|_test\.(py|go)$|(^|/)test_[^/]*\.py$")
 
 
-_FILTRO = re.compile(r'(?:^|\s)(pasta|path|tipo|tag|desde|status):("[^"]+"|\S+)', re.I)
+_FILTRO = re.compile(r'(?:^|\s)(pasta|path|folder|tipo|type|tag|desde|since|status):("[^"]+"|\S+)', re.I)
 _EXCLUI = re.compile(r'(?:^|\s)-(\w[\w-]*)')
 _FRASE = re.compile(r'"([^"]{3,})"')
 
@@ -45,7 +46,13 @@ def parse_filtros(q: str) -> tuple[str, dict]:
     """Tira da consulta os filtros (pasta:, tipo:, tag:, desde:, -excluir, "frase exata") e devolve o resto."""
     f: dict = {}
     for k, v in _FILTRO.findall(q):
-        f["pasta" if k.lower() == "path" else k.lower()] = v.strip('"')
+        key = {"path":"pasta", "folder":"pasta", "type":"tipo", "since":"desde"}.get(k.lower(), k.lower())
+        value = v.strip('"')
+        if key == 'tipo':
+            value = {'code':'codigo', 'note':'nota', 'document':'documento', 'decision':'decisao', 'learning':'aprendizado'}.get(value.lower(), value)
+        elif key == 'status':
+            value = {'active':'ativa', 'superseded':'substituída', 'revoked':'revogada', 'cancelled':'cancelada'}.get(value.lower(), value)
+        f[key] = value
     q = _FILTRO.sub(" ", q)
     f["excluir"] = [w.lower() for w in _EXCLUI.findall(q)]
     q = _EXCLUI.sub(" ", q)
@@ -62,27 +69,48 @@ def _fts_query(q: str) -> str | None:
     return " OR ".join(f'"{t}"*' if len(t) >= 4 else f'"{t}"' for t in tokens)
 
 
-def _passa_filtros(c, f: dict) -> bool:
-    if f.get('status') and (c['status_fm'] or 'ativa').casefold() != f['status'].casefold():
-        return False
-    tipo = f.get("tipo", "").lower().removesuffix("s")
-    if tipo:
-        tipos = {c["kind"], c["tipo_fm"] or ""}
-        if tipo in ("decisao", "decisoe", "decisão"):
-            tipo = "decisao"
-        if tipo not in tipos:
-            return False
-    if f.get("desde"):
-        import datetime as dt
-        quando = str(c["data_fm"] or dt.date.fromtimestamp(c["mtime"] or 0).isoformat())
-        if quando < f["desde"]:
-            return False
-    texto = f"{c['title']} {c['text']}".lower()
-    if any(w in texto for w in f.get("excluir", ())):
-        return False
-    if any(fr not in texto for fr in f.get("frases", ())):
-        return False
-    return True
+def _filter_type(value: str) -> str:
+    value = value.lower()
+    aliases = {"decisão": "decisao", "decisões": "decisao", "decisoes": "decisao",
+               "decisoe": "decisao", "código": "codigo", "códigos": "codigo"}
+    return aliases.get(value, value.removesuffix("s"))
+
+
+def _candidate_filter_sql(tag, folder, filters):
+    """One parameterized eligibility query shared by all candidate sources.
+
+    Scope is applied before each source's candidate limit, including text-level
+    phrase/exclusion constraints. Unicode casing matches the Python filters.
+    """
+    clauses, params = [], []
+    prefix = folder.lower().strip("/") + "/" if folder and folder.strip("/") else ""
+    if prefix:
+        clauses.append("instr(atlasbrain_lower(n.path), ?) = 1")
+        params.append(prefix)
+    elif folder:
+        clauses.append("1=1")  # pasta:/ explicitly selects the project root
+    if tag:
+        clauses.append("EXISTS (SELECT 1 FROM tags t WHERE t.note_id=n.id AND t.tag=?)")
+        params.append(tag.lstrip("#").lower())
+    if filters.get("tipo"):
+        clauses.append("(n.kind=? OR json_extract(n.frontmatter, '$.tipo')=?)")
+        tipo = _filter_type(filters["tipo"])
+        params.extend((tipo, tipo))
+    if filters.get("status"):
+        clauses.append("atlasbrain_casefold(COALESCE(NULLIF(json_extract(n.frontmatter, '$.status'), ''), 'ativa'))=?")
+        params.append(filters["status"].casefold())
+    if filters.get("desde"):
+        clauses.append("CAST(COALESCE(NULLIF(json_extract(n.frontmatter, '$.data'), ''), "
+                       "date(COALESCE(n.mtime, 0), 'unixepoch', 'localtime')) AS TEXT)>=?")
+        params.append(filters["desde"])
+    text = "atlasbrain_lower(COALESCE(n.title, '') || ' ' || COALESCE(c.text, ''))"
+    for word in filters.get("excluir", ()):
+        clauses.append(f"instr({text}, ?) = 0")
+        params.append(word)
+    for phrase in filters.get("frases", ()):
+        clauses.append(f"instr({text}, ?) > 0")
+        params.append(phrase)
+    return " AND ".join(clauses), params
 
 
 def _procura_implementacao(q: str) -> bool:
@@ -98,6 +126,10 @@ def _procura_implementacao(q: str) -> bool:
 class Searcher:
     def __init__(self, con):
         self.con = con
+        # SQLite's built-in lower() handles ASCII only. Keep accented paths and
+        # phrase filters consistent with Python's Unicode matching.
+        con.create_function("atlasbrain_lower", 1, lambda value: str(value or "").lower(), deterministic=True)
+        con.create_function("atlasbrain_casefold", 1, lambda value: str(value or "").casefold(), deterministic=True)
         self.lock = threading.Lock()
         self._rev = None
         self._ids = None
@@ -151,6 +183,25 @@ class Searcher:
         code_intent = (not filtros.get('tipo') and _procura_implementacao(q)
                        and self.con.execute("SELECT 1 FROM notes WHERE kind='codigo' LIMIT 1").fetchone() is not None)
         pool = 200
+        where, scope_params = _candidate_filter_sql(tag, folder, filtros)
+        scope_rows = self.con.execute(
+            "SELECT c.id, c.note_id FROM notes n CROSS JOIN chunks c ON c.note_id=n.id WHERE " + where,
+            scope_params).fetchall() if where else None
+        eligible = {r[0] for r in scope_rows} if scope_rows is not None else None
+        eligible_notes = {r[1] for r in scope_rows} if scope_rows is not None else None
+        if eligible is not None and not eligible:
+            return []
+        # Materialize eligibility once. Re-running the full scope subquery for
+        # every symbol/path candidate can multiply work on large repositories.
+        scope_args = [json.dumps(sorted(eligible))] if eligible is not None else []
+        chunk_scope = " AND c.id IN (SELECT value FROM json_each(?))" if eligible is not None else ""
+
+        def first_chunk(note_id):
+            if eligible_notes is not None and note_id not in eligible_notes:
+                return None
+            rows = self.con.execute("SELECT id FROM chunks WHERE note_id=? ORDER BY ord", (note_id,))
+            return next((row for row in rows if eligible is None or row[0] in eligible), None)
+
         rrf: dict[int, float] = {}
         snippets: dict[int, str] = {}
         sources = {}
@@ -163,7 +214,7 @@ class Searcher:
             for row in self.con.execute('SELECT DISTINCT note_id FROM simbolos WHERE lower(nome)=?', (target,)):
                 exact_notes.add(row[0])
             for note_id in exact_notes:
-                row = self.con.execute('SELECT id FROM chunks WHERE note_id=? ORDER BY ord LIMIT 1', (note_id,)).fetchone()
+                row = first_chunk(note_id)
                 if row:
                     rrf[row[0]] = .1
                     sources.setdefault(row[0], set()).add('correspondência exata')
@@ -171,17 +222,37 @@ class Searcher:
         match = _fts_query(q) if "fts" in sinais else None
         if match:
             try:
-                rows = self.con.execute(
-                    "SELECT rowid, snippet(chunks_fts, 2, '**', '**', ' … ', 24) AS snip "
-                    "FROM chunks_fts WHERE chunks_fts MATCH ? ORDER BY bm25(chunks_fts, 8.0, 3.0, 1.0) LIMIT ?",
-                    (match, pool),
-                ).fetchall()
+                if eligible is None:
+                    rows = self.con.execute(
+                        "SELECT rowid, snippet(chunks_fts, 2, '**', '**', ' … ', 24) AS snip "
+                        "FROM chunks_fts WHERE chunks_fts MATCH ? "
+                        "ORDER BY bm25(chunks_fts, 8.0, 3.0, 1.0) LIMIT ?", (match, pool)).fetchall()
+                    ranked = [(rank, row['rowid']) for rank, row in enumerate(rows)]
+                else:
+                    # Preserve each source's global rank while filling a scoped
+                    # shortlist. Rebasing ranks changed proven result ordering.
+                    ranked = []
+                    for rank, row in enumerate(self.con.execute(
+                            "SELECT rowid FROM chunks_fts WHERE chunks_fts MATCH ? "
+                            "ORDER BY bm25(chunks_fts, 8.0, 3.0, 1.0)", (match,))):
+                        if row[0] in eligible:
+                            ranked.append((rank, row[0]))
+                            if len(ranked) == pool:
+                                break
+                    # Unary + prevents FTS5 from restarting MATCH for every
+                    # rowid. Generate snippets only for the selected passages.
+                    rows = self.con.execute(
+                        "SELECT rowid, snippet(chunks_fts, 2, '**', '**', ' … ', 24) AS snip "
+                        "FROM chunks_fts WHERE chunks_fts MATCH ? "
+                        "AND +rowid IN (SELECT value FROM json_each(?))",
+                        (match, json.dumps([cid for _, cid in ranked]))).fetchall() if ranked else []
             except Exception:
-                rows = []
-            for rank, r in enumerate(rows):
-                rrf[r[0]] = rrf.get(r[0], 0) + FTS_WEIGHT / (60 + rank)
-                snippets[r[0]] = r[1]
-                sources.setdefault(r[0], set()).add('palavras-chave')
+                rows, ranked = [], []
+            for row in rows:
+                snippets[row['rowid']] = row['snip']
+            for rank, cid in ranked:
+                rrf[cid] = rrf.get(cid, 0) + FTS_WEIGHT / (60 + rank)
+                sources.setdefault(cid, set()).add('palavras-chave')
 
         # 3º sinal: nome de símbolo ou de arquivo bate com a consulta
         struct = []
@@ -190,7 +261,9 @@ class Searcher:
             marks = ",".join("?" * len(idents))
             for r in self.con.execute(
                 f"SELECT s.note_id, s.linha, (SELECT c.id FROM chunks c WHERE c.note_id=s.note_id AND c.heading LIKE '%'||s.nome||'%' "
-                f"ORDER BY c.ord LIMIT 1) cid FROM simbolos s WHERE s.nome IN ({marks}) COLLATE NOCASE LIMIT 30", idents):
+                + chunk_scope +
+                f" ORDER BY c.ord LIMIT 1) cid FROM simbolos s WHERE s.nome IN ({marks}) COLLATE NOCASE "
+                + ("AND cid IS NOT NULL " if eligible is not None else "") + "LIMIT 30", [*scope_args, *idents]):
                 if r["cid"]:
                     struct.append(r["cid"])
             # caminho: só quando a palavra É o nome de um arquivo ou pasta (registro → registro.py). Trecho de
@@ -201,7 +274,7 @@ class Searcher:
                     partes = r["path"].lower().split("/")
                     nomes = {re.sub(r"\.[^.]+$", "", partes[-1]), *partes[:-1]}
                     if alvo & nomes:
-                        c = self.con.execute("SELECT id FROM chunks WHERE note_id=? ORDER BY ord LIMIT 1", (r["id"],)).fetchone()
+                        c = first_chunk(r["id"])
                         if c:
                             struct.append(c[0])
         for rank, cid in enumerate(dict.fromkeys(struct)):
@@ -209,21 +282,35 @@ class Searcher:
             sources.setdefault(cid, set()).add('símbolo ou caminho')
 
         semantic_scores = None
-        if embed.enabled() and "vec" in sinais:
+        if q and embed.enabled() and "vec" in sinais:
             self._load_vectors()
             if self._M is not None:
                 weight = VEC_WEIGHT if code_intent else 1.0
                 qv = embed.embed([q])[0]
                 scores = self._M @ qv
                 semantic_scores = scores
-                top = np.argsort(-scores)[:pool]
-                for rank, i in enumerate(top):
+                order = np.argsort(-scores)
+                if eligible is None:
+                    top = list(enumerate(order[:pool]))
+                else:
+                    positions = np.flatnonzero(np.isin(self._ids[order], np.fromiter(eligible, dtype=np.int64)))[:pool]
+                    top = [(int(rank), order[rank]) for rank in positions]
+                for rank, i in top:
                     if scores[i] < 0.2:
                         break
                     cid = int(self._ids[i])
                     rrf[cid] = rrf.get(cid, 0) + weight / (60 + rank)
                     sources.setdefault(cid, set()).add('semelhança semântica')
 
+        if not q and where:
+            # A filters-only query is a bounded listing, not an embedding of an
+            # empty string. Pick one eligible passage per file, newest first.
+            rows = self.con.execute(
+                "SELECT MIN(c.id) FROM chunks c JOIN notes n ON n.id=c.note_id WHERE " + where +
+                " GROUP BY n.id ORDER BY n.mtime DESC, n.path LIMIT ?", [*scope_params, pool])
+            for row in rows:
+                rrf[row[0]] = .01
+                sources.setdefault(row[0], set()).add('filtros da consulta')
         if not rrf:
             return []
         cids = sorted(rrf, key=rrf.get, reverse=True)[: pool * 2]
@@ -237,21 +324,11 @@ class Searcher:
                 cids,
             )
         }
-        allowed = None
-        if tag:
-            allowed = {r[0] for r in self.con.execute("SELECT note_id FROM tags WHERE tag=?", (tag.lstrip("#").lower(),))}
-
         tokens = [t for t in re.findall(r"\w+", q.lower()) if t not in STOPWORDS]
         by_note: dict[int, dict] = {}
         for cid in cids:
             c = info.get(cid)
             if not c:
-                continue
-            if allowed is not None and c["note_id"] not in allowed:
-                continue
-            if folder and not c["path"].lower().startswith(folder.lower().strip("/") + "/"):
-                continue
-            if not _passa_filtros(c, filtros):
                 continue
             entry = by_note.get(c["note_id"])
             if entry is None:
@@ -297,7 +374,8 @@ class Searcher:
             elif not e['exato'] and covered.get(e['path']) in summary_paths:
                 e['motivos'].append('fonte disponível na síntese: '+covered[e['path']])
                 e['score'] *= .65
-        results = sorted(by_note.values(), key=lambda e: (e['exato'], e['score']), reverse=True)
+        results = (sorted(by_note.values(), key=lambda e: (e['exato'], e['score']), reverse=True)
+                   if q else list(by_note.values()))
         if (rerank and code_intent and semantic_scores is not None
                 and len(results) >= 2 and sum(e['kind'] == 'codigo' for e in results[:3]) >= 2
                 and self._has_complete_code_vectors()):

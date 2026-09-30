@@ -63,7 +63,7 @@ test('3D brain gives bounded, deterministic depth to cortex, cerebellum and stem
 test('cortex pulse spreads outward in 2D and 3D, stops on selection or hover, and respects reduced motion',()=>{
   const code=source.slice(source.indexOf('const orbit='),source.indexOf('function set3d('));
   const sandbox=brainLayout(165);
-  Object.assign(sandbox,{performance:{now:()=>0},RM:false,selected:-1,hover:-1,radialMode:false,modo:'arquivos'});
+  Object.assign(sandbox,{performance:{now:()=>0},RM:false,pulseEnabled:true,selected:-1,hover:-1,radialMode:false,modo:'arquivos'});
   vm.runInContext(code+`\npulse2=cortexPulseState(false,2200);pulse3=cortexPulseState(true,2200);peak=cortexPulseIntensity(.5,.5);far=cortexPulseIntensity(.8,.5);`,sandbox);
   assert.equal(sandbox.pulse2.phase,.5);assert.equal(sandbox.pulse3.phase,.5);
   assert(sandbox.pulse2.dist.every(d=>d>=0&&d<=1));
@@ -175,7 +175,7 @@ test('isolated files are red and tags are yellow',()=>{
 const dirtyCode=source.slice(source.indexOf('function editorDirty('),source.indexOf('function editorMessage('));
 test('new drafts and edited content warn before leaving; clean notes do not',()=>{
   let confirmations=0;
-  const sandbox={editorSession:{create:true,original:'template'},$:()=>({value:'template'}),confirm:()=>{confirmations++;return false},toast(){}};
+  const sandbox={t:s=>s,editorSession:{create:true,original:'template'},$:()=>({value:'template'}),confirm:()=>{confirmations++;return false},toast(){}};
   vm.createContext(sandbox);vm.runInContext(dirtyCode,sandbox);
   assert(sandbox.editorDirty());assert.equal(sandbox.canLeaveEditor(),false);assert.equal(confirmations,1);
   sandbox.editorSession.create=false;
@@ -184,7 +184,7 @@ test('new drafts and edited content warn before leaving; clean notes do not',()=
   assert(sandbox.editorDirty());assert.equal(sandbox.canLeaveEditor(),false);
 });
 test('cannot leave while a save is in progress',()=>{
-  const sandbox={editorSession:{saving:true,original:'saved'},$:()=>({value:'saved'}),confirm:()=>{throw Error('should not ask')},toast(){}};
+  const sandbox={t:s=>s,editorSession:{saving:true,original:'saved'},$:()=>({value:'saved'}),confirm:()=>{throw Error('should not ask')},toast(){}};
   vm.createContext(sandbox);vm.runInContext(dirtyCode,sandbox);
   assert.equal(sandbox.canLeaveEditor(),false);
 });
@@ -231,4 +231,43 @@ test('restoring saved positions initializes hover intensity so nodes stay visibl
  vm.createContext(sandbox);vm.runInContext(code,sandbox);
  assert.equal(sandbox.N[0].h,0);assert.equal(sandbox.N[1].h,.4);
  for(const n of sandbox.N){n.h+=(0-n.h)*.25;assert(Number.isFinite(n.r*(1+n.h*.35)));}
+});
+
+const i18nCode=source.slice(source.indexOf('const PT_BR='),source.indexOf('const staticTranslations='));
+function translationContext(language){const sandbox={localStorage:{getItem:()=>language}};vm.createContext(sandbox);vm.runInContext(i18nCode,sandbox);return sandbox}
+test('English is the default and switching locale translates UI without changing interpolated content',()=>{
+ const s=translationContext(null);assert.equal(s.t('Graph filters'),'Graph filters');
+ const original='Decisão do projeto · src/Aprendizados.md';
+ s.title=original;vm.runInContext('english=tr`Dependencies of ${title}`;locale="pt-BR";portuguese=tr`Dependencies of ${title}`',s);
+ assert.equal(s.english,'Dependencies of '+original);assert.equal(s.portuguese,'Dependências de '+original);
+ assert.equal(s.t('New note'),'Nova nota');assert.equal(s.displayValue('codigo'),'código');
+ assert.equal(s.displayValue('A decisão original'),'A decisão original');
+ const persisted=translationContext('pt-BR');assert.equal(persisted.t('Graph filters'),'Filtros do grafo');
+ const corrupt=translationContext('other');assert.equal(corrupt.t('Graph filters'),'Graph filters');
+});
+const limitsCode=source.slice(source.indexOf('const DEFAULT_GRAPH_LIMIT='),source.indexOf('syncViewMode();\nfunction saveView('));
+test('page size defaults to 500, persists per project and preserves selected file when resizing',async()=>{
+ const storage=new Map(),input={value:500},calls=[],messages=[];
+ const s={savedView:null,storageKey:'atlasbrain:view:project-a',localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},N:[{path:'src/target.md'}],selected:0,modo:'arquivos',graphPage:4,$:()=>input,loadGraph:async(...args)=>calls.push(args),saveView(){},toast:m=>messages.push(m),t:m=>m};
+ vm.createContext(s);vm.runInContext(limitsCode,s);assert.equal(s.validGraphLimit(undefined),500);assert.equal(s.validGraphLimit(800),800);assert.equal(s.validGraphLimit(801),500);
+ await s.changeGraphLimit('375');assert.equal(s.graphPage,0);assert.deepEqual(calls,[[true,'src/target.md']]);assert.equal(JSON.parse(storage.get(s.storageKey)).graphLimit,375);
+ await s.changeGraphLimit('49');await s.changeGraphLimit('501.5');assert.equal(calls.length,1);assert.equal(input.value,375);assert.equal(messages.length,2);
+ const other={...s,savedView:null,storageKey:'atlasbrain:view:project-b'};vm.createContext(other);vm.runInContext(limitsCode+'\nrestored=graphLimit',other);assert.equal(other.restored,500);
+ const persisted={...s,savedView:JSON.parse(storage.get(s.storageKey))};vm.createContext(persisted);vm.runInContext(limitsCode+'\nrestored=graphLimit',persisted);assert.equal(persisted.restored,375);
+});
+test('pulse defaults to disabled, restores explicit preferences and does not disable fiber feedback',()=>{
+ const s=brainLayout(165);Object.assign(s,{performance:{now:()=>2200},pulseEnabled:false,RM:false,selected:-1,hover:-1,radialMode:false,modo:'arquivos'});
+ vm.runInContext(source.slice(source.indexOf('const orbit='),source.indexOf('function set3d(')),s);
+ assert.equal(s.cortexPulseState(false),null);assert.equal(s.cortexPulseState(true),null);s.pulseEnabled=true;assert(s.cortexPulseState(false));assert(s.cortexPulseState(true));
+ const saved=translationContext(null);Object.assign(saved,{savedView:{graphLimit:500,pulseEnabled:false}});vm.runInContext(limitsCode+'\nrestoredPulse=pulseEnabled',saved);assert.equal(saved.restoredPulse,false);
+ for(const preference of [null,{}, {pulseEnabled:true}]){const fresh=translationContext(null);fresh.savedView=preference;vm.runInContext(limitsCode+"\nrestoredPulse=pulseEnabled",fresh);assert.equal(fresh.restoredPulse,preference?.pulseEnabled===true)}
+});
+const idleCode=source.slice(source.indexOf('let lastRotationTime='),source.indexOf('function frame('));
+test('idle 3D rotates by elapsed time and pauses for interaction, panels, hidden tabs and reduced motion',()=>{
+ const s={RM:false,document:{hidden:false,activeElement:{closest:()=>null},querySelector:()=>null},view:'grafo',view3d:true,radialMode:false,modo:'arquivos',N:[{},{}],selected:-1,hover:-1,orbitDrag:null,drag:null,pan:null,pinch:null,orbit:{yaw:0}};
+ vm.createContext(s);vm.runInContext(idleCode,s);assert.equal(s.rotateIdle3d(2000),false);assert(s.rotateIdle3d(2020));assert(Math.abs(s.orbit.yaw-.0024)<1e-12);
+ for(const [key,value]of Object.entries({selected:0,hover:0,orbitDrag:{},RM:true,view3d:false,radialMode:true,view:'decisoes',modo:'deps'})){const old=s[key],yaw=s.orbit.yaw;s[key]=value;assert.equal(s.rotateIdle3d(2040),false,key);assert.equal(s.orbit.yaw,yaw);s[key]=old;}
+ s.document.hidden=true;assert.equal(s.rotateIdle3d(50000),false);s.document.hidden=false;
+ s.document.querySelector=()=>({});assert.equal(s.rotateIdle3d(50020),false);s.document.querySelector=()=>null;
+ vm.runInContext('lastGraphInteraction=50030',s);assert.equal(s.rotateIdle3d(51000),false);assert(s.rotateIdle3d(51700));assert(s.orbit.yaw<.02,'resuming never jumps after a long pause');
 });

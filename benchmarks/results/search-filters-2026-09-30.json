@@ -1,0 +1,859 @@
+{
+  "baseline_commit": "8cccda5b951d13ed2202224028c08f2dc73a52f3",
+  "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+  "timings": "Warmed, interleaved queries on frozen SQLite copies; initialization excluded. Token cost not measured.",
+  "scope_labels": "Folder/type queries are derivatives of reviewed labels, not independent natural-language validation.",
+  "synthetic": {
+    "folder": {
+      "metrics": {
+        "before": {
+          "cases": 1,
+          "top1": 0.0,
+          "top3": 0.0,
+          "mrr": 0.0,
+          "no_results": 1,
+          "p50_ms": 0.6174999998620478,
+          "p95_ms": 0.6500830004370073
+        },
+        "after": {
+          "cases": 1,
+          "top1": 1.0,
+          "top3": 1.0,
+          "mrr": 1.0,
+          "no_results": 0,
+          "p50_ms": 0.24645899975439534,
+          "p95_ms": 0.2969170000142185
+        }
+      },
+      "rank_changes": [
+        {
+          "case": 1,
+          "before": null,
+          "after": 1
+        }
+      ],
+      "warmup_ms": {
+        "before": 17.967124999813677,
+        "after": 0.4244579995429376
+      },
+      "repeats": 5
+    },
+    "tag": {
+      "metrics": {
+        "before": {
+          "cases": 1,
+          "top1": 0.0,
+          "top3": 0.0,
+          "mrr": 0.0,
+          "no_results": 1,
+          "p50_ms": 0.5719170003430918,
+          "p95_ms": 0.5855419994986732
+        },
+        "after": {
+          "cases": 1,
+          "top1": 1.0,
+          "top3": 1.0,
+          "mrr": 1.0,
+          "no_results": 0,
+          "p50_ms": 0.2137080000466085,
+          "p95_ms": 0.23291699926630827
+        }
+      },
+      "rank_changes": [
+        {
+          "case": 1,
+          "before": null,
+          "after": 1
+        }
+      ],
+      "warmup_ms": {
+        "before": 0.7447500001944718,
+        "after": 0.33675000031507807
+      },
+      "repeats": 5
+    },
+    "type": {
+      "metrics": {
+        "before": {
+          "cases": 1,
+          "top1": 0.0,
+          "top3": 0.0,
+          "mrr": 0.0,
+          "no_results": 1,
+          "p50_ms": 0.6042079994585947,
+          "p95_ms": 0.6167920000734739
+        },
+        "after": {
+          "cases": 1,
+          "top1": 1.0,
+          "top3": 1.0,
+          "mrr": 1.0,
+          "no_results": 0,
+          "p50_ms": 0.22404199989978224,
+          "p95_ms": 0.23337499987974297
+        }
+      },
+      "rank_changes": [
+        {
+          "case": 1,
+          "before": null,
+          "after": 1
+        }
+      ],
+      "warmup_ms": {
+        "before": 0.9520419998807483,
+        "after": 0.3179159994033398
+      },
+      "repeats": 5
+    },
+    "status": {
+      "metrics": {
+        "before": {
+          "cases": 1,
+          "top1": 0.0,
+          "top3": 0.0,
+          "mrr": 0.0,
+          "no_results": 1,
+          "p50_ms": 0.5865000002813758,
+          "p95_ms": 0.6111669999881997
+        },
+        "after": {
+          "cases": 1,
+          "top1": 1.0,
+          "top3": 1.0,
+          "mrr": 1.0,
+          "no_results": 0,
+          "p50_ms": 0.25024999922607094,
+          "p95_ms": 0.2514589996280847
+        }
+      },
+      "rank_changes": [
+        {
+          "case": 1,
+          "before": null,
+          "after": 1
+        }
+      ],
+      "warmup_ms": {
+        "before": 0.7542499997725827,
+        "after": 0.3502079998725094
+      },
+      "repeats": 5
+    },
+    "date": {
+      "metrics": {
+        "before": {
+          "cases": 1,
+          "top1": 0.0,
+          "top3": 0.0,
+          "mrr": 0.0,
+          "no_results": 1,
+          "p50_ms": 0.5898339995837887,
+          "p95_ms": 0.5976669999654405
+        },
+        "after": {
+          "cases": 1,
+          "top1": 1.0,
+          "top3": 1.0,
+          "mrr": 1.0,
+          "no_results": 0,
+          "p50_ms": 0.23233299998537404,
+          "p95_ms": 0.23537500055681448
+        }
+      },
+      "rank_changes": [
+        {
+          "case": 1,
+          "before": null,
+          "after": 1
+        }
+      ],
+      "warmup_ms": {
+        "before": 0.7422500002576271,
+        "after": 0.31979100003809435
+      },
+      "repeats": 5
+    },
+    "exclusion": {
+      "metrics": {
+        "before": {
+          "cases": 1,
+          "top1": 0.0,
+          "top3": 0.0,
+          "mrr": 0.0,
+          "no_results": 1,
+          "p50_ms": 0.6132919997980935,
+          "p95_ms": 0.6629580002481816
+        },
+        "after": {
+          "cases": 1,
+          "top1": 1.0,
+          "top3": 1.0,
+          "mrr": 1.0,
+          "no_results": 0,
+          "p50_ms": 0.27550000049814116,
+          "p95_ms": 0.27670899999066023
+        }
+      },
+      "rank_changes": [
+        {
+          "case": 1,
+          "before": null,
+          "after": 1
+        }
+      ],
+      "warmup_ms": {
+        "before": 0.7614579999426496,
+        "after": 0.35841699991578935
+      },
+      "repeats": 5
+    },
+    "phrase": {
+      "metrics": {
+        "before": {
+          "cases": 1,
+          "top1": 0.0,
+          "top3": 0.0,
+          "mrr": 0.0,
+          "no_results": 1,
+          "p50_ms": 0.7167909998315736,
+          "p95_ms": 0.7408329993268126
+        },
+        "after": {
+          "cases": 1,
+          "top1": 1.0,
+          "top3": 1.0,
+          "mrr": 1.0,
+          "no_results": 0,
+          "p50_ms": 0.31724999917059904,
+          "p95_ms": 0.3234999994674581
+        }
+      },
+      "rank_changes": [
+        {
+          "case": 1,
+          "before": null,
+          "after": 1
+        }
+      ],
+      "warmup_ms": {
+        "before": 0.9003749992189114,
+        "after": 0.4087920005986234
+      },
+      "repeats": 5
+    },
+    "combined": {
+      "metrics": {
+        "before": {
+          "cases": 1,
+          "top1": 0.0,
+          "top3": 0.0,
+          "mrr": 0.0,
+          "no_results": 1,
+          "p50_ms": 0.6574999997610576,
+          "p95_ms": 0.669874999402964
+        },
+        "after": {
+          "cases": 1,
+          "top1": 1.0,
+          "top3": 1.0,
+          "mrr": 1.0,
+          "no_results": 0,
+          "p50_ms": 0.2961250002044835,
+          "p95_ms": 0.309166999613808
+        }
+      },
+      "rank_changes": [
+        {
+          "case": 1,
+          "before": null,
+          "after": 1
+        }
+      ],
+      "warmup_ms": {
+        "before": 0.7937919999676524,
+        "after": 0.406874999498541
+      },
+      "repeats": 5
+    },
+    "filters_only": {
+      "metrics": {
+        "before": {
+          "cases": 1,
+          "top1": 0.0,
+          "top3": 0.0,
+          "mrr": 0.0,
+          "no_results": 1,
+          "p50_ms": 0.002499999936844688,
+          "p95_ms": 0.004208000063954387
+        },
+        "after": {
+          "cases": 1,
+          "top1": 1.0,
+          "top3": 1.0,
+          "mrr": 1.0,
+          "no_results": 0,
+          "p50_ms": 0.08604199956607772,
+          "p95_ms": 0.10216600003332132
+        }
+      },
+      "rank_changes": [
+        {
+          "case": 1,
+          "before": null,
+          "after": 1
+        }
+      ],
+      "warmup_ms": {
+        "before": 0.008834000254864804,
+        "after": 0.15474999963771552
+      },
+      "repeats": 5
+    },
+    "plural_alias": {
+      "metrics": {
+        "before": {
+          "cases": 1,
+          "top1": 0.0,
+          "top3": 0.0,
+          "mrr": 0.0,
+          "no_results": 1,
+          "p50_ms": 0.002499999936844688,
+          "p95_ms": 0.0035829998523695394
+        },
+        "after": {
+          "cases": 1,
+          "top1": 1.0,
+          "top3": 1.0,
+          "mrr": 1.0,
+          "no_results": 0,
+          "p50_ms": 0.08404100026382366,
+          "p95_ms": 0.08845799948176136
+        }
+      },
+      "rank_changes": [
+        {
+          "case": 1,
+          "before": null,
+          "after": 1
+        }
+      ],
+      "warmup_ms": {
+        "before": 0.012041999980283435,
+        "after": 0.16195900025195442
+      },
+      "repeats": 5
+    }
+  },
+  "projects": [
+    {
+      "project": "atlasbrain",
+      "revision": "293",
+      "index_stable": true,
+      "files": 130,
+      "vectors": 591,
+      "cohorts": {
+        "original": {
+          "metrics": {
+            "before": {
+              "cases": 17,
+              "top1": 0.6470588235294118,
+              "top3": 0.8823529411764706,
+              "mrr": 0.7524509803921569,
+              "no_results": 0,
+              "p50_ms": 6.022415999723307,
+              "p95_ms": 10.293874999661057
+            },
+            "after": {
+              "cases": 17,
+              "top1": 0.6470588235294118,
+              "top3": 0.8823529411764706,
+              "mrr": 0.7524509803921569,
+              "no_results": 0,
+              "p50_ms": 5.336749999514723,
+              "p95_ms": 8.985833000224375
+            }
+          },
+          "rank_changes": [],
+          "warmup_ms": {
+            "before": 9.877167000013287,
+            "after": 8.940916000028665
+          },
+          "repeats": 5
+        },
+        "folder_scoped": {
+          "metrics": {
+            "before": {
+              "cases": 17,
+              "top1": 0.7058823529411765,
+              "top3": 0.8823529411764706,
+              "mrr": 0.7941176470588235,
+              "no_results": 0,
+              "p50_ms": 5.380042000069807,
+              "p95_ms": 8.26045800022257
+            },
+            "after": {
+              "cases": 17,
+              "top1": 0.7058823529411765,
+              "top3": 0.8823529411764706,
+              "mrr": 0.7927170868347339,
+              "no_results": 0,
+              "p50_ms": 4.9372500006938935,
+              "p95_ms": 7.557834000181174
+            }
+          },
+          "rank_changes": [
+            {
+              "case": 1,
+              "before": 6,
+              "after": 7
+            }
+          ],
+          "warmup_ms": {
+            "before": 7.158124999477877,
+            "after": 7.198291999884532
+          },
+          "repeats": 5
+        },
+        "type_scoped": {
+          "metrics": {
+            "before": {
+              "cases": 17,
+              "top1": 0.7647058823529411,
+              "top3": 0.8823529411764706,
+              "mrr": 0.8319327731092436,
+              "no_results": 0,
+              "p50_ms": 5.799042000035115,
+              "p95_ms": 8.815958999548457
+            },
+            "after": {
+              "cases": 17,
+              "top1": 0.7647058823529411,
+              "top3": 0.8823529411764706,
+              "mrr": 0.8319327731092436,
+              "no_results": 0,
+              "p50_ms": 4.9992499998552375,
+              "p95_ms": 7.642332999239443
+            }
+          },
+          "rank_changes": [],
+          "warmup_ms": {
+            "before": 16.213999999308726,
+            "after": 6.514792000416492
+          },
+          "repeats": 5
+        }
+      }
+    },
+    {
+      "project": "olax",
+      "revision": "194",
+      "index_stable": true,
+      "files": 3263,
+      "vectors": 4748,
+      "cohorts": {
+        "original": {
+          "metrics": {
+            "before": {
+              "cases": 32,
+              "top1": 0.5625,
+              "top3": 0.75,
+              "mrr": 0.6546875,
+              "no_results": 0,
+              "p50_ms": 25.55456250001953,
+              "p95_ms": 34.88975000072969
+            },
+            "after": {
+              "cases": 32,
+              "top1": 0.5625,
+              "top3": 0.75,
+              "mrr": 0.6546875,
+              "no_results": 0,
+              "p50_ms": 24.071104000086052,
+              "p95_ms": 33.075708000069426
+            }
+          },
+          "rank_changes": [],
+          "warmup_ms": {
+            "before": 45.30666699974972,
+            "after": 41.9789170000513
+          },
+          "repeats": 5
+        },
+        "folder_scoped": {
+          "metrics": {
+            "before": {
+              "cases": 32,
+              "top1": 0.65625,
+              "top3": 0.875,
+              "mrr": 0.76875,
+              "no_results": 0,
+              "p50_ms": 23.29387500003577,
+              "p95_ms": 30.290374999822234
+            },
+            "after": {
+              "cases": 32,
+              "top1": 0.65625,
+              "top3": 0.875,
+              "mrr": 0.7726934523809523,
+              "no_results": 0,
+              "p50_ms": 16.765333999956056,
+              "p95_ms": 24.15904099962063
+            }
+          },
+          "rank_changes": [
+            {
+              "case": 3,
+              "before": 6,
+              "after": 4
+            },
+            {
+              "case": 4,
+              "before": 3,
+              "after": 2
+            },
+            {
+              "case": 5,
+              "before": 6,
+              "after": 7
+            },
+            {
+              "case": 24,
+              "before": 10,
+              "after": null
+            }
+          ],
+          "warmup_ms": {
+            "before": 47.606125000129396,
+            "after": 39.108791000217025
+          },
+          "repeats": 5
+        },
+        "type_scoped": {
+          "metrics": {
+            "before": {
+              "cases": 32,
+              "top1": 0.5,
+              "top3": 0.75,
+              "mrr": 0.6143229166666667,
+              "no_results": 0,
+              "p50_ms": 25.060999999823252,
+              "p95_ms": 33.773957999983395
+            },
+            "after": {
+              "cases": 32,
+              "top1": 0.5,
+              "top3": 0.75,
+              "mrr": 0.6143229166666667,
+              "no_results": 0,
+              "p50_ms": 27.946604499902605,
+              "p95_ms": 44.00416699991183
+            }
+          },
+          "rank_changes": [],
+          "warmup_ms": {
+            "before": 38.05966699928831,
+            "after": 37.39670800041495
+          },
+          "repeats": 5
+        }
+      }
+    },
+    {
+      "project": "SabeTudo",
+      "revision": "3",
+      "index_stable": true,
+      "files": 177,
+      "vectors": 1221,
+      "cohorts": {
+        "original": {
+          "metrics": {
+            "before": {
+              "cases": 8,
+              "top1": 0.25,
+              "top3": 0.625,
+              "mrr": 0.4239583333333333,
+              "no_results": 0,
+              "p50_ms": 12.399291500059917,
+              "p95_ms": 24.15858299991669
+            },
+            "after": {
+              "cases": 8,
+              "top1": 0.25,
+              "top3": 0.625,
+              "mrr": 0.4239583333333333,
+              "no_results": 0,
+              "p50_ms": 10.852083500594745,
+              "p95_ms": 22.106957999312726
+            }
+          },
+          "rank_changes": [],
+          "warmup_ms": {
+            "before": 14.42562500051281,
+            "after": 13.466917000187095
+          },
+          "repeats": 5
+        },
+        "folder_scoped": {
+          "metrics": {
+            "before": {
+              "cases": 8,
+              "top1": 0.375,
+              "top3": 0.75,
+              "mrr": 0.5833333333333334,
+              "no_results": 0,
+              "p50_ms": 10.215396000603505,
+              "p95_ms": 24.249000000054366
+            },
+            "after": {
+              "cases": 8,
+              "top1": 0.5,
+              "top3": 0.75,
+              "mrr": 0.6458333333333334,
+              "no_results": 0,
+              "p50_ms": 5.392833500081906,
+              "p95_ms": 14.651957999376464
+            }
+          },
+          "rank_changes": [
+            {
+              "case": 8,
+              "before": 2,
+              "after": 1
+            }
+          ],
+          "warmup_ms": {
+            "before": 15.494000000217056,
+            "after": 9.321417000137444
+          },
+          "repeats": 5
+        },
+        "type_scoped": {
+          "metrics": {
+            "before": {
+              "cases": 8,
+              "top1": 0.5,
+              "top3": 0.625,
+              "mrr": 0.5711805555555556,
+              "no_results": 0,
+              "p50_ms": 29.833771000085108,
+              "p95_ms": 82.02054199955455
+            },
+            "after": {
+              "cases": 8,
+              "top1": 0.5,
+              "top3": 0.625,
+              "mrr": 0.5711805555555556,
+              "no_results": 0,
+              "p50_ms": 25.32687500024622,
+              "p95_ms": 76.58141599949886
+            }
+          },
+          "rank_changes": [],
+          "warmup_ms": {
+            "before": 34.16920800009393,
+            "after": 39.289542000005895
+          },
+          "repeats": 5
+        }
+      }
+    },
+    {
+      "project": "sushigame",
+      "revision": "20",
+      "index_stable": true,
+      "files": 171,
+      "vectors": 929,
+      "cohorts": {
+        "original": {
+          "metrics": {
+            "before": {
+              "cases": 20,
+              "top1": 0.6,
+              "top3": 0.85,
+              "mrr": 0.7238095238095238,
+              "no_results": 0,
+              "p50_ms": 28.473291500176856,
+              "p95_ms": 99.22016699965752
+            },
+            "after": {
+              "cases": 20,
+              "top1": 0.6,
+              "top3": 0.85,
+              "mrr": 0.7238095238095238,
+              "no_results": 0,
+              "p50_ms": 25.920395999946777,
+              "p95_ms": 74.19616700008191
+            }
+          },
+          "rank_changes": [],
+          "warmup_ms": {
+            "before": 116.6574999997465,
+            "after": 69.76270800078055
+          },
+          "repeats": 5
+        },
+        "folder_scoped": {
+          "metrics": {
+            "before": {
+              "cases": 20,
+              "top1": 0.8,
+              "top3": 0.95,
+              "mrr": 0.8654761904761905,
+              "no_results": 0,
+              "p50_ms": 15.96943749973434,
+              "p95_ms": 28.45762500055571
+            },
+            "after": {
+              "cases": 20,
+              "top1": 0.8,
+              "top3": 0.95,
+              "mrr": 0.8654761904761905,
+              "no_results": 0,
+              "p50_ms": 10.116853999534214,
+              "p95_ms": 19.67766699999629
+            }
+          },
+          "rank_changes": [],
+          "warmup_ms": {
+            "before": 21.674000000530214,
+            "after": 17.72212500054593
+          },
+          "repeats": 5
+        },
+        "type_scoped": {
+          "metrics": {
+            "before": {
+              "cases": 20,
+              "top1": 0.5,
+              "top3": 0.85,
+              "mrr": 0.6645833333333333,
+              "no_results": 0,
+              "p50_ms": 27.88414599990574,
+              "p95_ms": 66.76549999974668
+            },
+            "after": {
+              "cases": 20,
+              "top1": 0.5,
+              "top3": 0.85,
+              "mrr": 0.6645833333333333,
+              "no_results": 0,
+              "p50_ms": 25.879249999888998,
+              "p95_ms": 55.365791999975045
+            }
+          },
+          "rank_changes": [],
+          "warmup_ms": {
+            "before": 17.802709000534378,
+            "after": 16.362917000151356
+          },
+          "repeats": 5
+        }
+      }
+    },
+    {
+      "project": "adsivos",
+      "revision": "3",
+      "index_stable": true,
+      "files": 215,
+      "vectors": 760,
+      "cohorts": {
+        "original": {
+          "metrics": {
+            "before": {
+              "cases": 20,
+              "top1": 0.5,
+              "top3": 0.6,
+              "mrr": 0.5708333333333333,
+              "no_results": 0,
+              "p50_ms": 24.00835400021606,
+              "p95_ms": 41.63391700058128
+            },
+            "after": {
+              "cases": 20,
+              "top1": 0.5,
+              "top3": 0.6,
+              "mrr": 0.5708333333333333,
+              "no_results": 0,
+              "p50_ms": 20.666479500505375,
+              "p95_ms": 41.09591700034798
+            }
+          },
+          "rank_changes": [],
+          "warmup_ms": {
+            "before": 28.348292000373476,
+            "after": 21.564333999776863
+          },
+          "repeats": 5
+        },
+        "folder_scoped": {
+          "metrics": {
+            "before": {
+              "cases": 20,
+              "top1": 0.6,
+              "top3": 0.95,
+              "mrr": 0.7654761904761905,
+              "no_results": 0,
+              "p50_ms": 29.2835415002628,
+              "p95_ms": 96.98616700006824
+            },
+            "after": {
+              "cases": 20,
+              "top1": 0.6,
+              "top3": 0.95,
+              "mrr": 0.7654761904761905,
+              "no_results": 0,
+              "p50_ms": 19.66508299983616,
+              "p95_ms": 92.11491600035515
+            }
+          },
+          "rank_changes": [],
+          "warmup_ms": {
+            "before": 19.05733399962628,
+            "after": 15.766749999784224
+          },
+          "repeats": 5
+        },
+        "type_scoped": {
+          "metrics": {
+            "before": {
+              "cases": 20,
+              "top1": 0.45,
+              "top3": 0.6,
+              "mrr": 0.538888888888889,
+              "no_results": 0,
+              "p50_ms": 21.626895999816043,
+              "p95_ms": 47.29924999992363
+            },
+            "after": {
+              "cases": 20,
+              "top1": 0.45,
+              "top3": 0.6,
+              "mrr": 0.5327777777777778,
+              "no_results": 0,
+              "p50_ms": 20.803666499887186,
+              "p95_ms": 56.702083999880415
+            }
+          },
+          "rank_changes": [
+            {
+              "case": 4,
+              "before": 9,
+              "after": null
+            },
+            {
+              "case": 19,
+              "before": 9,
+              "after": 10
+            }
+          ],
+          "warmup_ms": {
+            "before": 24.622333000479557,
+            "after": 17.916791000061494
+          },
+          "repeats": 5
+        }
+      }
+    }
+  ]
+}

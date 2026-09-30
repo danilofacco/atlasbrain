@@ -18,7 +18,7 @@ from pathlib import Path
 
 PACOTE = Path(__file__).parent
 # ordem de dependência: quem é importado vem antes de quem importa
-MODULOS = ["config", "db", "embed", "parse", "extract", "codigo", "relevancia", "search", "graph",
+MODULOS = ["localization", "mcp_api", "config", "db", "embed", "parse", "extract", "codigo", "relevancia", "search", "graph",
            "consultas", "topologia", "inteligencia", "editor", "indexer", "registro", "importacao", "relatorio", "captura", "classify", "consolidacao", "renomear", "bench", "ferramentas"]
 
 
