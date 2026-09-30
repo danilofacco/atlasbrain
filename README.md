@@ -133,6 +133,8 @@ The first index downloads the local embedding model and can take longer. The ser
 
 Merge the generated entry into an existing configuration rather than replacing other servers. Reconnect/reload the MCP client after changing its configuration. These Claude instructions are for **Claude Code**. For Claude Desktop chat, follow the [local bridge instructions](docs/claude-desktop.md) to reach the same service.
 
+Step-by-step AtlasBrain guides: [Claude Code CLI](docs/claude-code.md), [Codex Desktop](docs/codex-desktop.md), [Codex CLI](docs/codex-cli.md), [Antigravity](docs/antigravity.md), and [OpenCode](docs/opencode.md).
+
 Official instructions: [Claude Code](https://code.claude.com/docs/en/mcp), [Antigravity](https://antigravity.google/docs/mcp), [Codex](https://developers.openai.com/codex/mcp/).
 
 To connect another client to the same project, run `setup` again with its client name: it reuses the same PID and port. To connect another project, change `--vault`. For multiple project entries in one client, also use `--nome my-project` to give each entry a distinct name.
@@ -243,6 +245,11 @@ See the [performance report](docs/search-performance-evaluation.md),
 
 - [Features, language coverage, hooks, and service operation](docs/features-and-operation.md)
 - [Claude Desktop connection](docs/claude-desktop.md)
+- [Claude Code CLI installation and connection](docs/claude-code.md)
+- [Codex Desktop installation and connection](docs/codex-desktop.md)
+- [Codex CLI installation and connection](docs/codex-cli.md)
+- [Antigravity installation and connection](docs/antigravity.md)
+- [OpenCode installation and connection](docs/opencode.md)
 - [Task context and Markdown renaming](docs/task-context-and-renaming.md)
 - [Reliable memory updates and recovery](docs/reliable-memory.md)
 - [Memory consolidation](docs/memory-consolidation.md)
