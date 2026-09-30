@@ -101,3 +101,13 @@ def test_bootstrap_arguments_and_empty_optional_arrays(tmp_path):
     script = Path(__file__).resolve().parents[1] / 'scripts/install.sh'
     result = subprocess.run(['bash', str(script), '--vault', str(project), '--platform', 'wsl', '--prepare-only', '--clients', ''], env={**os.environ, 'PATH': str(bin_dir) + ':' + os.environ['PATH'], 'ATLASBRAIN_INSTALL_DIR': str(root)}, text=True, capture_output=True, check=True)
     assert result.stdout.splitlines() == ['-m', 'atlasbrain.desktop_install', '--vault', str(project), '--clients', '', '--port', '8765', '--platform', 'wsl', '--prepare-only']
+
+
+def test_desktop_shortcut_opens_selected_project(tmp_path, monkeypatch):
+    from urllib.parse import parse_qs, urlparse
+    monkeypatch.setattr(Path, 'home', lambda: tmp_path)
+    vault = tmp_path / "project with spaces & accents é"
+    path = install.desktop_shortcut(vault, 9876)
+    url = plistlib.loads(path.read_bytes())['URL']
+    assert urlparse(url).netloc == '127.0.0.1:9876'
+    assert parse_qs(urlparse(url).query) == {'v': [str(vault)]}

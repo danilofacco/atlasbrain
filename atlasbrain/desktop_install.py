@@ -10,6 +10,7 @@ import sys
 import time
 import tomllib
 from pathlib import Path
+from urllib.parse import urlencode
 from . import config, service
 
 LABEL = 'com.atlasbrain.service'
@@ -117,6 +118,13 @@ def startup_files(vault, port, platform):
     return path
 
 
+def desktop_shortcut(vault, port):
+    url = f'http://127.0.0.1:{port}/?' + urlencode({'v': str(vault)})
+    path = Path.home() / 'Desktop/AtlasBrain.webloc'
+    save(path, plistlib.dumps({'URL': url}))
+    return path
+
+
 def activate_macos(path):
     domain = f'gui/{os.getuid()}'
     subprocess.run(['launchctl', 'bootout', f'{domain}/{LABEL}'], capture_output=True)
@@ -153,6 +161,7 @@ def main():
     bridge = json.loads(args.bridge_command_json) if args.bridge_command_json else None
     url = configure_clients(vault, clients, args.name, args.port, args.desktop_config, bridge, args.client_home)
     path = startup_files(vault, args.port, args.platform)
+    shortcut = desktop_shortcut(vault, args.port) if args.platform == 'macos' else None
     if not args.prepare_only:
         if args.platform != 'macos':
             parser.error('WSL startup must be activated by install.ps1; use --prepare-only.')
@@ -163,7 +172,7 @@ def main():
             time.sleep(1)
         else:
             raise RuntimeError(f'Startup failed. Check {service.state_dir() / "server.log"}')
-    print(json.dumps({'url': url, 'startup': str(path), 'python': sys.executable, 'vault': str(vault), 'claude_desktop_connector': url if 'claude-desktop' in clients else None}))
+    print(json.dumps({'url': url, 'startup': str(path), 'shortcut': str(shortcut) if shortcut else None, 'python': sys.executable, 'vault': str(vault), 'claude_desktop_connector': url if 'claude-desktop' in clients else None}))
 
 
 if __name__ == '__main__':

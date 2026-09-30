@@ -1,6 +1,8 @@
 # Automatic desktop service installation
 
-AtlasBrain is installed once per computer. A single HTTP service starts when the user logs in, independently of Codex, Claude or OpenCode. Each project has its own MCP URL, while sharing the process and port. Closing an editor does not stop AtlasBrain. This installs a background service, not a tray application or native window.
+AtlasBrain is installed once per computer. A single HTTP service starts when the user logs in, independently of Codex, Claude or OpenCode. Each project has its own MCP URL, while sharing the process and port. Closing an editor does not stop AtlasBrain. Installation also creates an AtlasBrain shortcut on the Desktop. It opens the selected project in your default browser; closing that window does not stop the service. On macOS the shortcut is a `.webloc`; Windows uses a `.url` and resolves your actual Desktop folder, including OneDrive. This installs a background service and browser launcher, not a tray application or native window.
+
+In the interface, open **MCP HTTP** to see and copy the URL of the selected project. Switching projects changes that URL, and the address uses the same host and port as the interface, including a custom installation port.
 
 ## macOS
 

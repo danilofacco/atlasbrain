@@ -268,3 +268,11 @@ def test_web_custom_graph_page_size_validation(servidor):
     for query in ("limite=oops", "limite=500.5", "pagina=oops"):
         status, result = req(url + "/api/graph?" + query)
         assert status == 400 and "integers" in result["erro"]
+
+
+def test_web_mcp_url_matches_selected_project(servidor):
+    from atlasbrain.service import project_id
+    url, project = servidor
+    status, connection = req(url + '/api/mcp')
+    assert status == 200
+    assert connection == {'path': f'/projects/{project_id(project)}/mcp', 'project': str(project)}

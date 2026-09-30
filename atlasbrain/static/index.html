@@ -240,6 +240,10 @@ kbd{font:11px var(--mono);padding:2px 6px;border-radius:5px;border:1px solid var
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 #noteEditor{padding:24px 16px;align-items:center;box-sizing:border-box}.note-editor .editor-head,.note-editor .editor-tabs,.note-editor .editor-actions,.note-editor .editor-message{flex-shrink:0}.wiki-options{border:1px solid var(--line);border-radius:10px;background:var(--panel);max-height:210px;overflow:auto;margin:8px 0}.wiki-options button{display:block;width:100%;text-align:left;background:none;border:0;color:var(--fg);padding:10px;cursor:pointer}.wiki-options button[aria-selected="true"]{background:var(--overlay)}.editor-body:has(.wiki-options:not([hidden])) textarea{height:30vh}.wiki-options small{display:block;color:var(--fg-muted)}.editor-connections{margin:12px 0;border-top:1px solid var(--line);padding:12px 0;font-size:13px}.editor-connections summary{cursor:pointer}.editor-connections p,.editor-connections small{color:var(--fg-muted)}.editor-connections details{margin:12px 0}.candidate-preview{max-height:220px;overflow:auto;margin:10px 0}[hidden]{display:none!important}
+.mcp-connection{position:relative;font-size:12px;white-space:nowrap}
+.mcp-connection summary{cursor:pointer;color:var(--brand-fg);padding:8px}
+.mcp-panel{position:fixed;right:20px;top:72px;box-sizing:border-box;width:min(460px,calc(100vw - 40px));padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--bg-subtle);box-shadow:0 12px 40px #0005;white-space:normal}
+.mcp-panel p{color:var(--fg-muted);line-height:1.5;margin:8px 0}.mcp-panel input{width:100%;box-sizing:border-box;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px;font:12px var(--mono);margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -260,6 +264,11 @@ kbd{font:11px var(--mono);padding:2px 6px;border-radius:5px;border:1px solid var
     <button class="tab" role="tab" data-view="soltos" aria-selected="false">Isolated <span class="n" id="nSoltos"></span></button>
   </nav>
   <div class="spacer"></div>
+  <details class="mcp-connection"><summary>MCP HTTP</summary><div class="mcp-panel">
+    <strong>Connect your assistant</strong><p>Copy this project's URL into your assistant's MCP settings.</p>
+    <label class="sr" for="mcpUrl">MCP URL</label><input id="mcpUrl" readonly aria-label="MCP URL" placeholder="Loading…">
+    <button class="chip" id="copyMcpUrl" disabled>Copy URL</button><p id="mcpConnectionStatus" role="status"></p>
+  </div></details>
   <select id="language" class="language-select" aria-label="Language"><option value="en">EN</option><option value="pt-BR">PT-BR</option></select>
   <button class="chip new-note" id="newNote" aria-label="New note (⌘/Ctrl+N)" title="New note (⌘/Ctrl+N)">+ <span>New note</span></button>
   <button class="searchbtn" id="openPal" aria-label="Search (⌘K)">
@@ -424,6 +433,14 @@ kbd{font:11px var(--mono);padding:2px 6px;border-radius:5px;border:1px solid var
 "use strict";
 // Explicit UI translations. Interpolated titles, paths and document content are preserved.
 const PT_BR={
+  "Connect your assistant": "Conecte seu assistente",
+  "Copy this project's URL into your assistant's MCP settings.": "Copie a URL deste projeto para as configurações MCP do seu assistente.",
+  "Copy URL": "Copiar URL",
+  "HTTP connection for the selected project.": "Conexão HTTP para o projeto selecionado.",
+  "Connection unavailable. Check that the service is running.": "Conexão indisponível. Verifique se o serviço está ativo.",
+  "URL copied": "URL copiada",
+  "Select and copy the URL manually.": "Selecione e copie a URL manualmente.",
+
   "Learnings": "Aprendizados",
   "Open": "Abrir",
   "AtlasBrain — home": "AtlasBrain — início",
@@ -1156,6 +1173,8 @@ let rel=new Intl.RelativeTimeFormat(locale,{numeric:'auto'});
 function ago(ts){const s=(ts*1000-Date.now())/1000;const u=[[60,'second'],[3600,'minute'],[86400,'hour'],[604800,'day'],[2629800,'week'],[31557600,'month'],[Infinity,'year']];
   let prev=1;for(const[lim,unit]of u){if(Math.abs(s)<lim)return rel.format(Math.round(s/prev),unit);prev=lim}}
 function toast(msg){const el=$('#toast');el.textContent=systemText(msg);el.classList.add('show');clearTimeout(el._h);el._h=setTimeout(()=>el.classList.remove('show'),2200)}
+async function loadMcpConnection(){try{const connection=await api('/api/mcp');$('#mcpUrl').value=location.origin+connection.path;$('#copyMcpUrl').disabled=false;$('#mcpConnectionStatus').textContent=t('HTTP connection for the selected project.')}catch{$('#mcpConnectionStatus').textContent=t('Connection unavailable. Check that the service is running.')}}
+$('#copyMcpUrl').onclick=async()=>{const input=$('#mcpUrl');try{await navigator.clipboard.writeText(input.value);toast(t('URL copied'))}catch{input.focus();input.select();toast(t('Select and copy the URL manually.'))}};
 const VPARAM=new URLSearchParams(location.search).get('v');
 async function api(path){if(VPARAM)path+=(path.includes('?')?'&':'?')+'v='+encodeURIComponent(VPARAM);
   const r=await fetch(path,{headers:{'X-atlasbrain':'1'}});if(!r.ok)throw new Error(r.status);return r.json()}
@@ -2078,7 +2097,7 @@ async function setLanguage(language){
  applyTranslations();rel=new Intl.RelativeTimeFormat(locale,{numeric:'auto'});
  syncViewMode();selectionSignature='';updateSelectionPanel();if(modo!=='deps')renderCrumbs();
  if(decisions)renderDecisions();renderPal();renderSugs();editorState();
- loadOverview();loadBrains();loadIndexState();
+ loadOverview();loadBrains();loadMcpConnection();loadIndexState();
  if(view==='soltos')loadSoltos();else if(view==='recentes')loadRecent();else if(view==='mudancas')loadChanges();
  if(current){const path=current;await openNote(path)}
  if(modo==='deps'&&depCentro)await abrirDeps(depCentro);
@@ -2103,7 +2122,7 @@ $$('[data-layer]').forEach(b=>b.setAttribute('aria-pressed',String(layers[b.data
 api('/api/filtros').then(d=>{$('#filterExt').innerHTML=t("<option value=\"\">All languages</option>")+d.extensoes.map(e=>`<option value="${esc(e)}">${esc(e)}</option>`).join('');$('#filterExt').value=graphFilters.ext}).catch(()=>{});
 const restoreCamera=!!savedView&&savedView.layoutVersion===4;
 loadGraph(restoreCamera).then(()=>{if(savedView){if(savedView.mode==='3d')set3d(true);if(savedView.mode==='radial')setRadial(true);if(restoreCamera&&savedView.cam&&['x','y','k'].every(k=>Number.isFinite(savedView.cam[k]))){Object.assign(camT,savedView.cam);camT.k=Math.max(.02,Math.min(6,camT.k));}if(savedView.orbitVersion===2&&savedView.orbit&&Number.isFinite(savedView.orbit.yaw)&&Number.isFinite(savedView.orbit.pitch))Object.assign(orbit,savedView.orbit);}restoring=false;needs=true});
-loadOverview();loadBrains();loadIndexState();if(view==='grafo')loadChanges(0,true);requestAnimationFrame(frame);
+loadOverview();loadBrains();loadMcpConnection();loadIndexState();if(view==='grafo')loadChanges(0,true);requestAnimationFrame(frame);
 addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h!==view&&['grafo','decisoes','recentes','soltos','mudancas'].includes(h))setView(h)});
 // atlasbrain atualizado: a página se recarrega sozinha (só se nada estiver aberto no meio do uso)
 let versaoPagina=null;

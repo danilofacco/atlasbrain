@@ -73,3 +73,11 @@ for ($attempt = 0; $attempt -lt 60; $attempt++) {
 }
 if (-not $ready) { throw "AtlasBrain did not become reachable from Windows. Check WSL localhost forwarding and $linuxHome/.config/atlasbrain/server.log." }
 Write-Host "Installed. AtlasBrain starts at login and is available at http://127.0.0.1:$Port. Reopen your clients and approve the project MCP when prompted."
+
+# Windows resolves the real Desktop folder, including OneDrive redirection.
+$shell = New-Object -ComObject WScript.Shell
+$desktop = $shell.SpecialFolders.Item('Desktop')
+$shortcut = $shell.CreateShortcut((Join-Path $desktop 'AtlasBrain.url'))
+$shortcut.TargetPath = "http://127.0.0.1:$Port/?v=$([Uri]::EscapeDataString($linuxVault))"
+$shortcut.Save()
+Write-Host 'AtlasBrain shortcut created on your Desktop. The interface shows the project MCP URL under MCP HTTP.'

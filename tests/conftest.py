@@ -1,4 +1,5 @@
 import subprocess
+import shutil
 from pathlib import Path
 
 import pytest
@@ -6,8 +7,23 @@ import pytest
 from atlasbrain import config, embed
 
 
+@pytest.fixture(scope="session")
+def parser_cache(tmp_path_factory):
+    # Grammar libraries are downloaded on demand. Preserve cached libraries in a
+    # disposable directory before tests change HOME; never write to the user cache.
+    from tree_sitter_language_pack import PackConfig, cache_dir, configure
+    source = Path(cache_dir())
+    isolated = tmp_path_factory.mktemp("parser-cache")
+    configure(PackConfig(cache_dir=str(isolated)))
+    target = Path(cache_dir())
+    if source.exists():
+        shutil.copytree(source, target, dirs_exist_ok=True)
+    yield target
+    configure()
+
+
 @pytest.fixture(autouse=True)
-def isolado(tmp_path, monkeypatch):
+def isolado(tmp_path, monkeypatch, parser_cache):
     """Nenhum teste toca no registro real, no cérebro global nem na home do usuário."""
     home = tmp_path / "home"
     home.mkdir()

@@ -214,6 +214,9 @@ def create_server(vault: Path, port: int = 8765, auto_index: bool = True, *, han
                 if u.path == "/api/versao":  # a página recarrega sozinha quando a interface muda
                     from .reload import version
                     return self._json({"versao": "%d-%d" % (version(True)[0] * 1000, version(True)[1])})
+                if u.path == "/api/mcp":
+                    from .service import project_id
+                    return self._json({"path": f"/projects/{project_id(vault)}/mcp", "project": str(vault)})
                 if u.path == "/api/brains":
                     current = q.get("v") and str(Path(q["v"]).expanduser().resolve())
                     return self._json({"atual": current if current in workspaces else str(vault),
