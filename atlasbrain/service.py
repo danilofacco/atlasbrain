@@ -143,7 +143,7 @@ def stop():
 
 
 def client_config(vault, client, port=8765, name='atlasbrain'):
-    url = f'http://127.0.0.1:{port}/projects/{project_id(vault)}/mcp'
+    url = f'http://127.0.0.1:{port}/mcp'
     if client == 'codex':
         return f'[mcp_servers.{json.dumps(name)}]\nurl = {json.dumps(url)}\n'
     entry = {'serverUrl': url} if client == 'antigravity' else {'type': 'http', 'url': url}
@@ -214,13 +214,17 @@ def create_app(vault, identity, auto_index=True):
     class ProjectMCP:
         async def __call__(self, scope, receive, send):
             request = WebRequest(scope, receive)
-            key = request.path_params['project']
+            key = request.path_params.get('project', '__global__')
             projects = {project_id(b['path']): Path(b['path']) for b in config.registered()}
+            if key == '__global__':
+                config.GLOBAL_BRAIN.mkdir(parents=True, exist_ok=True)
+                config.data_dir(config.GLOBAL_BRAIN)
+                projects[key] = config.GLOBAL_BRAIN
             if key not in projects:
                 return await JSONResponse({'error': 'Unknown project; run setup for this folder.'}, status_code=404)(scope, receive, send)
             async with mutex:
                 if key not in apps:
-                    server = build_server(projects[key], auto_index=False)
+                    server = build_server(projects[key], auto_index=False, global_endpoint=key == '__global__')
                     if 'streamable_http_path' in inspect.signature(server.streamable_http_app).parameters:
                         app = server.streamable_http_app(streamable_http_path=request.url.path)
                     else:
@@ -262,6 +266,7 @@ def create_app(vault, identity, auto_index=True):
 
     return Starlette(lifespan=lifespan, routes=[
         Route('/health', health_route),
+        Route('/mcp', ProjectMCP(), methods=['GET', 'POST', 'DELETE']),
         Route('/projects/{project}/mcp', ProjectMCP(), methods=['GET', 'POST', 'DELETE']),
         Route('/{path:path}', web, methods=['GET', 'POST']),
     ])

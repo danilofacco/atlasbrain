@@ -265,7 +265,7 @@ kbd{font:11px var(--mono);padding:2px 6px;border-radius:5px;border:1px solid var
   </nav>
   <div class="spacer"></div>
   <details class="mcp-connection"><summary>MCP HTTP</summary><div class="mcp-panel">
-    <strong>Connect your assistant</strong><p>Copy this project's URL into your assistant's MCP settings.</p>
+    <strong>Connect your assistant</strong><p>Copy this global URL into your assistant's MCP settings.</p>
     <label class="sr" for="mcpUrl">MCP URL</label><input id="mcpUrl" readonly aria-label="MCP URL" placeholder="Loading…">
     <button class="chip" id="copyMcpUrl" disabled>Copy URL</button><p id="mcpConnectionStatus" role="status"></p>
   </div></details>
@@ -434,9 +434,9 @@ kbd{font:11px var(--mono);padding:2px 6px;border-radius:5px;border:1px solid var
 // Explicit UI translations. Interpolated titles, paths and document content are preserved.
 const PT_BR={
   "Connect your assistant": "Conecte seu assistente",
-  "Copy this project's URL into your assistant's MCP settings.": "Copie a URL deste projeto para as configurações MCP do seu assistente.",
+  "Copy this global URL into your assistant's MCP settings.": "Copie a URL global para as configurações MCP do seu assistente.",
   "Copy URL": "Copiar URL",
-  "HTTP connection for the selected project.": "Conexão HTTP para o projeto selecionado.",
+  "One HTTP connection for all projects.": "Uma conexão HTTP para todos os projetos.",
   "Connection unavailable. Check that the service is running.": "Conexão indisponível. Verifique se o serviço está ativo.",
   "URL copied": "URL copiada",
   "Select and copy the URL manually.": "Selecione e copie a URL manualmente.",
@@ -1173,7 +1173,7 @@ let rel=new Intl.RelativeTimeFormat(locale,{numeric:'auto'});
 function ago(ts){const s=(ts*1000-Date.now())/1000;const u=[[60,'second'],[3600,'minute'],[86400,'hour'],[604800,'day'],[2629800,'week'],[31557600,'month'],[Infinity,'year']];
   let prev=1;for(const[lim,unit]of u){if(Math.abs(s)<lim)return rel.format(Math.round(s/prev),unit);prev=lim}}
 function toast(msg){const el=$('#toast');el.textContent=systemText(msg);el.classList.add('show');clearTimeout(el._h);el._h=setTimeout(()=>el.classList.remove('show'),2200)}
-async function loadMcpConnection(){try{const connection=await api('/api/mcp');$('#mcpUrl').value=location.origin+connection.path;$('#copyMcpUrl').disabled=false;$('#mcpConnectionStatus').textContent=t('HTTP connection for the selected project.')}catch{$('#mcpConnectionStatus').textContent=t('Connection unavailable. Check that the service is running.')}}
+async function loadMcpConnection(){try{const connection=await api('/api/mcp');$('#mcpUrl').value=location.origin+connection.path;$('#copyMcpUrl').disabled=false;$('#mcpConnectionStatus').textContent=t('One HTTP connection for all projects.')}catch{$('#mcpConnectionStatus').textContent=t('Connection unavailable. Check that the service is running.')}}
 $('#copyMcpUrl').onclick=async()=>{const input=$('#mcpUrl');try{await navigator.clipboard.writeText(input.value);toast(t('URL copied'))}catch{input.focus();input.select();toast(t('Select and copy the URL manually.'))}};
 const VPARAM=new URLSearchParams(location.search).get('v');
 async function api(path){if(VPARAM)path+=(path.includes('?')?'&':'?')+'v='+encodeURIComponent(VPARAM);

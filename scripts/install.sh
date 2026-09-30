@@ -20,7 +20,12 @@ while (($#)); do
         *) echo "Unknown argument: $1" >&2; exit 2 ;;
     esac
 done
-[[ -n "$vault" && -d "$vault" ]] || { echo 'Use --vault with an existing project folder.' >&2; exit 2; }
+if [[ -z "$vault" ]]; then
+    vault="${ATLASBRAIN_GLOBAL:-$HOME/AtlasBrain}"
+    if [[ -z "${ATLASBRAIN_GLOBAL:-}" && -d "$HOME/SegundoCerebro" ]]; then vault="$HOME/SegundoCerebro"; fi
+    mkdir -p "$vault"
+fi
+[[ -d "$vault" ]] || { echo 'Use --vault with an existing project folder.' >&2; exit 2; }
 if [[ "$platform" == macos ]]; then
     [[ $(uname -s) == Darwin ]] || { echo 'This installer requires macOS; Windows uses install.ps1.' >&2; exit 2; }
     if ! /usr/bin/git --version >/dev/null 2>&1; then

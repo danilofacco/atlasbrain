@@ -15,10 +15,7 @@ if ($UninstallStartup) {
     Write-Host 'Automatic startup removed. Project data and client settings are preserved.'
     return
 }
-if (-not $Vault) { throw 'Supply -Vault with an existing project folder.' }
 if ($Distribution -notmatch '^[A-Za-z0-9._-]+$') { throw 'Unsupported distribution name.' }
-$project = (Resolve-Path -LiteralPath $Vault).Path
-if (-not (Test-Path -LiteralPath $project -PathType Container)) { throw 'Vault must be a folder.' }
 if (-not (Get-Command wsl.exe -ErrorAction SilentlyContinue)) { throw 'Install WSL with wsl --install, restart Windows, then rerun this installer.' }
 $distributions = @(& wsl.exe --list --quiet) | ForEach-Object { ($_ -replace "`0", '').Trim() }
 if ($distributions -notcontains $Distribution) {
@@ -31,9 +28,16 @@ function Invoke-Linux([string[]]$Arguments) {
     return $output
 }
 # All user paths travel as arguments, never interpolated shell source.
-$linuxVault = (Invoke-Linux -Arguments @('wslpath', '-a', '-u', $project) | Select-Object -Last 1).Trim()
 $clientHome = (Invoke-Linux -Arguments @('wslpath', '-a', '-u', $env:USERPROFILE) | Select-Object -Last 1).Trim()
 $linuxHome = (Invoke-Linux -Arguments @('printenv', 'HOME') | Select-Object -Last 1).Trim()
+if ($Vault) {
+    $project = (Resolve-Path -LiteralPath $Vault).Path
+    if (-not (Test-Path -LiteralPath $project -PathType Container)) { throw 'Vault must be a folder.' }
+    $linuxVault = (Invoke-Linux -Arguments @('wslpath', '-a', '-u', $project) | Select-Object -Last 1).Trim()
+} else {
+    $linuxVault = "$linuxHome/AtlasBrain"
+    Invoke-Linux -Arguments @('mkdir', '-p', $linuxVault) | Out-Null
+}
 $linuxRoot = "$linuxHome/.local/share/atlasbrain/app"
 $python = "$linuxRoot/.venv/bin/python"
 Invoke-Linux -Arguments @('sh', '-c', 'command -v git >/dev/null && command -v curl >/dev/null || { sudo apt-get update && sudo apt-get install -y git curl ca-certificates; }') | Out-Host
@@ -80,4 +84,4 @@ $desktop = $shell.SpecialFolders.Item('Desktop')
 $shortcut = $shell.CreateShortcut((Join-Path $desktop 'AtlasBrain.url'))
 $shortcut.TargetPath = "http://127.0.0.1:$Port/?v=$([Uri]::EscapeDataString($linuxVault))"
 $shortcut.Save()
-Write-Host 'AtlasBrain shortcut created on your Desktop. The interface shows the project MCP URL under MCP HTTP.'
+Write-Host 'AtlasBrain shortcut created on your Desktop. The interface shows the global MCP URL under MCP HTTP.'

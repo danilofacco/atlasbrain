@@ -52,15 +52,16 @@ any proposed replacement. Public tool names and arguments are English; legacy Po
 remain callable for existing integrations but are not advertised. Note contents retain their language.
 """
 
-GLOBAL_ROUTING = """This is a global MCP endpoint and cannot know the folder open in the client.
-Always supply project_folder (the absolute folder where the user is working) to project tools.
-Use projects to discover registered paths if needed. Requests without a folder are rejected rather
-than routed to the wrong brain; isolated_files alone can aggregate all registered projects.
-The project field is a note label, not an index selector. Project-specific endpoints already bind
-one folder and do not require project_folder."""
+GLOBAL_ROUTING = """This is one global MCP endpoint for all projects.
+The server automatically selects the project when the client supplies one unambiguous local workspace root.
+Otherwise, automatically supply project_folder using the absolute working folder from your conversation context.
+Do not ask the user to configure a project URL. Never guess a folder from recent activity or the web interface.
+For multiple workspace roots, supply the exact project_folder relevant to this request.
+Use projects to discover registered folders when needed. Missing or ambiguous context is rejected.
+The project field is a note label, not an index selector."""
 
 
-def build_server(vault: Path, auto_index: bool = True, interval: int = 60) -> FastMCP:
+def build_server(vault: Path, auto_index: bool = True, interval: int = 60, *, global_endpoint: bool = False) -> FastMCP:
     """O servidor é só a casca: as ferramentas moram em tools.py e são chamadas pela versão ATUAL do
     módulo a cada chamada, então código novo no disco passa a valer sem reabrir a sessão (reload.py)."""
     log = current_module("indexer")._log
@@ -88,7 +89,7 @@ def build_server(vault: Path, auto_index: bool = True, interval: int = 60) -> Fa
             return {"erro": str(e)}
 
     ctx.reindex = reindex
-    routed = current_module("config").is_global(vault)
+    routed = global_endpoint or current_module("config").is_global(vault)
     mcp = FastMCP("AtlasBrain", instructions=(GLOBAL_ROUTING + "\n\n" + INSTRUCTIONS if routed else INSTRUCTIONS))
 
     if auto_index:
@@ -103,9 +104,11 @@ def build_server(vault: Path, auto_index: bool = True, interval: int = 60) -> Fa
     from .mcp_api import TOOLS, legacy_function
     annotations = {n: READ_TOOLS for n in f.READ_TOOLS} | {n: WRITE_TOOLS for n in f.WRITE_TOOLS}
     for name, a in annotations.items():
-        mcp.tool(annotations=a)(_tool_wrapper(name, legacy_function(f, name), ctx, routed=routed, english=True))
+        tool = _tool_wrapper(name, legacy_function(f, name), ctx, routed=routed, english=True)
+        mcp.tool(annotations=a)(_automatic_project(tool) if routed else tool)
         if TOOLS[name][0] != name:
-            mcp.tool(annotations=a)(_tool_wrapper(name, legacy_function(f, name), ctx, routed=routed))
+            tool = _tool_wrapper(name, legacy_function(f, name), ctx, routed=routed)
+            mcp.tool(annotations=a)(_automatic_project(tool, english=False) if routed else tool)
     if routed:
         def projects() -> str:
             """List registered project folders for the project_folder argument."""
@@ -148,6 +151,75 @@ def _registered_project(raw: str) -> tuple[Path | None, str | None]:
             return None, f"Nome de projeto ambíguo: {raw}. Informe a pasta absoluta."
     options = ', '.join(f"{b['nome']}: {b['path']}" for b in brains)
     return None, f"Projeto não registrado: {raw}. Execute atlasbrain setup --vault /pasta/do/projeto. Projetos disponíveis: {options or 'nenhum'}."
+
+
+def _workspace_path(uri: str) -> Path | None:
+    from urllib.parse import urlparse, unquote
+    import sys
+    parsed = urlparse(uri)
+    if parsed.scheme != 'file' or parsed.netloc not in ('', 'localhost'):
+        return None
+    raw = unquote(parsed.path)
+    # Windows clients reach the service inside WSL using Windows file URIs.
+    if sys.platform == 'linux' and len(raw) > 3 and raw[0] == '/' and raw[2] == ':':
+        raw = '/mnt/' + raw[1].lower() + raw[3:]
+    folder = Path(raw)
+    if not folder.is_absolute():
+        return None
+    folder = folder.resolve()
+    if current_module('config').invalid_folder_reason(folder):
+        return None
+    registered, error = _registered_project(str(folder))
+    # Respect a nested repository before falling back to an enclosing registered brain.
+    for parent in (folder, *folder.parents):
+        if (parent / '.git').exists() or (parent / '.atlasbrain').exists():
+            folder = parent
+            break
+    if not error and (folder == registered or folder in registered.parents):
+        return registered
+    if current_module('config').invalid_folder_reason(folder):
+        return None
+    return folder
+
+
+def _automatic_project(tool, *, english=True):
+    import asyncio
+    from functools import wraps
+    try:
+        from mcp.server.mcpserver import Context
+    except ImportError:
+        from mcp.server.fastmcp import Context
+    argument = 'project_folder' if english else 'pasta_projeto'
+    @wraps(tool)
+    async def invoke(**arguments):
+        context = arguments.pop('mcp_context', None)
+        if not arguments.get(argument) and context is not None:
+            try:
+                session = context.session
+                capabilities = getattr(session, 'client_capabilities', None) or getattr(getattr(session, '_client_params', None), 'capabilities', None)
+                if capabilities and getattr(capabilities, 'roots', None) is not None:
+                    roots = await asyncio.wait_for(session.list_roots(), timeout=3)
+                    folders = {_workspace_path(str(root.uri)) for root in roots.roots}
+                    folders.discard(None)
+                    # Invalid or additional roots must not silently select another project.
+                    if len(folders) == 1 and len(roots.roots) == 1:
+                        folder = folders.pop()
+                        current_module('config').data_dir(folder)
+                        arguments[argument] = str(folder)
+            except Exception:
+                pass  # Explicit conversation context remains available without roots support.
+        requested = arguments.get(argument)
+        if requested and Path(requested).expanduser().is_absolute():
+            folder = _workspace_path(Path(requested).expanduser().as_uri())
+            if folder is not None:
+                current_module('config').data_dir(folder)
+                arguments[argument] = str(folder)
+        return await asyncio.to_thread(tool, **arguments)
+    params = list(inspect.signature(tool).parameters.values())
+    params.append(inspect.Parameter('mcp_context', kind=inspect.Parameter.KEYWORD_ONLY, default=None, annotation=Context))
+    invoke.__signature__ = inspect.signature(tool).replace(parameters=params)
+    invoke.__annotations__ = dict(tool.__annotations__, mcp_context=Context)
+    return invoke
 
 
 def _tool_wrapper(name: str, original, ctx, *, routed: bool = False, english: bool = False):
@@ -208,7 +280,7 @@ def _tool_wrapper(name: str, original, ctx, *, routed: bool = False, english: bo
     invoke.__signature__ = sig.replace(parameters=params)
     invoke.__name__ = TOOLS[name][0] if english else name
     invoke.__doc__ = (TOOLS[name][1] if english else original.__doc__ or '') + (
-        ('\nOn the global endpoint, supply project_folder (absolute path or unique registered name).' if english else '\nNo endpoint global, informe `pasta_projeto` (caminho absoluto ou nome único registrado).')
+        ('\nProject is selected from client workspace roots when available; otherwise automatically supply project_folder from the working context.' if english else '\nNo endpoint global, informe `pasta_projeto` (caminho absoluto ou nome único registrado).')
         if routed else '')
     invoke.__annotations__ = {(PARAMETERS.get(k,k) if english else k): v for k, v in typing.get_type_hints(original).items() if k != "ctx"}
     if routed:

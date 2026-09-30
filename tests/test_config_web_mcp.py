@@ -275,4 +275,4 @@ def test_web_mcp_url_matches_selected_project(servidor):
     url, project = servidor
     status, connection = req(url + '/api/mcp')
     assert status == 200
-    assert connection == {'path': f'/projects/{project_id(project)}/mcp', 'project': str(project)}
+    assert connection == {'path': '/mcp', 'scope': 'global'}

@@ -4,7 +4,7 @@ For dependency installation and automatic startup after login, see the [automate
 
 ## Connect by HTTP URL
 
-Use the [automated installer](automatic-installation.md) with `--clients codex,claude-code,claude-desktop` (or `-Clients` on Windows). It installs the shared background service and prints a project URL such as `http://127.0.0.1:8765/projects/PROJECT_ID/mcp`. In your Desktop version's Connectors settings, add that URL, then verify a `find_files` call. The installer does not write a binary-launch entry for this mode.
+Use the [automated installer](automatic-installation.md) with `--clients codex,claude-code,claude-desktop` (or `-Clients` on Windows). It installs the shared background service and prints the global URL `http://127.0.0.1:8765/mcp`. In your Desktop version's Connectors settings, add that URL, then verify a `find_files` call. The installer does not write a binary-launch entry for this mode.
 
 Check where your connector makes requests: the [published custom connector documentation](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp) describes cloud-originating connections, which cannot reach your computer's localhost. Use the local connector route your Desktop installation supports; a background service alone does not make a local URL reachable from a cloud connector. AtlasBrain's installer verifies the local HTTP server, while Desktop connector support must be checked in the application.
 
@@ -28,7 +28,7 @@ For Desktop installations using command-based `claude_desktop_config.json`, use 
          "args": [
            "-y",
            "mcp-remote@0.14.3",
-           "http://127.0.0.1:8765/projects/PROJECT_ID/mcp",
+           "http://127.0.0.1:8765/mcp",
            "--transport",
            "http-only",
            "--allow-http",
@@ -43,6 +43,4 @@ For Desktop installations using command-based `claude_desktop_config.json`, use 
 
 3. Fully quit and reopen Claude Desktop. Check **Settings → Developer** or the chat's **+ → Connectors** menu for AtlasBrain. After a computer restart, run `uv run atlasbrain start --vault /absolute/path/to/my-project` if the service is not running.
 
-The Claude Desktop chat entry points to one specific project. Claude Code can instead use a local-scoped `atlasbrain` entry for each project, so it automatically selects the correct project while you work there.
-
-For one fixed project, the URL above needs no extra tool arguments. If you connect Claude Desktop to the global brain instead, AtlasBrain exposes `projects`; pass `pasta_projeto` with the project folder on each project tool call. AtlasBrain will ask for a folder when it is missing, avoiding results from the wrong project. `isolated_files` without a folder lists isolated files across registered projects.
+The connection is global. A single client workspace root identifies the project automatically when provided. Otherwise the assistant uses `project_folder` from its conversation context. Desktop chat without a workspace needs that context to be established in the conversation; the server cannot infer an editor's folder from a plain URL alone. Browser selection never overrides the project used by an MCP request.

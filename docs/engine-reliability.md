@@ -1,6 +1,6 @@
 # Engine reliability and evaluation
 
-These engine features use the shared local daemon and project-specific MCP endpoints.
+These engine features use the shared local daemon and global MCP endpoint with per-request project routing.
 
 ## Search evaluation
 

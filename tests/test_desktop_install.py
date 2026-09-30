@@ -38,10 +38,10 @@ def test_json_preserves_settings_and_other_servers(tmp_path):
 
 def test_project_configuration(tmp_path):
     url = install.configure_clients(tmp_path, ['codex', 'claude-code', 'antigravity', 'opencode'], 'atlasbrain', 9876)
-    assert url.endswith('/mcp') and ':9876/projects/' in url
-    assert json.loads((tmp_path / '.mcp.json').read_text())['mcpServers']['atlasbrain']['url'] == url
-    assert json.loads((tmp_path / 'opencode.json').read_text())['mcp']['atlasbrain']['type'] == 'remote'
-    assert json.loads((tmp_path / '.agents/mcp_config.json').read_text())['mcpServers']['atlasbrain']['serverUrl'] == url
+    assert url == 'http://127.0.0.1:9876/mcp'
+    assert json.loads((Path.home() / '.claude.json').read_text())['mcpServers']['atlasbrain']['url'] == url
+    assert json.loads((Path.home() / '.config/opencode/opencode.json').read_text())['mcp']['atlasbrain']['type'] == 'remote'
+    assert json.loads((Path.home() / '.gemini/config/mcp_config.json').read_text())['mcpServers']['atlasbrain']['serverUrl'] == url
 
 
 def test_launchagent_paths_and_no_editor_dependency(tmp_path, monkeypatch):
@@ -111,3 +111,17 @@ def test_desktop_shortcut_opens_selected_project(tmp_path, monkeypatch):
     url = plistlib.loads(path.read_bytes())['URL']
     assert urlparse(url).netloc == '127.0.0.1:9876'
     assert parse_qs(urlparse(url).query) == {'v': [str(vault)]}
+
+
+def test_global_configuration_removes_only_legacy_project_entries(tmp_path):
+    vault = tmp_path / 'project'
+    vault.mkdir()
+    (vault / '.mcp.json').write_text('{"mcpServers":{"atlasbrain":{"type":"http","url":"http://old/projects/id/mcp"},"other":{"command":"keep"}}}')
+    (vault / '.codex').mkdir()
+    (vault / '.codex/config.toml').write_text('[mcp_servers.atlasbrain]\nurl="http://old/projects/id/mcp"\n[mcp_servers.other]\ncommand="keep"\n')
+    home = tmp_path / 'client-home'
+    url = install.configure_clients(vault, ['codex', 'claude-code'], 'atlasbrain', 9876, client_home=home)
+    assert url.endswith(':9876/mcp')
+    assert json.loads((vault / '.mcp.json').read_text())['mcpServers'] == {'other': {'command': 'keep'}}
+    assert tomllib.loads((vault / '.codex/config.toml').read_text())['mcp_servers'] == {'other': {'command': 'keep'}}
+    assert json.loads((home / '.claude.json').read_text())['mcpServers']['atlasbrain']['url'] == url

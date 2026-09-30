@@ -3,6 +3,7 @@ import json
 import socket
 import subprocess
 import sys
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from urllib.request import urlopen
 
@@ -10,7 +11,7 @@ from atlasbrain import config, indexer, service
 
 
 def test_configs(project):
-    url = f'/projects/{service.project_id(project)}/mcp'
+    url = '/mcp'
     assert json.loads(service.client_config(project, 'antigravity'))['mcpServers']['atlasbrain']['serverUrl'].endswith(url)
     assert json.loads(service.client_config(project, 'claude'))['mcpServers']['atlasbrain']['type'] == 'http'
     import tomllib
@@ -49,7 +50,7 @@ def test_shared_daemon_and_http_sessions(project, tmp_path, monkeypatch):
             from mcp import ClientSession
             from mcp.client.streamable_http import streamable_http_client
             async def client(vault):
-                url = json.loads(service.client_config(vault, 'claude', port))['mcpServers']['atlasbrain']['url']
+                url = f'http://127.0.0.1:{port}/projects/{service.project_id(vault)}/mcp'
                 async with streamable_http_client(url) as transport:
                     async with ClientSession(transport[0], transport[1]) as session:
                         await session.initialize()
@@ -137,3 +138,66 @@ def test_global_mcp_requires_project_folder_and_routes_to_it(tmp_path, monkeypat
         asyncio.run(run())
     finally:
         service.stop()
+
+
+def test_global_endpoint_auto_routes_each_client_workspace(tmp_path, monkeypatch):
+    monkeypatch.setenv('ATLASBRAIN_SERVICE_DIR', str(tmp_path / 'service'))
+    monkeypatch.setenv('ATLASBRAIN_NO_EMBED', '1')
+    monkeypatch.setattr(config, 'REGISTRY', tmp_path / 'home/.config/atlasbrain/projects.json')
+    first, second = tmp_path / 'first', tmp_path / 'second'
+    first.mkdir()
+    second.mkdir()
+    with socket.socket() as sock:
+        sock.bind(('127.0.0.1', 0))
+        port = sock.getsockname()[1]
+    try:
+        service.start(first, port, False)
+        async def run():
+            from mcp import ClientSession
+            from mcp.types import ListRootsResult, Root
+            from mcp.client.streamable_http import streamable_http_client
+            async def client(folder, title):
+                async def roots(context):
+                    return ListRootsResult(roots=[Root(uri=folder.as_uri(), name=folder.name)])
+                async with streamable_http_client(f'http://127.0.0.1:{port}/mcp') as streams:
+                    async with ClientSession(streams[0], streams[1], list_roots_callback=roots) as session:
+                        await session.initialize()
+                        tools = {t.name: t for t in (await session.list_tools()).tools}
+                        assert 'mcp_context' not in tools['create_note'].input_schema['properties']
+                        result = await session.call_tool('create_note', {'title': title, 'content': 'Written from the client workspace.'})
+                        assert not result.is_error
+                        assert (folder / '.atlasbrain/Inbox' / (title + '.md')).exists(), result
+                        # roots/list is consulted again on every call, so a changed workspace is respected.
+                        moved = second if folder == first else first
+                        folder = moved
+                        result = await session.call_tool('create_note', {'title': title + ' moved', 'content': 'Changed workspace.'})
+                        assert (moved / '.atlasbrain/Inbox' / (title + ' moved.md')).exists(), result
+            await asyncio.gather(client(first, 'First sentinel'), client(second, 'Second sentinel'))
+            async def ambiguous(context):
+                return ListRootsResult(roots=[Root(uri=first.as_uri()), Root(uri=second.as_uri())])
+            async with streamable_http_client(f'http://127.0.0.1:{port}/mcp') as streams:
+                async with ClientSession(streams[0], streams[1], list_roots_callback=ambiguous) as session:
+                    await session.initialize()
+                    result = await session.call_tool('create_note', {'title': 'Must not guess', 'content': 'Ambiguous workspace.'})
+                    assert 'Supply `project_folder`' in result.content[0].text
+                    assert not (first / '.atlasbrain/Inbox/Must not guess.md').exists()
+                    assert not (second / '.atlasbrain/Inbox/Must not guess.md').exists()
+        asyncio.run(run())
+        assert not (first / '.atlasbrain/Inbox/Second sentinel.md').exists()
+        assert not (second / '.atlasbrain/Inbox/First sentinel.md').exists()
+    finally:
+        service.stop()
+
+
+def test_workspace_uri_respects_nested_repositories_and_rejects_remote(tmp_path):
+    from atlasbrain.mcp_server import _workspace_path
+    parent = tmp_path / 'outer'
+    parent.mkdir()
+    config.data_dir(parent)
+    nested = parent / 'inner'
+    nested.mkdir()
+    (nested / '.git').mkdir()
+    assert _workspace_path(nested.as_uri()) == nested.resolve()
+    assert _workspace_path('file://remote-server/project') is None
+    assert _workspace_path('https://example.com/project') is None
+    assert _workspace_path(Path.home().as_uri()) is None

@@ -53,32 +53,36 @@ def codex_config(path, name, url):
                 removing = False
         if not removing:
             kept.append(line)
-    content = ''.join(kept).rstrip() + f'\n\n[mcp_servers.{json.dumps(name)}]\nurl = {json.dumps(url)}\n'
+    content = ''.join(kept).rstrip() + ('\n\n' + f'[mcp_servers.{json.dumps(name)}]\nurl = {json.dumps(url)}\n' if url else '\n')
     result = tomllib.loads(content)
     expected = dict(parsed.get('mcp_servers', {}))
-    expected[name] = {'url': url}
+    if url:
+        expected[name] = {'url': url}
+    else:
+        expected.pop(name, None)
     if result.get('mcp_servers') != expected:
         raise ValueError(f'Unsupported inline MCP configuration in {path}; migrate it to tables first.')
     save(path, content.lstrip('\n'))
 
 
 def configure_clients(vault, clients, name, port, desktop_config=None, bridge_command=None, client_home=None):
-    url = f'http://127.0.0.1:{port}/projects/{service.project_id(vault)}/mcp'
+    url = f'http://127.0.0.1:{port}/mcp'
     client_home = client_home or Path.home()
     for client in clients:
         if client == 'codex':
             global_config = client_home / '.codex/config.toml'
-            if global_config.exists() and name in tomllib.loads(global_config.read_text()).get('mcp_servers', {}):
-                codex_config(global_config, name, url)
-            codex_config(vault / '.codex/config.toml', name, url)
+            codex_config(global_config, name, url)
+            scoped = vault / '.codex/config.toml'
+            if scoped.exists() and name in tomllib.loads(scoped.read_text()).get('mcp_servers', {}):
+                codex_config(scoped, name, None)
         elif client == 'claude-code':
-            merge_json(vault / '.mcp.json', 'mcpServers', name, {'type': 'http', 'url': url})
+            merge_json(client_home / '.claude.json', 'mcpServers', name, {'type': 'http', 'url': url})
         elif client == 'antigravity':
-            merge_json(vault / '.agents/mcp_config.json', 'mcpServers', name, {'serverUrl': url})
+            merge_json(client_home / '.gemini/config/mcp_config.json', 'mcpServers', name, {'serverUrl': url})
         elif client == 'opencode':
             if (vault / 'opencode.jsonc').exists():
                 raise ValueError('Existing opencode.jsonc: merge the HTTP entry manually to avoid shadowing it.')
-            merge_json(vault / 'opencode.json', 'mcp', name, {'type': 'remote', 'url': url, 'enabled': True})
+            merge_json(client_home / '.config/opencode/opencode.json', 'mcp', name, {'type': 'remote', 'url': url, 'enabled': True})
         elif client == 'claude-desktop':
             # Connectors are registered in the application's account settings.
             # Emit the URL; do not write a stdio entry for a connector.
@@ -90,6 +94,28 @@ def configure_clients(vault, clients, name, port, desktop_config=None, bridge_co
                 desktop_config = Path.home() / 'Library/Application Support/Claude/claude_desktop_config.json'
             command = bridge_command or [sys.executable, '-m', 'atlasbrain.http_bridge']
             merge_json(desktop_config, 'mcpServers', name, {'command': command[0], 'args': command[1:] + [url]})
+    # Remove only this server from old project scopes for the clients being configured.
+    folders = {vault} | {Path(brain['path']) for brain in config.registered()}
+    for folder in folders:
+        scoped_codex = folder / '.codex/config.toml'
+        if 'codex' in clients and scoped_codex.exists() and name in tomllib.loads(scoped_codex.read_text()).get('mcp_servers', {}):
+            codex_config(scoped_codex, name, None)
+        for client, scoped, section in (('claude-code', folder / '.mcp.json', 'mcpServers'), ('antigravity', folder / '.agents/mcp_config.json', 'mcpServers'), ('opencode', folder / 'opencode.json', 'mcp')):
+            if client in clients and scoped.exists():
+                data = json.loads(scoped.read_text())
+                if name in data.get(section, {}):
+                    del data[section][name]
+                    save(scoped, json.dumps(data, ensure_ascii=False, indent=2) + '\n')
+    if 'claude-code' in clients:
+        path = client_home / '.claude.json'
+        data = json.loads(path.read_text())
+        changed = False
+        for project in data.get('projects', {}).values():
+            if isinstance(project, dict) and name in project.get('mcpServers', {}):
+                del project['mcpServers'][name]
+                changed = True
+        if changed:
+            save(path, json.dumps(data, ensure_ascii=False, indent=2) + '\n')
     return url
 
 
@@ -134,7 +160,7 @@ def activate_macos(path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--vault', required=True, type=Path)
+    parser.add_argument('--vault', type=Path, default=config.GLOBAL_BRAIN)
     parser.add_argument('--port', type=int, default=8765)
     parser.add_argument('--name', default='atlasbrain')
     parser.add_argument('--clients', default='codex,claude-code')
@@ -145,6 +171,8 @@ def main():
     parser.add_argument('--prepare-only', action='store_true', help='write startup files without activating them')
     args = parser.parse_args()
     vault = args.vault.expanduser().resolve()
+    if vault == config.GLOBAL_BRAIN.resolve():
+        vault.mkdir(parents=True, exist_ok=True)
     if not vault.is_dir() or config.invalid_folder_reason(vault):
         parser.error('Choose an existing project or notes folder, not a system/home folder.')
     if not 1 <= args.port <= 65535:

@@ -129,19 +129,19 @@ The first index downloads the local embedding model and can take longer. The ser
 
 | Client | Configuration location | Generated format |
 | --- | --- | --- |
-| Claude Code | `.mcp.json` in your target project | `mcpServers` with `type: "http"` and `url` |
+| Claude Code | `~/.claude.json` at user scope | `mcpServers` with `type: "http"` and `url` |
 | Antigravity | **MCP Servers → Manage MCP Servers → View raw config**, or `~/.gemini/config/mcp_config.json` | `mcpServers` with `serverUrl` |
-| Codex app / CLI / IDE | `~/.codex/config.toml`, or `.codex/config.toml` in a trusted project | `[mcp_servers."atlasbrain"]` with `url` |
+| Codex app / CLI / IDE | `~/.codex/config.toml` | `[mcp_servers."atlasbrain"]` with `url` |
 
-Merge the generated entry into an existing configuration rather than replacing other servers. Reconnect/reload the MCP client after changing its configuration. These Claude instructions are for **Claude Code**. For Claude Desktop chat, follow the [local bridge instructions](docs/claude-desktop.md) to reach the same service.
+Merge the generated entry into an existing configuration rather than replacing other servers. Reconnect/reload the MCP client after changing its configuration. These Claude instructions are for **Claude Code**. For Claude Desktop chat, follow the [Desktop connection instructions](docs/claude-desktop.md) to reach the same service.
 
 Step-by-step AtlasBrain guides: [Claude Code CLI](docs/claude-code.md), [Codex Desktop](docs/codex-desktop.md), [Codex CLI](docs/codex-cli.md), [Antigravity](docs/antigravity.md), and [OpenCode](docs/opencode.md).
 
 Official instructions: [Claude Code](https://code.claude.com/docs/en/mcp), [Antigravity](https://antigravity.google/docs/mcp), [Codex](https://developers.openai.com/codex/mcp/).
 
-To connect another client to the same project, run `setup` again with its client name: it reuses the same PID and port. To connect another project, change `--vault`. For multiple project entries in one client, also use `--name my-project` to give each entry a distinct name.
+Use one global URL for every client and project: `http://127.0.0.1:8765/mcp`. Setup registers an initial folder but does not bind the MCP configuration to it. No per-project MCP entry is required.
 
-A project-specific MCP URL already fixes the project folder. On a global AtlasBrain connection, use `projects` to list registered folders and pass the absolute folder as `project_folder` on each project tool call. Without it, project tools ask for a folder instead of returning data from the global brain by mistake; `isolated_files` alone can list isolated files across all registered projects.
+When the client supplies one local workspace root, AtlasBrain identifies and registers that project automatically. Otherwise the assistant supplies `project_folder` from the working folder in its conversation context. Multiple roots require the assistant to choose the relevant folder. Missing context is rejected to avoid mixing projects; the selected browser folder and daemon working directory are never used to guess the client project. The optional project argument is a folder selector, not the note's `project` label.
 
 ### Open the visual interface
 
@@ -166,8 +166,8 @@ uv run atlasbrain start --vault /absolute/path/to/my-project
 
 Use `uv run atlasbrain status` to check it. The [operation guide](docs/features-and-operation.md)
 explains service controls, automatic updates, optional hooks, and language coverage.
-Claude Desktop uses a small client-side bridge; AtlasBrain itself remains one
-shared service.
+Claude Desktop can use its HTTP connector route; the optional command-based
+compatibility bridge also reaches the same shared service.
 
 ## Try it with your assistant
 
@@ -198,7 +198,7 @@ For example, `authentication folder:src type:code` searches code inside `src`;
 Legacy Portuguese tool names remain callable for existing clients, but only the
 English names are advertised. Reconnect the MCP client to refresh its tool list.
 On the global MCP endpoint, pass `project_folder` with the absolute project folder;
-project-specific endpoints already bind that folder.
+one client workspace root selects that folder automatically when available.
 
 Queries containing only filters, such as `type:decision`, can also list matches.
 
