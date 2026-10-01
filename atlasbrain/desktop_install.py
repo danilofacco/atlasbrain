@@ -61,7 +61,7 @@ def codex_config(path, name, url):
         expected[name] = {'url': url}
     else:
         expected.pop(name, None)
-    if result.get('mcp_servers') != expected:
+    if result.get('mcp_servers', {}) != expected:
         raise ValueError(f'Unsupported inline MCP configuration in {path}; migrate it to tables first.')
     save(path, content.lstrip('\n'))
 

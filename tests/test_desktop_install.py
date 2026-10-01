@@ -175,3 +175,10 @@ def test_opencode_global_jsonc_is_not_shadowed(tmp_path):
     with pytest.raises(ValueError, match='opencode.jsonc'):
         install.configure_clients(tmp_path, ['opencode'], 'atlasbrain', 8765, client_home=home)
     assert not config.with_suffix('.json').exists()
+
+
+def test_removing_the_only_codex_server_leaves_a_valid_file(tmp_path):
+    path = tmp_path / 'config.toml'
+    path.write_text('[mcp_servers.atlasbrain]\nurl = "http://old/projects/id/mcp"\n')
+    install.codex_config(path, 'atlasbrain', None)
+    assert 'atlasbrain' not in tomllib.loads(path.read_text()).get('mcp_servers', {})
