@@ -13,7 +13,7 @@ from . import editor
 import json
 import os
 import subprocess
-from .processes import background_options
+from .processes import background_options, hidden_options
 import sys
 import time
 from pathlib import Path
@@ -117,7 +117,7 @@ def _extract(prompt: str) -> dict:
         try:
             r = subprocess.run(["claude", "-p", "--model", os.environ.get("ATLASBRAIN_CAPTURA_MODELO_CLAUDE", "haiku"),
                                 "--strict-mcp-config", "--output-format", "text"],
-                               input=prompt, capture_output=True, text=True, timeout=90, env=env)
+                               input=prompt, capture_output=True, text=True, timeout=90, env=env, **hidden_options())
             return _json_from_text(r.stdout)
         except Exception as e:
             errors.append(f"claude: {e}")
@@ -127,7 +127,7 @@ def _extract(prompt: str) -> dict:
                                 "-m", os.environ.get("ATLASBRAIN_CAPTURA_MODELO_CODEX", "gpt-5.6-luna"),
                                 "-c", "model_reasoning_effort=low", "-"],
                                input=prompt, capture_output=True, text=True, timeout=240, env=env,
-                               cwd=str(Path.home()))
+                               cwd=str(Path.home()), **hidden_options())
             return _json_from_text(r.stdout)
         except Exception as e:
             errors.append(f"codex: {e}")

@@ -45,3 +45,7 @@ jobs:
             & ./scripts/install.ps1 -UninstallStartup
           }
       - run: uv run pytest -q
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/viewer.test.cjs

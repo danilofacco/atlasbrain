@@ -271,3 +271,23 @@ test('idle 3D rotates by elapsed time and pauses for interaction, panels, hidden
  s.document.querySelector=()=>({});assert.equal(s.rotateIdle3d(50020),false);s.document.querySelector=()=>null;
  vm.runInContext('lastGraphInteraction=50030',s);assert.equal(s.rotateIdle3d(51000),false);assert(s.rotateIdle3d(51700));assert(s.orbit.yaw<.02,'resuming never jumps after a long pause');
 });
+
+test('folder picker opens the chosen native path and restores the button after cancel or error',async()=>{
+  const code=source.slice(source.indexOf("$('#escolher').onclick=async()=>"),source.indexOf('async function confirmar('));
+  for(const outcome of [{path:'C:\\Projects\\Pasta é'},{cancelado:true},new Error('Unavailable')]){
+    const button={disabled:false},input={value:''},messages=[],opened=[];
+    const sandbox={
+      $:selector=>selector==='#escolher'?button:input,
+      t:value=>value,
+      msg:(...args)=>messages.push(args),
+      post:async route=>{assert.equal(route,'/api/escolher');if(outcome instanceof Error)throw outcome;return outcome},
+      confirmar:path=>opened.push(path),
+    };
+    vm.createContext(sandbox);vm.runInContext(code,sandbox);
+    await button.onclick();
+    assert.equal(button.disabled,false);
+    assert.equal(messages[0][0],'Opening the folder picker…');
+    if(outcome.path){assert.deepEqual(opened,[outcome.path]);assert.equal(input.value,outcome.path)}
+    else{assert.deepEqual(opened,[]);assert.equal(messages.at(-1)[0],outcome instanceof Error?'Could not open the folder picker: Unavailable':'')}
+  }
+});

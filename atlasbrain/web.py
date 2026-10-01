@@ -178,13 +178,13 @@ def create_server(vault: Path, port: int = 8765, auto_index: bool = True, *, han
                     return self._json(result)
                 except (ValueError, OSError) as e:
                     return self._json({'erro':str(e)},400)
-            if u.path == "/api/escolher":  # seletor de pastas nativo do macOS
-                r = subprocess.run(["osascript", "-e",
-                                    'POSIX path of (choose folder with prompt "Escolha a pasta que vai virar um cérebro atlasbrain")'],
-                                   capture_output=True, text=True)
-                if r.returncode != 0:
-                    return self._json({"cancelado": True})
-                return self._json({"path": r.stdout.strip().rstrip("/") or "/"})
+            if u.path == "/api/escolher":
+                from .folder_picker import choose_folder
+                try:
+                    folder = choose_folder()
+                except RuntimeError as exc:
+                    return self._json({"erro": str(exc)}, 503)
+                return self._json({"path": folder} if folder else {"cancelado": True})
             if u.path == "/api/cerebros":
                 path = Path(str(body.get("path", "")).strip()).expanduser()
                 try:

@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 
 from .code import LANGS
+from .processes import hidden_options
 
 BRAIN = ".atlasbrain"  # pasta do cérebro dentro de cada projeto (como .git ou .claude)
 # Reuse existing global memory without moving user documents or breaking links.
@@ -57,7 +58,7 @@ def kind_of(path: Path) -> str | None:
 def git_root(start: Path) -> Path | None:
     try:
         out = subprocess.run(["git", "-C", str(start), "rev-parse", "--show-toplevel"],
-                             capture_output=True, text=True, timeout=5)
+                             capture_output=True, text=True, timeout=5, **hidden_options())
         return Path(out.stdout.strip()).resolve() if out.returncode == 0 and out.stdout.strip() else None
     except (OSError, subprocess.SubprocessError):
         return None

@@ -5,7 +5,7 @@ import json
 import os
 import re
 import subprocess
-from .processes import background_options
+from .processes import background_options, hidden_options
 import sys
 import time
 import tomllib
@@ -70,7 +70,7 @@ def _run(args: list[str], directory: Path, timeout: int = 60) -> str:
            'PYTHONUTF8': '1'}
     try:
         result = subprocess.run(args, cwd=directory, env=env, capture_output=True, text=True,
-                                timeout=timeout, check=False)
+                                timeout=timeout, check=False, **hidden_options())
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise UpdateError(f'Não foi possível executar {Path(args[0]).name}: {type(exc).__name__}') from exc
     if result.returncode:
@@ -129,7 +129,7 @@ def check(directory: Path | None = None) -> dict:
         if remote_version <= local:
             return _record({'state': 'up_to_date', 'version': local_text, 'remote_version': remote_text})
         ancestor = subprocess.run(['git', 'merge-base', '--is-ancestor', current, target],
-                                  cwd=directory, capture_output=True, timeout=15)
+                                  cwd=directory, capture_output=True, timeout=15, **hidden_options())
         if ancestor.returncode:
             return _record({'state': 'blocked', 'version': local_text, 'remote_version': remote_text,
                             'reason': 'Histórico local e remoto divergiram; exige revisão manual.'})

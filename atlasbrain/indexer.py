@@ -23,6 +23,7 @@ from .db import connect, from_blob, get_meta, set_meta, to_blob
 from . import code
 from .extract import extract_text
 from .parse import parse
+from .processes import hidden_options
 
 
 SCHEMA_VERSION = "5"
@@ -51,7 +52,7 @@ def _git_files(vault: Path) -> list[str] | None:
         return None
     try:
         r = subprocess.run(["git", "-C", str(vault), "ls-files", "-co", "--exclude-standard", "-z"],
-                           capture_output=True, timeout=60)
+                           capture_output=True, timeout=60, **hidden_options())
     except (OSError, subprocess.SubprocessError):
         return None
     if r.returncode != 0:

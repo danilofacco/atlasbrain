@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from .config import resolve_vault
+from .processes import hidden_options
 
 
 def _vault_arg(p):
@@ -158,7 +159,7 @@ def cmd_connect(a):
         if not shutil.which(tool):
             print(f'{tool}: command not found; use setup to generate configuration.')
             continue
-        result = subprocess.run([tool, *args], capture_output=True, text=True)
+        result = subprocess.run([tool, *args], capture_output=True, text=True, **hidden_options())
         print((result.stdout + result.stderr).strip())
         if result.returncode:
             raise SystemExit(result.returncode)

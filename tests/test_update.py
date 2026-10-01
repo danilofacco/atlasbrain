@@ -138,3 +138,23 @@ def test_auto_loop_launches_one_temporary_helper_for_available_version(tmp_path,
     assert commands[0][0][1:5] == ['-m', 'atlasbrain.cli', 'update', 'apply']
     from atlasbrain.processes import background_options
     assert all(commands[0][1][key] == value for key, value in background_options().items())
+
+
+def test_update_check_hides_console_for_every_git_command(tmp_path, monkeypatch):
+    from atlasbrain import processes
+    publisher, installed = repositories(tmp_path)
+    publish(publisher, '0.1.1')
+    monkeypatch.setenv('ATLASBRAIN_SERVICE_DIR', str(tmp_path / 'service'))
+    # A sentinel exercises every caller on Unix too, without passing Windows
+    # creation flags to its actual subprocess implementation.
+    monkeypatch.setattr(processes, 'hidden_options', lambda: {'creationflags': 0x08000000})
+    monkeypatch.setattr(update, 'hidden_options', processes.hidden_options)
+    original_run = subprocess.run
+    commands = []
+    def run(command, **options):
+        assert options.pop('creationflags') == 0x08000000
+        commands.append(command)
+        return original_run(command, **options)
+    monkeypatch.setattr(subprocess, 'run', run)
+    assert update.check(installed)['state'] == 'available'
+    assert any('merge-base' in command for command in commands)

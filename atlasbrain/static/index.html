@@ -418,7 +418,7 @@ kbd{font:11px var(--mono);padding:2px 6px;border-radius:5px;border:1px solid var
     <div class="dhead"><h2 id="abrirT">Open a folder as a brain</h2>
       <p>The folder gets an <code>.atlasbrain/</code> and is indexed on your computer. In a Git repository, only files visible to Git are included.</p></div>
     <div class="dbody">
-      <button class="btn" id="escolher"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Choose in Finder…</button>
+      <button class="btn" id="escolher"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Choose folder…</button>
       <div class="ou"><span>or enter a path</span></div>
       <div class="pin"><input id="caminho" placeholder="~/Documents/GitHub/my-project" autocomplete="off" spellcheck="false" aria-label="Folder path" aria-describedby="abrirMsg" aria-controls="sugs"></div>
       <div class="sugs" id="sugs" role="listbox"></div>
@@ -578,7 +578,7 @@ const PT_BR={
   "Open a folder as a brain": "Abrir uma pasta como cérebro",
   "The folder gets an ": "A pasta ganha um ",
   " and is indexed on your computer. In a Git repository, only files visible to Git are included.": " e é indexada no seu computador. Num repositório git, só entra o que o git vê.",
-  "Choose in Finder…": "Escolher no Finder…",
+  "Choose folder…": "Escolher pasta…",
   "or enter a path": "ou digite o caminho",
   "~/Documents/GitHub/my-project": "~/Documents/GitHub/meu-projeto",
   "Folder path": "Caminho da pasta",
@@ -726,8 +726,8 @@ const PT_BR={
   "<option disabled>──────────</option><option value=\"__abrir__\">＋ Open another folder…</option>": "<option disabled>──────────</option><option value=\"__abrir__\">＋ Abrir outra pasta…</option>",
   "#open": "#abrir",
   "<b>project</b>": "<b>projeto</b>",
-  "Opening the macOS folder picker…": "Abrindo o seletor de pastas do macOS…",
-  "Could not open Finder: ": "Não consegui abrir o Finder: ",
+  "Opening the folder picker…": "Abrindo o seletor de pastas…",
+  "Could not open the folder picker: ": "Não consegui abrir o seletor de pastas: ",
   "Choose or enter a folder.": "Escolha ou digite uma pasta.",
   "Checking the folder…": "Verificando a pasta…",
   "\"/></svg><h2>Could not open ": "\"/></svg><h2>Não deu para abrir ",
@@ -2054,9 +2054,9 @@ $('#caminho').addEventListener('keydown',e=>{
 $('#sugs').addEventListener('click',e=>{const d=e.target.closest('.sug');if(!d)return;const x=sugs[+d.dataset.i];$('#caminho').value=x.path.replace(/^\/Users\/[^/]+/,'~');$('#caminho').focus()});
 $('#abrir').addEventListener('click',e=>{if(e.target.id==='abrir')fecharDialogo()});
 $('#abrirOk').onclick=()=>confirmar($('#caminho').value.trim());
-$('#escolher').onclick=async()=>{const b=$('#escolher');b.disabled=true;msg(t("Opening the macOS folder picker…"));
+$('#escolher').onclick=async()=>{const b=$('#escolher');b.disabled=true;msg(t("Opening the folder picker…"));
   try{const r=await post('/api/escolher');if(r.cancelado){msg('')}else{$('#caminho').value=r.path.replace(/^\/Users\/[^/]+/,'~');confirmar(r.path)}}
-  catch(err){msg(t("Could not open Finder: ")+err.message,true)}finally{b.disabled=false}};
+  catch(err){msg(t("Could not open the folder picker: ")+err.message,true)}finally{b.disabled=false}};
 async function confirmar(p){if(!p){msg(t("Choose or enter a folder."),true);return}
   $('#abrirOk').disabled=true;msg(t("Checking the folder…"));
   try{const r=await post('/api/cerebros',{path:p});location.href='/?v='+encodeURIComponent(r.path)+'#grafo'}

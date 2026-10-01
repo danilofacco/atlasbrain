@@ -277,3 +277,27 @@ def test_web_mcp_url_matches_selected_project(servidor):
     status, connection = req(url + '/api/mcp')
     assert status == 200
     assert connection == {'path': '/mcp', 'scope': 'global'}
+
+
+def test_folder_picker_requires_local_origin_and_returns_selection(servidor, monkeypatch):
+    url, _ = servidor
+    from atlasbrain import folder_picker
+    selected = 'C:\\Projects\\Pasta com acentuação é'
+    calls = []
+    monkeypatch.setattr(folder_picker, 'choose_folder', lambda: calls.append(True) or selected)
+    assert req(url + '/api/escolher', 'POST', {})[0] == 403
+    assert not calls
+    status, data = req(url + '/api/escolher', 'POST', {}, {'X-atlasbrain': '1'})
+    assert status == 200 and data == {'path': selected}
+    assert calls == [True]
+
+
+def test_folder_picker_cancel_and_failure(servidor, monkeypatch):
+    url, _ = servidor
+    from atlasbrain import folder_picker
+    monkeypatch.setattr(folder_picker, 'choose_folder', lambda: None)
+    assert req(url + '/api/escolher', 'POST', {}, {'X-atlasbrain': '1'}) == (200, {'cancelado': True})
+    def unavailable():
+        raise RuntimeError('Digite o caminho da pasta.')
+    monkeypatch.setattr(folder_picker, 'choose_folder', unavailable)
+    assert req(url + '/api/escolher', 'POST', {}, {'X-atlasbrain': '1'}) == (503, {'erro': 'Digite o caminho da pasta.'})
