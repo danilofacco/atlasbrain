@@ -3,7 +3,8 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const path=require('node:path');
-const source=fs.readFileSync(path.join(__dirname,'../atlasbrain/static/index.html'),'utf8');
+// Git may check out HTML with CRLF on Windows; snippet boundaries use LF.
+const source=fs.readFileSync(path.join(__dirname,'../atlasbrain/static/index.html'),'utf8').replace(/\r\n/g,'\n');
 const labelCode=source.slice(source.indexOf('function drawNearbyLabels('),source.indexOf('function draw3d('));
 function labels(nodes,options={}){
   const drawn=[];
