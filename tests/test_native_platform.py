@@ -116,7 +116,7 @@ def test_windows_manifest_runner_mcp_and_authenticated_shutdown(tmp_path, monkey
         with pytest.raises(HTTPError) as error:
             urlopen(request, timeout=5)
         assert error.value.code == 403
-        assert service.owned_health()['pid'] == child.pid
+        assert service.owned_health()['instance'] == live['instance']
         # No process signal is required on either operating system.
         monkeypatch.setattr(service.os, 'kill', lambda *args: pytest.fail('unexpected OS signal'))
         assert service.stop()
@@ -125,8 +125,12 @@ def test_windows_manifest_runner_mcp_and_authenticated_shutdown(tmp_path, monkey
         assert not (directory / 'server.json').exists()
     finally:
         if child.poll() is None:
-            child.terminate()
-            child.wait(timeout=10)
+            try:
+                service.stop()
+            finally:
+                if child.poll() is None:
+                    child.terminate()
+                child.wait(timeout=10)
 
 
 @pytest.mark.skipif(sys.platform != 'win32', reason='native Windows drive URI')
