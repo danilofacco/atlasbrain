@@ -201,7 +201,8 @@ def create_app(vault, identity, auto_index=True, *, shutdown=None, shutdown_toke
     def index_loop():
         from .indexer import index_vault, scan, _log
         from .watch import IndexQueue
-        queue = IndexQueue(scan, index_vault)
+        # Minute polling already groups edits; process changes in the same pass.
+        queue = IndexQueue(scan, index_vault, settle=0)
         while not done.is_set():
             brains = config.registered()
             queue.retain(b['path'] for b in brains)
@@ -215,7 +216,7 @@ def create_app(vault, identity, auto_index=True, *, shutdown=None, shutdown_toke
                         refresh_queue(Path(brain['path']),execute=True)
                 except Exception as e:
                     _log(f'[atlasbrain] indexing failed: {e}')
-            done.wait(3)
+            done.wait(60)
 
     @asynccontextmanager
     async def lifespan(app):

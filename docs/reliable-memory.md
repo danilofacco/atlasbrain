@@ -23,7 +23,7 @@ File deletion is permanent after confirmation: it unlinks the file and deletes i
 
 ## Incremental indexing
 
-The shared HTTP daemon uses one existing background thread for all registered projects. A polling queue checks metadata every 3 seconds, groups bursts until the files settle (at least 2 seconds), and allows processing after 10 seconds of continuing changes. Only files whose metadata/content changed are reprocessed by the existing indexer. A reconciliation runs at least every 5 minutes while the worker is available. Skipped/failed index calls remain pending. There is no additional listening port or persistent process. Large projects can make a polling pass take longer than its nominal interval.
+The shared HTTP daemon uses one existing background thread for all registered projects. A polling queue checks metadata once per minute and processes detected changes in that same pass, grouping external edits made between checks. Only files whose metadata/content changed are reprocessed by the existing indexer. A reconciliation runs at least every 5 minutes while the worker is available. Skipped/failed index calls remain pending for the next pass. There is no additional listening port or persistent process. Large projects can make a polling pass take longer than its nominal interval.
 
 Explicit writes still request an immediate index update; the queue covers external edits, creates, renames and deletes. Global graph relationships may still need rebuilding when documents change. Metadata polling is not an OS filesystem watcher and cannot detect an external edit that preserves both timestamp and size until a forced reindex.
 
