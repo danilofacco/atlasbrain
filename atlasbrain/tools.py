@@ -327,7 +327,7 @@ def _create_note(ctx, title: str, content: str, folder: str = "Inbox", tags: lis
     front = "---\n" + "\n".join(f"{_value(k)}: {json.dumps(v, ensure_ascii=False)}" for k, v in fm.items()) + "\n---\n\n"
     editor.save(ctx.vault, path.relative_to(ctx.vault).as_posix(), front + content.rstrip() + "\n", create=True)
     ctx.reindex()
-    return f"{_text('Nota criada: `')}{path.relative_to(ctx.vault)}`"
+    return f"{_text('Nota criada: `')}{path.relative_to(ctx.vault).as_posix()}`"
 
 
 def find_files(ctx, query: str, limit: int = 20) -> str:

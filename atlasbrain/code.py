@@ -297,7 +297,7 @@ def extract_code(src_text: str, ext: str) -> CodeStructure | None:
         elif "comment" in t:
             m = RATIONALE_RE.search(_txt(node, src))
             if m:
-                e.rationales.append((m.group(1).upper(), m.group(2).strip(" */#-"), line))
+                e.rationales.append((m.group(1).upper(), m.group(2).strip(" \t\r\n*/#-"), line))
         for c in reversed(node.children):
             stack.append((c, cur))
     return e

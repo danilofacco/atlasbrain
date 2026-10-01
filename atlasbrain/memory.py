@@ -265,7 +265,7 @@ def _write_memory(vault: Path, kind: str, title: str, fm: dict, body: str, dedup
                                                   "substituida_por_arquivo": path.relative_to(vault).as_posix(),
                                                   "substituida_em": today})
     index_vault(vault, quiet=True)
-    out = {"criada": True, "path": str(path.relative_to(vault)), "relevancia": av.score}
+    out = {"criada": True, "path": path.relative_to(vault).as_posix(), "relevancia": av.score}
     if av.reasons:
         out["pontos_fracos"] = av.reasons
     if warning:

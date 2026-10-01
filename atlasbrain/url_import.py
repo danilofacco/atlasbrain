@@ -101,7 +101,7 @@ def import_url(vault, url, title=None, update=False):
     if not path.exists() and legacy.exists():
         path = legacy
     if path.exists() and not update:
-        return {'path': str(path.relative_to(vault)), 'importada': False, 'motivo': 'URL already imported; use atualizar=true to refresh.'}
+        return {'path': path.relative_to(vault).as_posix(), 'importada': False, 'motivo': 'URL already imported; use atualizar=true to refresh.'}
     from . import editor
     expected = editor.revision(path.read_bytes()) if path.exists() else None
     raw, content_type, charset, final_url = fetch(url)
@@ -137,4 +137,4 @@ def import_url(vault, url, title=None, update=False):
         raise ValueError('Extracted text exceeds the 2 MB note indexing limit.')
     folder.mkdir(parents=True, exist_ok=True)
     editor.save(vault, path.relative_to(vault).as_posix(), content, expected, create=expected is None, max_bytes=MAX_TEXT_BYTES)
-    return {'path': str(path.relative_to(vault)), 'importada': True, 'source_url': url}
+    return {'path': path.relative_to(vault).as_posix(), 'importada': True, 'source_url': url}

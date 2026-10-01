@@ -107,7 +107,9 @@ def test_windows_manifest_runner_mcp_and_authenticated_shutdown(tmp_path, monkey
                 pytest.fail((directory / 'server.log').read_text(encoding='utf-8'))
             time.sleep(.1)
         live = service.owned_health()
-        assert live and live['pid'] == child.pid
+        # Windows venv redirectors supervise a child with a different PID.
+        assert live and live['vault'] == str(project)
+        assert child.poll() is None
         assert 'shutdown_token' not in live
         desktop_install.check_mcp(f'http://127.0.0.1:{port}/mcp')
         request = Request(f'http://127.0.0.1:{port}/_shutdown', data=b'', method='POST')
@@ -164,3 +166,10 @@ def test_stop_stale_state_does_not_signal_or_wait(tmp_path, monkeypatch):
     monkeypatch.setattr(service, 'owned_health', lambda: None)
     monkeypatch.setattr(service.time, 'sleep', lambda *args: pytest.fail('stale process must not cause a delay'))
     assert service.stop() is False
+
+
+def test_crlf_code_preserves_symbol_lines_and_clean_rationale():
+    from atlasbrain.code import extract_code
+    structure = extract_code('def example():\r\n    # WHY: keep the original line numbers\r\n    return 1\r\n', '.py')
+    assert ('example', 'funcao', 1, None) in structure.symbols
+    assert ('WHY', 'keep the original line numbers', 2) in structure.rationales
