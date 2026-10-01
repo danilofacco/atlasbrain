@@ -136,4 +136,5 @@ def test_auto_loop_launches_one_temporary_helper_for_available_version(tmp_path,
     update.auto_loop(Done(), tmp_path / 'brain')
     assert len(commands) == 1
     assert commands[0][0][1:5] == ['-m', 'atlasbrain.cli', 'update', 'apply']
-    assert commands[0][1]['start_new_session']
+    from atlasbrain.processes import background_options
+    assert all(commands[0][1][key] == value for key, value in background_options().items())

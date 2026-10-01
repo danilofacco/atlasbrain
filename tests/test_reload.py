@@ -40,8 +40,8 @@ def test_sessao_mcp_aberta_recebe_codigo_novo_sem_reconectar(indexado, tmp_path)
     ferr = copia / "atlasbrain" / "tools.py"
 
     async def run_benchmark():
-        env = {"PYTHONPATH": str(copia), "ATLASBRAIN_NO_EMBED": "1", "HOME": str(Path.home()),
-               "PATH": "/usr/bin:/bin:/opt/homebrew/bin", "PYTHONDONTWRITEBYTECODE": "1"}
+        env = {**os.environ, "PYTHONPATH": str(copia), "ATLASBRAIN_NO_EMBED": "1", "HOME": str(Path.home()),
+               "PATH": os.environ["PATH"], "PYTHONDONTWRITEBYTECODE": "1"}
         p = StdioServerParameters(command=sys.executable, args=["-m", "atlasbrain.cli", "mcp", "--sem-auto"],
                                   cwd=str(project), env=env)
         async with stdio_client(p) as (r, w):

@@ -13,7 +13,7 @@ GLOBAL_BRAIN = Path(os.environ.get("ATLASBRAIN_GLOBAL", _default_global)).expand
 REGISTRY = Path.home() / ".config" / "atlasbrain" / "projects.json"
 
 IGNORE_DIRS = {
-    ".git", ".obsidian", ".cerebro", ".trash", "node_modules", ".venv", "venv",
+    ".git", ".obsidian", ".cerebro", ".trash", "node_modules", ".venv", ".venv-wsl", ".venv-windows", "venv",
     "__pycache__", "dist", "build", ".next", ".idea", ".vscode",
 }
 TEXT_EXT = {".md", ".markdown", ".txt", ".org", ".rst"}
@@ -98,10 +98,10 @@ def data_dir(vault: Path) -> Path:
     d = vault / BRAIN
     d.mkdir(exist_ok=True)
     gi = d / ".gitignore"
-    current = gi.read_text() if gi.exists() else ""
+    current = gi.read_text(encoding="utf-8") if gi.exists() else ""
     missing = [l for l in _GITIGNORE.splitlines() if l and not l.startswith("#") and l not in current.splitlines()]
     if missing:  # cérebros antigos ganham as regras novas
-        gi.write_text((current or _GITIGNORE.splitlines()[0] + "\n") + "".join(l + "\n" for l in missing))
+        gi.write_text((current or _GITIGNORE.splitlines()[0] + "\n") + "".join(l + "\n" for l in missing), encoding="utf-8")
     register(vault)
     return d
 
@@ -119,7 +119,7 @@ def _read_registry() -> dict:
     legacy = path.with_name("projetos.json")
     if not path.exists() and legacy.exists():
         path = legacy
-    return json.loads(path.read_text()) if path.exists() else {}
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
 def register(vault: Path) -> None:
@@ -131,7 +131,7 @@ def register(vault: Path) -> None:
         REGISTRY.parent.mkdir(parents=True, exist_ok=True)
         reg = _read_registry()
         reg[key] = {"nome": vault.name, "visto": time.time(), "global": is_global(vault)}
-        REGISTRY.write_text(json.dumps(reg, ensure_ascii=False, indent=2))
+        REGISTRY.write_text(json.dumps(reg, ensure_ascii=False, indent=2), encoding="utf-8")
     except (OSError, ValueError):
         pass
 
@@ -151,7 +151,7 @@ def unregister(vault: Path) -> None:
     try:
         reg = _read_registry()
         reg.pop(key, None)
-        REGISTRY.write_text(json.dumps(reg, ensure_ascii=False, indent=2))
+        REGISTRY.write_text(json.dumps(reg, ensure_ascii=False, indent=2), encoding="utf-8")
     except (OSError, ValueError):
         pass
 
@@ -171,4 +171,14 @@ def invalid_folder_reason(p: Path) -> str | None:
         return "Pasta ampla demais (home, raiz ou pasta do sistema). Escolha a pasta de um projeto."
     if any(p == x or x in p.parents for x in (Path("/System"), Path("/usr"), home / "Library")):
         return "Pasta de sistema: escolha a pasta de um projeto."
+    if os.name == 'nt':
+        system_folders = [Path(os.environ[key]).resolve() for key in
+                          ('SystemRoot', 'ProgramFiles', 'ProgramFiles(x86)')
+                          if os.environ.get(key)]
+        broad_folders = [Path(os.environ[key]).resolve() for key in
+                         ('ProgramData', 'APPDATA', 'LOCALAPPDATA') if os.environ.get(key)]
+        # AppData also contains temporary project/test folders: reject the broad
+        # root itself, without rejecting every project underneath it.
+        if p == Path(p.anchor) or p in broad_folders or any(p == x or x in p.parents for x in system_folders):
+            return "Pasta de sistema: escolha a pasta de um projeto."
     return None

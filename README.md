@@ -98,9 +98,9 @@ a Git repository, AtlasBrain uses its built-in exclusions and `.atlasbrainignore
 
 ## Get started
 
-For installation with automatic startup at login on macOS or Windows (WSL), follow the [automated installation guide](docs/automatic-installation.md). It installs Python and dependencies and configures HTTP clients. The manual steps below remain available.
+For installation with automatic startup at login on macOS or native Windows, follow the [automated installation guide](docs/automatic-installation.md). It installs Python and dependencies and configures HTTP clients. The manual steps below remain available.
 
-Requirements: Git and [uv](https://docs.astral.sh/uv/getting-started/installation/), on macOS or Linux. Windows users can run the service in WSL, with clients able to reach its localhost port. Native Windows is currently unsupported. `uv` downloads Python 3.12 and installs the project's dependencies automatically.
+Requirements: Git and [uv](https://docs.astral.sh/uv/getting-started/installation/), on macOS, Windows or Linux. Windows runs natively; WSL is not required. `uv` downloads Python 3.12 and installs the project's dependencies automatically.
 
 ### 1. Clone
 
@@ -120,6 +120,8 @@ uv run --python 3.12 atlasbrain setup --vault /absolute/path/to/my-project --cli
 # Or: --client antigravity
 # Or: --client codex
 ```
+
+On Windows, use a native folder such as `--vault "C:\Projects\my-project"`.
 
 This installs dependencies, creates the project's `.atlasbrain/`, starts or reuses the shared service, and prints the configuration to paste into your client. No global Python install, symlink, API key, or manually installed dependency is needed. It does not edit your client's configuration automatically.
 
@@ -186,11 +188,9 @@ bash scripts/uninstall-startup.sh
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -UninstallStartup
 ```
 
-If you installed with another WSL distribution, append `-Distribution Ubuntu-24.04` (replace it with your distribution's name).
-
 These commands remove automatic startup and preserve client settings, installation files, and project memory. To finish uninstalling, remove only the `atlasbrain` entry from each configured MCP client, remove the AtlasBrain Desktop shortcut, and delete the installation checkout if you no longer need it. Remove the Claude Desktop connector through its Connectors settings.
 
-See the [macOS and Windows uninstall guide](docs/uninstall.md) for configuration locations, optional cleanup, and instructions for preserving your notes. Uninstalling AtlasBrain does not require removing WSL, Python, or uv.
+See the [macOS and Windows uninstall guide](docs/uninstall.md) for configuration locations, optional cleanup, and instructions for preserving your notes. Uninstalling AtlasBrain does not require removing Python, Git, or uv.
 
 ## Try it with your assistant
 

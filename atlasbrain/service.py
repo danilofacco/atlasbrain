@@ -1,13 +1,15 @@
 """One loopback HTTP service for every project and MCP client (no stdio bridges)."""
 import asyncio
-import fcntl
+from . import locking
 import hashlib
 import io
 import json
+import secrets
 import os
 import signal
 import socket
 import subprocess
+from .processes import background_options
 import sys
 import threading
 import time
@@ -43,13 +45,24 @@ def health(port):
 
 def owned_health():
     try:
-        state = json.loads((state_dir() / 'server.json').read_text())
+        state = json.loads((state_dir() / 'server.json').read_text(encoding="utf-8"))
         live = health(state['port'])
         if live and all(live.get(k) == state.get(k) for k in ('pid', 'instance', 'port')):
             return live
     except (OSError, ValueError, KeyError):
         pass
     return None
+
+
+def check_port(port):
+    with socket.socket() as sock:
+        # Windows SO_REUSEADDR permits overlapping listeners; require exclusivity.
+        option = socket.SO_EXCLUSIVEADDRUSE if os.name == 'nt' else socket.SO_REUSEADDR
+        sock.setsockopt(socket.SOL_SOCKET, option, 1)
+        try:
+            sock.bind(('127.0.0.1', port))
+        except OSError as exc:
+            raise RuntimeError(f'Port {port} is occupied. No alternate port or extra server was started.') from exc
 
 
 def start(vault, port=8765, auto_index=True):
@@ -59,14 +72,14 @@ def start(vault, port=8765, auto_index=True):
     directory = state_dir()
     directory.mkdir(parents=True, exist_ok=True)
     with (directory / 'launch.lock').open('a') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+        locking.acquire(lock)
         config.data_dir(vault)
         live = owned_health()
         if not live:
             with (directory / 'server.lock').open('a') as running_lock:
                 try:
-                    fcntl.flock(running_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    fcntl.flock(running_lock, fcntl.LOCK_UN)
+                    locking.acquire(running_lock, blocking=False)
+                    locking.release(running_lock)
                 except BlockingIOError:
                     deadline = time.monotonic() + 60
                     locked = True
@@ -75,8 +88,8 @@ def start(vault, port=8765, auto_index=True):
                         live = owned_health()
                         if not live:
                             try:
-                                fcntl.flock(running_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                                fcntl.flock(running_lock, fcntl.LOCK_UN)
+                                locking.acquire(running_lock, blocking=False)
+                                locking.release(running_lock)
                                 locked = False
                                 break  # the previous process finished shutting down
                             except BlockingIOError:
@@ -89,20 +102,13 @@ def start(vault, port=8765, auto_index=True):
             if live['auto_index'] != auto_index:
                 raise RuntimeError('Indexing mode differs. Stop the service before changing it.')
             return live
-        with socket.socket() as sock:
-            # Match uvicorn's bind behavior: closed sockets in TIME_WAIT must not block a restart.
-            # SO_REUSEADDR does not permit a second listener on the same address/port.
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            try:
-                sock.bind(('127.0.0.1', port))
-            except OSError as e:
-                raise RuntimeError(f'Port {port} is occupied. No alternate port or extra server was started.') from e
+        check_port(port)
         args = [sys.executable, '-m', 'atlasbrain.cli', '_daemon', '--vault', str(vault), '--porta', str(port)]
         if not auto_index:
             args.append('--sem-auto')
         with (directory / 'server.log').open('ab') as log:
             child = subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
-                                     start_new_session=True, cwd=Path(__file__).resolve().parent.parent)
+                                     **background_options(), cwd=Path(__file__).resolve().parent.parent)
         deadline = time.monotonic() + 30
         while time.monotonic() < deadline:
             live = owned_health()
@@ -120,21 +126,37 @@ def stop():
     state_dir().mkdir(parents=True, exist_ok=True)
     # Only signal the PID authenticated against our saved instance and live health.
     with (state_dir() / 'launch.lock').open('a') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+        locking.acquire(lock)
         live = owned_health()
         if not live and (state_dir() / 'server.json').exists():
             deadline = time.monotonic() + 30
             while not live and time.monotonic() < deadline:
+                with (state_dir() / 'server.lock').open('a') as running_lock:
+                    try:
+                        locking.acquire(running_lock, blocking=False)
+                        return False  # stale state left by an interrupted process
+                    except BlockingIOError:
+                        pass
                 time.sleep(.2)
                 live = owned_health()
         if not live:
             return False
-        os.kill(live['pid'], signal.SIGTERM)
+        state = json.loads((state_dir() / 'server.json').read_text(encoding='utf-8'))
+        if state.get('shutdown_token'):
+            request = Request(f"http://127.0.0.1:{live['port']}/_shutdown", data=b'',
+                              headers={'X-AtlasBrain-Stop': state['shutdown_token']}, method='POST')
+            with build_opener(ProxyHandler({})).open(request, timeout=5) as response:
+                response.read()
+        elif os.name != 'nt':
+            # Upgrade compatibility with an already running pre-native daemon.
+            os.kill(live['pid'], signal.SIGTERM)
+        else:
+            raise RuntimeError('Service has no shutdown token; disable its startup task first.')
         for _ in range(100):
             if not owned_health():
                 with (state_dir() / 'server.lock').open('a') as running_lock:
                     try:
-                        fcntl.flock(running_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        locking.acquire(running_lock, blocking=False)
                         return True
                     except BlockingIOError:
                         pass
@@ -150,7 +172,7 @@ def client_config(vault, client, port=8765, name='atlasbrain'):
     return json.dumps({'mcpServers': {name: entry}}, indent=2) + '\n'
 
 
-def create_app(vault, identity, auto_index=True):
+def create_app(vault, identity, auto_index=True, *, shutdown=None, shutdown_token=None):
     from starlette.applications import Starlette
     from starlette.requests import Request as WebRequest
     from starlette.responses import JSONResponse, Response
@@ -264,8 +286,16 @@ def create_app(vault, identity, auto_index=True):
     async def health_route(request):
         return JSONResponse(identity)
 
+    async def shutdown_route(request):
+        token = request.headers.get('X-AtlasBrain-Stop', '')
+        if not shutdown or not shutdown_token or not secrets.compare_digest(token, shutdown_token):
+            return JSONResponse({'error': 'Unauthorized'}, status_code=403)
+        shutdown()
+        return JSONResponse({'stopping': True})
+
     return Starlette(lifespan=lifespan, routes=[
         Route('/health', health_route),
+        Route('/_shutdown', shutdown_route, methods=['POST']),
         Route('/mcp', ProjectMCP(), methods=['GET', 'POST', 'DELETE']),
         Route('/projects/{project}/mcp', ProjectMCP(), methods=['GET', 'POST', 'DELETE']),
         Route('/{path:path}', web, methods=['GET', 'POST']),
@@ -278,17 +308,22 @@ def run_daemon(vault, port=8765, auto_index=True):
     directory.mkdir(parents=True, exist_ok=True)
     with (directory / 'server.lock').open('a') as lock:
         try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            locking.acquire(lock, blocking=False)
         except BlockingIOError:
             raise SystemExit('An AtlasBrain service is already running.')
         identity = dict(service='atlasbrain', protocol=1, pid=os.getpid(), port=port, vault=str(vault),
                         instance=uuid.uuid4().hex, auto_index=auto_index)
         path = directory / 'server.json'
         temp = directory / 'server.json.tmp'
-        temp.write_text(json.dumps(identity))
+        shutdown_token = secrets.token_hex(32)
+        temp.write_text(json.dumps({**identity, 'shutdown_token': shutdown_token}), encoding='utf-8')
+        temp.chmod(0o600)
         temp.replace(path)
         try:
-            uvicorn.run(create_app(vault, identity, auto_index), host='127.0.0.1', port=port,
-                        log_level='warning', timeout_graceful_shutdown=5)
+            server = uvicorn.Server(uvicorn.Config(
+                create_app(vault, identity, auto_index,
+                           shutdown=lambda: setattr(server, 'should_exit', True), shutdown_token=shutdown_token),
+                host='127.0.0.1', port=port, log_level='warning', timeout_graceful_shutdown=5))
+            server.run()
         finally:
             path.unlink(missing_ok=True)

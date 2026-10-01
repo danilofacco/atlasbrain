@@ -1,7 +1,7 @@
 """Markdown editing with optimistic revisions and one recoverable previous version."""
 
 from .localization import text as _text
-import fcntl
+from . import locking
 import hashlib
 import json
 import os
@@ -87,13 +87,13 @@ def _lock(vault):
             yield
             return
         with (_cache(vault) / 'editor.lock').open('a') as handle:
-            fcntl.flock(handle, fcntl.LOCK_EX)
+            locking.acquire(handle)
             _local.held = held | {key}
             try:
                 yield
             finally:
                 _local.held = held
-                fcntl.flock(handle, fcntl.LOCK_UN)
+                locking.release(handle)
 
 
 def serialized(function):
@@ -114,7 +114,7 @@ def operation(vault, operation_id, payload, action):
     with _lock(vault):
         file = _cache(vault) / ('operation-' + revision(operation_id.encode()) + '.json')
         if file.exists():
-            receipt = json.loads(file.read_text())
+            receipt = json.loads(file.read_text(encoding="utf-8"))
             if receipt['signature'] != signature:
                 raise EditError(_text('Identificador já usado para outra operação'), 409)
             if receipt['state'] != 'done':

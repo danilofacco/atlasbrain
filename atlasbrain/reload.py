@@ -18,7 +18,7 @@ from pathlib import Path
 
 PACKAGE = Path(__file__).parent
 # ordem de dependência: quem é importado vem antes de quem importa
-MODULES = ["localization", "mcp_api", "config", "db", "embed", "parse", "extract", "code", "relevance", "search", "graph",
+MODULES = ["localization", "mcp_api", "locking", "processes", "config", "db", "embed", "parse", "extract", "code", "relevance", "search", "graph",
            "queries", "topology", "intelligence", "editor", "indexer", "memory", "url_import", "report", "capture", "classify", "consolidation", "rename", "bench", "tools"]
 
 

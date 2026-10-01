@@ -712,7 +712,7 @@ def pending_operations(ctx, operation_id: str | None = None) -> str:
         for file in editor._cache(ctx.vault).glob('operation-*.json'):
             if file.is_symlink():
                 continue
-            data=json.loads(file.read_text())
+            data=json.loads(file.read_text(encoding="utf-8"))
             if data.get('state')!='done':
                 result['escritas_para_inspecao'].append({'recibo':file.name,'estado':data.get('state')})
     return json.dumps(result,ensure_ascii=False)

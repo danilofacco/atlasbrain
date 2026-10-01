@@ -215,13 +215,13 @@ Each project has a local `.atlasbrain/` brain (code graph, decisions and learnin
 
 
 def _instruction_block(file_path: Path, remove: bool) -> None:
-    txt = file_path.read_text() if file_path.exists() else ""
+    txt = file_path.read_text(encoding="utf-8") if file_path.exists() else ""
     if BLOCK_START in txt:
         a, b = txt.index(BLOCK_START), txt.index(BLOCK_END) + len(BLOCK_END)
         txt = (txt[:a].rstrip() + "\n" + txt[b:].lstrip("\n")).strip() + "\n"
     if not remove:
         txt = txt.rstrip() + ("\n\n" if txt.strip() else "") + INSTRUCTION_BLOCK
-    file_path.write_text(txt)
+    file_path.write_text(txt, encoding="utf-8")
 
 
 def _guard_relevant(data):
@@ -260,13 +260,13 @@ def cmd_guard(a):
             return
         state_f = Path.home() / ".cache" / "atlasbrain" / "guard.json"
         state_f.parent.mkdir(parents=True, exist_ok=True)
-        import fcntl
+        from . import locking
         import time
         # Concurrent tool hooks must not inject the same reminder twice.
         with state_f.with_suffix(".lock").open("a") as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)
+            locking.acquire(lock)
             try:
-                state = json.loads(state_f.read_text()) if state_f.exists() else {}
+                state = json.loads(state_f.read_text(encoding="utf-8")) if state_f.exists() else {}
             except ValueError:
                 state = {}
             sid = str(project_root) + ":" + str(data.get("session_id", "?"))
@@ -275,7 +275,7 @@ def cmd_guard(a):
                 return
             state = {k: v for k, v in state.items() if now - v < 86400}
             state[sid] = now
-            state_f.write_text(json.dumps(state))
+            state_f.write_text(json.dumps(state), encoding="utf-8")
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": GUARD_TXT}}))
     except Exception:
         pass  # hook failures never block the tool
@@ -293,9 +293,9 @@ def cmd_init(a):
         line = f'"{exe}" index --vault "{vault}" --quiet >/dev/null 2>&1 &  # atlasbrain'
         for h in ("post-commit", "post-checkout", "post-merge"):
             f = hooks_dir / h
-            txt = f.read_text() if f.exists() else "#!/bin/sh\n"
+            txt = f.read_text(encoding="utf-8") if f.exists() else "#!/bin/sh\n"
             if "# atlasbrain" not in txt:
-                f.write_text(txt.rstrip() + "\n" + line + "\n")
+                f.write_text(txt.rstrip() + "\n" + line + "\n", encoding="utf-8")
                 f.chmod(0o755)
         print("✓ git hooks: reindexa em segundo plano a cada commit, checkout e merge")
     from .indexer import index_vault
@@ -313,7 +313,7 @@ def cmd_bench(a):
     res = bench.run_benchmark(vault, bench.load_questions(f))
     print(bench.report(res, details=a.details))
     if a.json:
-        Path(a.json).write_text(json.dumps({k: bench.metrics(v) for k, v in res.items()}, ensure_ascii=False, indent=2))
+        Path(a.json).write_text(json.dumps({k: bench.metrics(v) for k, v in res.items()}, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _remove_owned_hooks(hooks):
@@ -328,14 +328,14 @@ def _remove_owned_hooks(hooks):
 
 
 def _merge_hook(settings: Path, event: str, command: str) -> bool:
-    data = json.loads(settings.read_text()) if settings.exists() else {}
+    data = json.loads(settings.read_text(encoding="utf-8")) if settings.exists() else {}
     hooks = data.setdefault("hooks", {}).setdefault(event, [])
     hooks[:] = _remove_owned_hooks(hooks)
     entry = {"hooks": [{"type": "command", "command": command, "timeout": 10}]}
     if event == "PreToolUse":
         entry["matcher"] = "Bash|Read|Grep|Glob"
     hooks.append(entry)
-    settings.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+    settings.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return True
 
 
@@ -353,10 +353,10 @@ def cmd_hooks(a):
         for ev in events:
             c = brief if ev == "SessionStart" else guard if ev == "PreToolUse" else cmd
             if a.remove:
-                data = json.loads(f.read_text()) if f.exists() else {}
+                data = json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
                 lst = data.get("hooks", {}).get(ev, [])
                 lst[:] = _remove_owned_hooks(lst)
-                f.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+                f.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
             else:
                 _merge_hook(f, ev, c)
         print(f"{'removido de' if a.remove else '✓ hook em'} {f} ({', '.join(events)})")

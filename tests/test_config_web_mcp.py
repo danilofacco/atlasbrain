@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import sys
 import threading
 import urllib.request
@@ -126,8 +127,8 @@ def test_mcp_stdio(indexado):
 
     async def run_benchmark():
         p = StdioServerParameters(command=sys.executable, args=["-m", "atlasbrain.cli", "mcp", "--sem-auto"],
-                                  cwd=str(project / "src"), env={"ATLASBRAIN_NO_EMBED": "1", "HOME": str(Path.home()),
-                                                                 "PATH": "/usr/bin:/bin:/opt/homebrew/bin"})
+                                  cwd=str(project / "src"), env={**os.environ, "ATLASBRAIN_NO_EMBED": "1", "HOME": str(Path.home()),
+                                                                 "PATH": os.environ["PATH"]})
         async with stdio_client(p) as (r, w):
             async with ClientSession(r, w) as s:
                 await s.initialize()

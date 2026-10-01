@@ -1,10 +1,11 @@
 """Version-gated updates for a clean Git clone running the shared service."""
 
-import fcntl
+from . import locking
 import json
 import os
 import re
 import subprocess
+from .processes import background_options
 import sys
 import time
 import tomllib
@@ -32,7 +33,7 @@ def _state_dir() -> Path:
 
 def _read_json(path: Path) -> dict:
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
         return data if isinstance(data, dict) else {}
     except (OSError, ValueError):
         return {}
@@ -40,7 +41,7 @@ def _read_json(path: Path) -> dict:
 
 def _write_json(path: Path, data: dict) -> None:
     temporary = path.with_suffix(path.suffix + '.tmp')
-    temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
+    temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding="utf-8")
     temporary.replace(path)
 
 
@@ -65,7 +66,8 @@ def status() -> dict:
 
 
 def _run(args: list[str], directory: Path, timeout: int = 60) -> str:
-    env = {**os.environ, 'GIT_TERMINAL_PROMPT': '0'}
+    env = {**os.environ, 'GIT_TERMINAL_PROMPT': '0', 'UV_PROJECT_ENVIRONMENT': sys.prefix,
+           'PYTHONUTF8': '1'}
     try:
         result = subprocess.run(args, cwd=directory, env=env, capture_output=True, text=True,
                                 timeout=timeout, check=False)
@@ -102,7 +104,7 @@ def check(directory: Path | None = None) -> dict:
     if not (directory / '.git').exists() or not (directory / 'pyproject.toml').is_file():
         return _record({'state': 'unsupported', 'reason': 'Instalação precisa ser um clone Git com pyproject.toml.'})
     try:
-        local = _version((directory / 'pyproject.toml').read_text())
+        local = _version((directory / 'pyproject.toml').read_text(encoding="utf-8"))
         branch = _git(directory, 'symbolic-ref', '--quiet', '--short', 'HEAD')
         upstream = _git(directory, 'rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{upstream}')
         if branch not in ('main', 'master') or '/' not in upstream:
@@ -147,7 +149,7 @@ def apply(directory: Path | None = None, vault: Path | None = None) -> dict:
     from . import service
     directory = (directory or root()).resolve()
     with (_state_dir() / 'update.lock').open('a') as handle:
-        fcntl.flock(handle, fcntl.LOCK_EX)
+        locking.acquire(handle)
         plan = check(directory)
         if plan['state'] != 'available':
             return plan
@@ -205,6 +207,6 @@ def auto_loop(done, vault: Path) -> None:
             with (state_dir() / 'server.log').open('ab') as log:
                 subprocess.Popen([sys.executable, '-m', 'atlasbrain.cli', 'update', 'apply',
                                   '--vault', str(vault)], cwd=directory, stdin=subprocess.DEVNULL,
-                                 stdout=log, stderr=log, start_new_session=True)
+                                 stdout=log, stderr=log, **background_options())
         if done.wait(CHECK_INTERVAL - 60):
             break

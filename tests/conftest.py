@@ -28,6 +28,8 @@ def isolado(tmp_path, monkeypatch, parser_cache):
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.setenv("PYTHONUTF8", "1")
     monkeypatch.setattr(config, "REGISTRY", tmp_path / "registro" / "projects.json")
     monkeypatch.setattr(config, "GLOBAL_BRAIN", home / "SegundoCerebro")
     config._registered.clear()

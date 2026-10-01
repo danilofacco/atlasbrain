@@ -1,6 +1,6 @@
 """Indexação incremental da pasta: só reprocessa o que mudou."""
 
-import fcntl
+from . import locking
 import fnmatch
 import hashlib
 import json
@@ -40,7 +40,7 @@ def _ignore_patterns(vault: Path) -> list[str]:
     for name in (".atlasbrainignore", ".cerebroignore"):
         f = vault / name
         if f.exists():
-            out += [l.strip() for l in f.read_text().splitlines() if l.strip() and not l.startswith("#")]
+            out += [l.strip() for l in f.read_text(encoding="utf-8").splitlines() if l.strip() and not l.startswith("#")]
     return out
 
 
@@ -61,7 +61,7 @@ def _git_files(vault: Path) -> list[str] | None:
 
 def _walk(vault: Path, root: Path, patterns: list[str]):
     for dirpath, dirs, files in os.walk(root):
-        rel_root = os.path.relpath(dirpath, vault)
+        rel_root = Path(os.path.relpath(dirpath, vault)).as_posix()
         rel_root = "" if rel_root == "." else rel_root
         dirs[:] = [
             d for d in dirs
@@ -101,14 +101,16 @@ class _IndexLock:
     def __init__(self, vault: Path, wait_timeout: float = 0):
         self.path = data_dir(vault) / "index.lock"
         self.fh = None
+        self.acquired = False
         self.wait_timeout = wait_timeout
 
     def __enter__(self):
-        self.fh = open(self.path, "w")
+        self.fh = open(self.path, "a")
         limit = time.time() + self.wait_timeout
         while True:
             try:
-                fcntl.flock(self.fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                locking.acquire(self.fh, blocking=False)
+                self.acquired = True
                 return True
             except BlockingIOError:
                 if time.time() >= limit:
@@ -116,7 +118,8 @@ class _IndexLock:
                 time.sleep(0.5)  # comando explícito: espera o ciclo automático de outro processo terminar
 
     def __exit__(self, *exc):
-        fcntl.flock(self.fh, fcntl.LOCK_UN)
+        if self.acquired:
+            locking.release(self.fh)
         self.fh.close()
 
 

@@ -320,7 +320,7 @@ def _ts_aliases(vault) -> list[tuple[str, list[str]]]:
         if not f.exists():
             continue
         try:
-            raw = re.sub(r"//[^\n]*|/\*.*?\*/", "", f.read_text(errors="replace"), flags=re.S)
+            raw = re.sub(r"//[^\n]*|/\*.*?\*/", "", f.read_text(errors="replace", encoding="utf-8"), flags=re.S)
             raw = re.sub(r",(\s*[}\]])", r"\1", raw)
             opts = json.loads(raw).get("compilerOptions", {})
         except Exception:

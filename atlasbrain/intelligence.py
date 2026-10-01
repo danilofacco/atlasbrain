@@ -48,15 +48,15 @@ def status(con, vault, limit=30, offset=0):
     indexed = {r['path']: r for r in con.execute('SELECT path,mtime,size FROM notes')}
     skipped = json.loads(get_meta(con, 'pulados', '{}'))
     files = scan(vault)
-    import fcntl
+    from . import locking
     from .config import data_dir
     indexing = False
     lock_file = data_dir(vault) / 'index.lock'
     try:
         with lock_file.open('a') as handle:
             try:
-                fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                fcntl.flock(handle, fcntl.LOCK_UN)
+                locking.acquire(handle, blocking=False)
+                locking.release(handle)
             except BlockingIOError:
                 indexing = True
     except OSError:

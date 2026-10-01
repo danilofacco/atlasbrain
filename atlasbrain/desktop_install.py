@@ -6,6 +6,7 @@ import os
 import plistlib
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -31,7 +32,7 @@ def save(path: Path, content: str | bytes):
 
 
 def merge_json(path, section, name, entry):
-    data = json.loads(path.read_text()) if path.exists() else {}
+    data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     if not isinstance(data, dict) or not isinstance(data.get(section, {}), dict):
         raise ValueError(f'Invalid configuration: {path}')
     data.setdefault(section, {})[name] = entry
@@ -39,7 +40,7 @@ def merge_json(path, section, name, entry):
 
 
 def codex_config(path, name, url):
-    original = path.read_text() if path.exists() else ''
+    original = path.read_text(encoding="utf-8") if path.exists() else ''
     parsed = tomllib.loads(original)
     # Replace exactly this server, including child tables; preserve unrelated settings.
     lines = original.splitlines(keepends=True)
@@ -74,7 +75,7 @@ def configure_clients(vault, clients, name, port, desktop_config=None, bridge_co
             global_config = client_home / '.codex/config.toml'
             codex_config(global_config, name, url)
             scoped = vault / '.codex/config.toml'
-            if scoped.exists() and name in tomllib.loads(scoped.read_text()).get('mcp_servers', {}):
+            if scoped.exists() and name in tomllib.loads(scoped.read_text(encoding="utf-8")).get('mcp_servers', {}):
                 codex_config(scoped, name, None)
         elif client == 'claude-code':
             merge_json(client_home / '.claude.json', 'mcpServers', name, {'type': 'http', 'url': url})
@@ -90,26 +91,29 @@ def configure_clients(vault, clients, name, port, desktop_config=None, bridge_co
             continue
         elif client == 'claude-desktop-bridge':
             if desktop_config is None:
-                if sys.platform != 'darwin':
+                if sys.platform == 'win32':
+                    desktop_config = Path(os.environ['APPDATA']) / 'Claude/claude_desktop_config.json'
+                elif sys.platform == 'darwin':
+                    desktop_config = Path.home() / 'Library/Application Support/Claude/claude_desktop_config.json'
+                else:
                     raise ValueError('Supply --desktop-config for Claude Desktop outside macOS.')
-                desktop_config = Path.home() / 'Library/Application Support/Claude/claude_desktop_config.json'
             command = bridge_command or [sys.executable, '-m', 'atlasbrain.http_bridge']
             merge_json(desktop_config, 'mcpServers', name, {'command': command[0], 'args': command[1:] + [url]})
     # Remove only this server from old project scopes for the clients being configured.
     folders = {vault} | {Path(brain['path']) for brain in config.registered()}
     for folder in folders:
         scoped_codex = folder / '.codex/config.toml'
-        if 'codex' in clients and scoped_codex.exists() and name in tomllib.loads(scoped_codex.read_text()).get('mcp_servers', {}):
+        if 'codex' in clients and scoped_codex.exists() and name in tomllib.loads(scoped_codex.read_text(encoding="utf-8")).get('mcp_servers', {}):
             codex_config(scoped_codex, name, None)
         for client, scoped, section in (('claude-code', folder / '.mcp.json', 'mcpServers'), ('antigravity', folder / '.agents/mcp_config.json', 'mcpServers'), ('opencode', folder / 'opencode.json', 'mcp')):
             if client in clients and scoped.exists():
-                data = json.loads(scoped.read_text())
+                data = json.loads(scoped.read_text(encoding="utf-8"))
                 if name in data.get(section, {}):
                     del data[section][name]
                     save(scoped, json.dumps(data, ensure_ascii=False, indent=2) + '\n')
     if 'claude-code' in clients:
         path = client_home / '.claude.json'
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
         changed = False
         for project in data.get('projects', {}).values():
             if isinstance(project, dict) and name in project.get('mcpServers', {}):
@@ -136,6 +140,17 @@ def startup_files(vault, port, platform):
                     'ThrottleInterval': 10, 'StandardOutPath': str(directory / 'server.log'),
                     'StandardErrorPath': str(directory / 'server.log'), 'EnvironmentVariables': environment}
         save(path, plistlib.dumps(manifest))
+    elif platform == 'windows':
+        path = directory / 'service-launch.json'
+        environment = {key: os.environ[key] for key in
+                       ('ATLASBRAIN_SERVICE_DIR', 'ATLASBRAIN_GLOBAL', 'ATLASBRAIN_NO_EMBED') if key in os.environ}
+        environment['UV_PROJECT_ENVIRONMENT'] = sys.prefix
+        # Keep managed uv available for automatic updates after a fresh login.
+        uv = shutil.which('uv')
+        if uv:
+            environment['PATH'] = str(Path(uv).parent) + os.pathsep + os.environ.get('PATH', '')
+        save(path, json.dumps({'root': str(root), 'vault': str(vault), 'port': port,
+                               'environment': environment}, ensure_ascii=False, indent=2))
     else:
         path = directory / 'run-service.sh'
         environment = {key: os.environ[key] for key in ('ATLASBRAIN_SERVICE_DIR', 'ATLASBRAIN_GLOBAL', 'ATLASBRAIN_NO_EMBED') if key in os.environ}
@@ -175,20 +190,51 @@ def check_mcp(url):
     asyncio.run(asyncio.wait_for(verify_mcp(url), timeout=20))
 
 
+def run_service(path):
+    """Foreground task runner: the scheduler supervises the actual server process."""
+    manifest = json.loads(path.read_text(encoding='utf-8'))
+    os.environ.update(manifest['environment'])
+    os.chdir(manifest['root'])
+    directory = service.state_dir()
+    directory.mkdir(parents=True, exist_ok=True)
+    with (directory / 'server.log').open('a', encoding='utf-8', buffering=1) as log:
+        previous = sys.stdout, sys.stderr
+        try:
+            sys.stdout = sys.stderr = log
+            service.run_daemon(Path(manifest['vault']), manifest['port'])
+        except BaseException:
+            import traceback
+            traceback.print_exc(file=log)
+            raise
+        finally:
+            sys.stdout, sys.stderr = previous
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--vault', type=Path, default=config.GLOBAL_BRAIN)
     parser.add_argument('--port', type=int, default=8765)
     parser.add_argument('--name', default='atlasbrain')
     parser.add_argument('--clients', default='codex,claude-code')
-    parser.add_argument('--platform', choices=('macos', 'wsl'), default='macos' if sys.platform == 'darwin' else 'wsl')
+    parser.add_argument('--platform', choices=('macos', 'windows', 'wsl'),
+                        default='macos' if sys.platform == 'darwin' else 'windows' if sys.platform == 'win32' else 'wsl')
     parser.add_argument('--desktop-config', type=Path)
     parser.add_argument('--client-home', type=Path)
-    parser.add_argument('--bridge-command-json', help='Windows wsl.exe command as a JSON array')
+    parser.add_argument('--bridge-command-json', help='optional bridge command as a JSON array')
+    parser.add_argument('--run-service', type=Path, help='run the saved startup manifest in the foreground')
     parser.add_argument('--verify-url', help='check an installed MCP endpoint without changing settings')
+    parser.add_argument('--verify-owned', action='store_true', help='require the endpoint to match this native service state')
     parser.add_argument('--prepare-only', action='store_true', help='write startup files without activating them')
     args = parser.parse_args()
+    if args.run_service:
+        run_service(args.run_service)
+        return
     if args.verify_url:
+        if args.verify_owned:
+            from urllib.parse import urlparse
+            live = service.owned_health()
+            if not live or urlparse(args.verify_url).port != live['port']:
+                raise RuntimeError('The endpoint is not the service owned by this installation; inspect server.log.')
         check_mcp(args.verify_url)
         print("MCP handshake and global tool discovery verified.")
         return
@@ -205,8 +251,10 @@ def main():
     live = service.owned_health()
     if live and live['port'] != args.port:
         parser.error(f"Existing service uses port {live['port']}; use that port.")
-    if args.platform == 'wsl' and not args.prepare_only:
-        parser.error('WSL startup must be activated by install.ps1; use --prepare-only.')
+    if not live:
+        service.check_port(args.port)
+    if args.platform != 'macos' and not args.prepare_only:
+        parser.error('Windows startup must be activated by install.ps1; use --prepare-only.')
     config.data_dir(vault)
     bridge = json.loads(args.bridge_command_json) if args.bridge_command_json else None
     url = configure_clients(vault, clients, args.name, args.port, args.desktop_config, bridge, args.client_home)
@@ -214,7 +262,7 @@ def main():
     shortcut = desktop_shortcut(vault, args.port) if args.platform == 'macos' else None
     if not args.prepare_only:
         if args.platform != 'macos':
-            parser.error('WSL startup must be activated by install.ps1; use --prepare-only.')
+            parser.error('Windows startup must be activated by install.ps1; use --prepare-only.')
         activate_macos(path)
         for _ in range(60):
             if service.health(args.port):

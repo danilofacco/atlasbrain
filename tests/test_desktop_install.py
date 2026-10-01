@@ -55,6 +55,7 @@ def test_launchagent_paths_and_no_editor_dependency(tmp_path, monkeypatch):
     assert manifest['EnvironmentVariables']['ATLASBRAIN_SERVICE_DIR'].endswith('state with spaces')
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Unix shell bootstrap; Windows uses PowerShell")
 def test_wsl_runner_escapes_paths(tmp_path, monkeypatch):
     import subprocess
     monkeypatch.setenv('ATLASBRAIN_SERVICE_DIR', str(tmp_path / "state ' special"))
@@ -80,6 +81,7 @@ def test_desktop_connector_does_not_write_stdio_configuration(tmp_path):
     assert not desktop.exists()
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Unix shell bootstrap; Windows uses PowerShell")
 def test_bootstrap_arguments_and_empty_optional_arrays(tmp_path):
     import os
     import subprocess
@@ -127,6 +129,7 @@ def test_global_configuration_removes_only_legacy_project_entries(tmp_path):
     assert json.loads((home / '.claude.json').read_text())['mcpServers']['atlasbrain']['url'] == url
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Unix shell bootstrap; Windows uses PowerShell")
 def test_bootstrap_uses_its_checkout_and_separate_environment(tmp_path):
     import os
     import subprocess
@@ -159,6 +162,7 @@ def test_bootstrap_uses_its_checkout_and_separate_environment(tmp_path):
 
 
 @pytest.mark.parametrize('arguments, message', [(['--port', '0'], 'Port must'), (['--vault'], 'Missing value'), (['--platform', 'other'], 'Platform must')])
+@pytest.mark.skipif(sys.platform == "win32", reason="Unix shell bootstrap; Windows uses PowerShell")
 def test_bootstrap_rejects_invalid_arguments_before_installing(arguments, message):
     import subprocess
     script = Path(__file__).resolve().parents[1] / 'scripts/install.sh'

@@ -106,7 +106,7 @@ def test_code_body_embeddings_are_bounded_and_overridable(indexado,monkeypatch):
 
 
 def test_capture_receipts_metrics_and_worker_lock(project,monkeypatch):
-    import fcntl
+    from atlasbrain import locking
     from atlasbrain.config import data_dir
     calls=[]
     def action():
@@ -119,7 +119,7 @@ def test_capture_receipts_metrics_and_worker_lock(project,monkeypatch):
     assert len(capture.quality(project)['revisar'])==1
     monkeypatch.setattr(capture,'_worker',lambda *args: calls.append(False))
     with open(data_dir(project)/'capture.lock','a') as lock:
-        fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        locking.acquire(lock, blocking=False)
         capture.worker(project,project/'missing','session','','Stop')
     assert calls==[True]
 

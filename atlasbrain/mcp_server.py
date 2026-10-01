@@ -160,8 +160,10 @@ def _workspace_path(uri: str) -> Path | None:
     if parsed.scheme != 'file' or parsed.netloc not in ('', 'localhost'):
         return None
     raw = unquote(parsed.path)
-    # Windows clients reach the service inside WSL using Windows file URIs.
-    if sys.platform == 'linux' and len(raw) > 3 and raw[0] == '/' and raw[2] == ':':
+    # file:///C:/... is a native drive path; keep legacy WSL routing on Linux.
+    if sys.platform == 'win32' and len(raw) > 3 and raw[0] == '/' and raw[2] == ':':
+        raw = raw[1:]
+    elif sys.platform == 'linux' and len(raw) > 3 and raw[0] == '/' and raw[2] == ':':
         raw = '/mnt/' + raw[1].lower() + raw[3:]
     folder = Path(raw)
     if not folder.is_absolute():

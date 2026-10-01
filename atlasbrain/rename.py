@@ -151,7 +151,7 @@ def recovery(vault, con, operation_id=None, action=None, expected=None):
         for file in sorted(root.glob('rename-*.json')):
             if file.is_symlink():
                 continue
-            data=json.loads(file.read_text())
+            data=json.loads(file.read_text(encoding="utf-8"))
             if data.get('estado') not in ('concluido','revertido'):
                 items.append({'id':file.stem,'de':data['de'],'para':data['para'],'estado':data['estado']})
         return {'operacoes':items}
@@ -163,7 +163,7 @@ def recovery(vault, con, operation_id=None, action=None, expected=None):
         file=root/(operation_id+'.json')
         if file.is_symlink() or not file.is_file():
             raise editor.EditError('Operação não encontrada',404)
-        data=json.loads(file.read_text());changes=data['alteracoes']
+        data=json.loads(file.read_text(encoding="utf-8"));changes=data['alteracoes']
         old,new=data['de'],data['para']
         snapshots={};conflicts=[]
         moved=next(c for c in changes if c['path']==old)

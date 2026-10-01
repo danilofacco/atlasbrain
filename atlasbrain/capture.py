@@ -7,12 +7,13 @@ Desligar: ATLASBRAIN_CAPTURA=0.
 """
 
 import datetime as dt
-import fcntl
+from . import locking
 import hashlib
 from . import editor
 import json
 import os
 import subprocess
+from .processes import background_options
 import sys
 import time
 from pathlib import Path
@@ -152,7 +153,7 @@ def hook(vault_arg: str | None = None, event: str | None = None) -> None:
             "--transcript", transcript, "--sessao", str(data.get("session_id", transcript)),
             "--cwd", str(data.get("cwd", "")), "--evento", event]
     subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                     start_new_session=True, env={**os.environ, "ATLASBRAIN_CAPTURANDO": "1"})
+                     **background_options(), env={**os.environ, "ATLASBRAIN_CAPTURANDO": "1"})
 
 
 def _label(kind: str, title: str, res: dict) -> str:
@@ -170,7 +171,7 @@ def worker(vault: Path, transcript: Path, session_id: str, cwd: str, event: str)
     # One extraction per vault; do not hold the Markdown writer lock during model calls.
     with open(data_dir(vault)/'capture.lock','a') as lock:
         try:
-            fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            locking.acquire(lock, blocking=False)
         except BlockingIOError:
             return
         _worker(vault,transcript,session_id,cwd,event)
@@ -178,7 +179,7 @@ def worker(vault: Path, transcript: Path, session_id: str, cwd: str, event: str)
 
 def quality(vault):
     file=editor._cache(vault)/'capture-quality.json'
-    return json.loads(file.read_text()) if file.exists() else {'contadores':{},'revisar':[]}
+    return json.loads(file.read_text(encoding="utf-8")) if file.exists() else {'contadores':{},'revisar':[]}
 
 
 def _capture_result(vault, payload, action):
@@ -202,7 +203,7 @@ def _worker(vault: Path, transcript: Path, session_id: str, cwd: str, event: str
     file_state = data_dir(vault) / "capture.json"
     previous_state = file_state if file_state.exists() else file_state.with_name("captura.json")
     try:
-        state = json.loads(previous_state.read_text())
+        state = json.loads(previous_state.read_text(encoding="utf-8"))
     except Exception:
         state = {}
     s = state.get(session_id, {"offset": 0, "quando": 0})

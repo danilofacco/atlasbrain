@@ -1,0 +1,46 @@
+name: Native platforms
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTHONUTF8: '1'
+      ATLASBRAIN_NO_EMBED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked --python 3.12
+      - run: uv run pytest -q
+      - name: Validate Windows installer syntax
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$PWD/scripts/install.ps1", [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count) { $parseErrors | Out-String | Write-Error; exit 1 }
+      - name: Exercise Windows installer and scheduled task
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $env:UV_PROJECT_ENVIRONMENT = "$PWD/.venv"
+          $project = Join-Path $env:RUNNER_TEMP "AtlasBrain test ' accents"
+          New-Item -ItemType Directory -Path $project -Force | Out-Null
+          try {
+            & ./scripts/install.ps1 -Vault $project -Clients '' -Port 18765
+            $task = Get-ScheduledTask -TaskName AtlasBrain
+            if ($task.Actions.Execute -notmatch 'pythonw.exe$') { throw 'Startup must use native Python.' }
+            $health = Invoke-RestMethod http://127.0.0.1:18765/health
+            if ($health.service -ne 'atlasbrain') { throw 'Service failed to start.' }
+          } finally {
+            & ./scripts/install.ps1 -UninstallStartup
+          }

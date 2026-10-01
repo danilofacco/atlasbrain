@@ -20,4 +20,4 @@ AtlasBrain uses a single local workspace root supplied by the client. Without ro
 
 Open [the interface](http://127.0.0.1:8765) and **MCP HTTP** to copy the global URL. Ask the assistant to find the main files in the current project, then repeat from another project using the same MCP entry. With automatic startup installed, no terminal command is needed after login.
 
-For manual service installation, run `uv run --python 3.12 atlasbrain setup --vault /absolute/path/to/project --client claude` from the AtlasBrain checkout. This prints the same global URL and registers the initial folder. On Windows the service runs in WSL, while clients use the localhost HTTP address. Cloud sessions cannot reach your local machine via localhost.
+For manual service installation, run `uv run --python 3.12 atlasbrain setup --vault /absolute/path/to/project --client claude` from the AtlasBrain checkout. This prints the same global URL and registers the initial folder. On Windows the service runs natively, with clients using the same localhost HTTP address. WSL is not required. Cloud sessions cannot reach your local machine via localhost.

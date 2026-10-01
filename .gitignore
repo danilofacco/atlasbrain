@@ -1,5 +1,6 @@
 .venv/
 .venv-wsl/
+.venv-windows/
 __pycache__/
 *.egg-info/
 .cerebro/
