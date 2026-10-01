@@ -9,23 +9,45 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $taskName = 'AtlasBrain'
+function Invoke-Linux([string[]]$Arguments) {
+    # Transport shell-quoted arguments through stdin. PowerShell 5.1 otherwise
+    # strips embedded quotes from JSON and paths passed to native programs.
+    $quoted = $Arguments | ForEach-Object { "'" + $_.Replace("'", "'\''") + "'" }
+    $script = 'exec ' + ($quoted -join ' ') + ' #'
+    $previousEncoding = $OutputEncoding
+    try {
+        $OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+        $output = $script | & wsl.exe --distribution $Distribution --exec bash
+    } finally { $OutputEncoding = $previousEncoding }
+    if ($LASTEXITCODE -ne 0) { throw "WSL command failed with exit code $LASTEXITCODE" }
+    return $output
+}
 if ($UninstallStartup) {
     Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
     Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
+    if (Get-Command wsl.exe -ErrorAction SilentlyContinue) {
+        $linuxHome = (Invoke-Linux -Arguments @('printenv', 'HOME') | Select-Object -Last 1).Trim()
+        $checkout = Split-Path -Parent $PSScriptRoot
+        $linuxCheckout = (Invoke-Linux -Arguments @('wslpath', '-a', '-u', $checkout) | Select-Object -Last 1).Trim()
+        $candidates = @("$linuxCheckout/.venv-wsl/bin/python", "$linuxHome/.local/share/atlasbrain/app/.venv-wsl/bin/python", "$linuxHome/.local/share/atlasbrain/app/.venv/bin/python")
+        foreach ($candidate in $candidates) {
+            $exists = Invoke-Linux -Arguments @('sh', '-c', 'if [ -x "$1" ]; then echo exists; fi', 'sh', $candidate)
+            if ($exists -contains 'exists') {
+                Invoke-Linux -Arguments @($candidate, '-m', 'atlasbrain.cli', 'stop') | Out-Host
+                break
+            }
+        }
+    }
     Write-Host 'Automatic startup removed. Project data and client settings are preserved.'
     return
 }
 if ($Distribution -notmatch '^[A-Za-z0-9._-]+$') { throw 'Unsupported distribution name.' }
 if (-not (Get-Command wsl.exe -ErrorAction SilentlyContinue)) { throw 'Install WSL with wsl --install, restart Windows, then rerun this installer.' }
 $distributions = @(& wsl.exe --list --quiet) | ForEach-Object { ($_ -replace "`0", '').Trim() }
+if ($LASTEXITCODE -ne 0) { throw 'Cannot list WSL distributions. Finish WSL setup before running this installer.' }
 if ($distributions -notcontains $Distribution) {
     & wsl.exe --install --distribution $Distribution
     throw 'Finish the WSL installation and create your Linux user (restart if requested), then rerun this installer.'
-}
-function Invoke-Linux([string[]]$Arguments) {
-    $output = & wsl.exe --distribution $Distribution --exec @Arguments
-    if ($LASTEXITCODE -ne 0) { throw "WSL command failed with exit code $LASTEXITCODE" }
-    return $output
 }
 # All user paths travel as arguments, never interpolated shell source.
 $clientHome = (Invoke-Linux -Arguments @('wslpath', '-a', '-u', $env:USERPROFILE) | Select-Object -Last 1).Trim()
@@ -39,12 +61,32 @@ if ($Vault) {
     Invoke-Linux -Arguments @('mkdir', '-p', $linuxVault) | Out-Null
 }
 $linuxRoot = "$linuxHome/.local/share/atlasbrain/app"
-$python = "$linuxRoot/.venv/bin/python"
-Invoke-Linux -Arguments @('sh', '-c', 'command -v git >/dev/null && command -v curl >/dev/null || { sudo apt-get update && sudo apt-get install -y git curl ca-certificates; }') | Out-Host
-$bootstrap = (Invoke-Linux -Arguments @('mktemp') | Select-Object -Last 1).Trim()
+$checkout = Split-Path -Parent $PSScriptRoot
+$localBootstrap = Join-Path $PSScriptRoot 'install.sh'
+$hasCheckout = (Test-Path -LiteralPath (Join-Path $checkout 'atlasbrain/desktop_install.py')) -and (Test-Path -LiteralPath (Join-Path $checkout 'pyproject.toml'))
+if ($hasCheckout) {
+    $linuxRoot = (Invoke-Linux -Arguments @('wslpath', '-a', '-u', $checkout) | Select-Object -Last 1).Trim()
+}
+# A Windows Python environment cannot be reused by Linux.
+$environment = "$linuxRoot/.venv-wsl"
+$python = "$environment/bin/python"
+$packagesReady = Invoke-Linux -Arguments @('sh', '-c', 'if command -v git >/dev/null && command -v curl >/dev/null; then echo ready; fi')
+if ($packagesReady -notcontains 'ready') {
+    # Keep stdin interactive for sudo's password prompt.
+    & wsl.exe --distribution $Distribution --exec sudo apt-get update
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to update Ubuntu packages.' }
+    & wsl.exe --distribution $Distribution --exec sudo apt-get install -y git curl ca-certificates
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to install Ubuntu dependencies.' }
+}
+$bootstrap = $null
+if (-not $hasCheckout) { $bootstrap = (Invoke-Linux -Arguments @('mktemp') | Select-Object -Last 1).Trim() }
 try {
-    Invoke-Linux -Arguments @('curl', '--fail', '--location', '--proto', '=https', '--tlsv1.2', 'https://raw.githubusercontent.com/danilofacco/atlasbrain/main/scripts/install.sh', '-o', $bootstrap) | Out-Host
-    $arguments = @('bash', $bootstrap, '--vault', $linuxVault, '--clients', $Clients, '--port', "$Port", '--platform', 'wsl', '--prepare-only', '--client-home', $clientHome)
+    if ($hasCheckout) {
+        $bootstrap = (Invoke-Linux -Arguments @('wslpath', '-a', '-u', $localBootstrap) | Select-Object -Last 1).Trim()
+    } else {
+        Invoke-Linux -Arguments @('curl', '--fail', '--location', '--proto', '=https', '--tlsv1.2', 'https://raw.githubusercontent.com/danilofacco/atlasbrain/main/scripts/install.sh', '-o', $bootstrap) | Out-Host
+    }
+    $arguments = @('env', "UV_PROJECT_ENVIRONMENT=$environment", 'bash', $bootstrap, '--vault', $linuxVault, '--clients', $Clients, '--port', "$Port", '--platform', 'wsl', '--prepare-only', '--client-home', $clientHome)
     if ($Clients.Split(',') -contains 'claude-desktop-bridge') {
         $desktopFile = Join-Path $env:APPDATA 'Claude/claude_desktop_config.json'
         $linuxDesktop = (Invoke-Linux -Arguments @('wslpath', '-a', '-u', $desktopFile) | Select-Object -Last 1).Trim()
@@ -53,7 +95,7 @@ try {
     }
     Invoke-Linux -Arguments $arguments | Out-Host
 } finally {
-    Invoke-Linux -Arguments @('rm', '-f', $bootstrap) | Out-Null
+    if (-not $hasCheckout) { Invoke-Linux -Arguments @('rm', '-f', $bootstrap) | Out-Null }
 }
 # Stop the previous managed instance before registering the foreground task.
 Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
@@ -76,7 +118,8 @@ for ($attempt = 0; $attempt -lt 60; $attempt++) {
     Start-Sleep -Seconds 1
 }
 if (-not $ready) { throw "AtlasBrain did not become reachable from Windows. Check WSL localhost forwarding and $linuxHome/.config/atlasbrain/server.log." }
-Write-Host "Installed. AtlasBrain starts at login and is available at http://127.0.0.1:$Port. Reopen your clients and approve the project MCP when prompted."
+Invoke-Linux -Arguments @($python, '-m', 'atlasbrain.desktop_install', '--verify-url', "http://127.0.0.1:$Port/mcp") | Out-Host
+Write-Host "Installed. AtlasBrain starts at login and is available at http://127.0.0.1:$Port. Reopen your clients and approve the global MCP when prompted."
 
 # Windows resolves the real Desktop folder, including OneDrive redirection.
 $shell = New-Object -ComObject WScript.Shell

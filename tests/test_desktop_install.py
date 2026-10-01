@@ -125,3 +125,53 @@ def test_global_configuration_removes_only_legacy_project_entries(tmp_path):
     assert json.loads((vault / '.mcp.json').read_text())['mcpServers'] == {'other': {'command': 'keep'}}
     assert tomllib.loads((vault / '.codex/config.toml').read_text())['mcp_servers'] == {'other': {'command': 'keep'}}
     assert json.loads((home / '.claude.json').read_text())['mcpServers']['atlasbrain']['url'] == url
+
+
+def test_bootstrap_uses_its_checkout_and_separate_environment(tmp_path):
+    import os
+    import subprocess
+    import shutil
+    root = tmp_path / "checkout with spaces é"
+    (root / 'scripts').mkdir(parents=True)
+    (root / 'atlasbrain').mkdir()
+    (root / 'atlasbrain/desktop_install.py').touch()
+    (root / 'pyproject.toml').touch()
+    (root / '.git').mkdir()
+    script = root / 'scripts/install.sh'
+    shutil.copyfile(Path(__file__).resolve().parents[1] / 'scripts/install.sh', script)
+    environment = root / '.venv-wsl'
+    (environment / 'bin').mkdir(parents=True)
+    executable = environment / 'bin/python'
+    executable.write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
+    executable.chmod(0o700)
+    bin_dir = tmp_path / 'bin'
+    bin_dir.mkdir()
+    uv = bin_dir / 'uv'
+    uv.write_text('#!/bin/sh\nexit 0\n')
+    uv.chmod(0o700)
+    vault = tmp_path / 'notes'
+    vault.mkdir()
+    env = {**os.environ, 'PATH': str(bin_dir) + ':' + os.environ['PATH'], 'UV_PROJECT_ENVIRONMENT': str(environment)}
+    env.pop('ATLASBRAIN_INSTALL_DIR', None)
+    result = subprocess.run(['bash', str(script), '--vault', str(vault), '--platform', 'wsl', '--prepare-only'], env=env, text=True, capture_output=True, check=True)
+    assert result.stdout.splitlines()[:2] == ['-m', 'atlasbrain.desktop_install']
+    assert not (root / '.venv').exists()
+
+
+@pytest.mark.parametrize('arguments, message', [(['--port', '0'], 'Port must'), (['--vault'], 'Missing value'), (['--platform', 'other'], 'Platform must')])
+def test_bootstrap_rejects_invalid_arguments_before_installing(arguments, message):
+    import subprocess
+    script = Path(__file__).resolve().parents[1] / 'scripts/install.sh'
+    result = subprocess.run(['bash', str(script), *arguments], text=True, capture_output=True)
+    assert result.returncode == 2
+    assert message in result.stderr
+
+
+def test_opencode_global_jsonc_is_not_shadowed(tmp_path):
+    home = tmp_path / 'home'
+    config = home / '.config/opencode/opencode.jsonc'
+    config.parent.mkdir(parents=True)
+    config.write_text('// existing settings\n{}')
+    with pytest.raises(ValueError, match='opencode.jsonc'):
+        install.configure_clients(tmp_path, ['opencode'], 'atlasbrain', 8765, client_home=home)
+    assert not config.with_suffix('.json').exists()

@@ -1,5 +1,6 @@
 """Install per-user startup and project client settings; never delete project data."""
 import argparse
+import asyncio
 import json
 import os
 import plistlib
@@ -80,7 +81,7 @@ def configure_clients(vault, clients, name, port, desktop_config=None, bridge_co
         elif client == 'antigravity':
             merge_json(client_home / '.gemini/config/mcp_config.json', 'mcpServers', name, {'serverUrl': url})
         elif client == 'opencode':
-            if (vault / 'opencode.jsonc').exists():
+            if (vault / 'opencode.jsonc').exists() or (client_home / '.config/opencode/opencode.jsonc').exists():
                 raise ValueError('Existing opencode.jsonc: merge the HTTP entry manually to avoid shadowing it.')
             merge_json(client_home / '.config/opencode/opencode.json', 'mcp', name, {'type': 'remote', 'url': url, 'enabled': True})
         elif client == 'claude-desktop':
@@ -158,6 +159,22 @@ def activate_macos(path):
     subprocess.run(['launchctl', 'bootstrap', domain, str(path)], check=True)
 
 
+async def verify_mcp(url):
+    """Verify the actual MCP handshake and tool discovery, beyond HTTP health."""
+    from mcp import ClientSession
+    from mcp.client.streamable_http import streamable_http_client
+    async with streamable_http_client(url) as streams:
+        async with ClientSession(streams[0], streams[1]) as session:
+            await session.initialize()
+            tools = await session.list_tools()
+            if not {'find_files', 'projects'} <= {tool.name for tool in tools.tools}:
+                raise RuntimeError('The endpoint is not the current global AtlasBrain MCP.')
+
+
+def check_mcp(url):
+    asyncio.run(asyncio.wait_for(verify_mcp(url), timeout=20))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--vault', type=Path, default=config.GLOBAL_BRAIN)
@@ -168,8 +185,13 @@ def main():
     parser.add_argument('--desktop-config', type=Path)
     parser.add_argument('--client-home', type=Path)
     parser.add_argument('--bridge-command-json', help='Windows wsl.exe command as a JSON array')
+    parser.add_argument('--verify-url', help='check an installed MCP endpoint without changing settings')
     parser.add_argument('--prepare-only', action='store_true', help='write startup files without activating them')
     args = parser.parse_args()
+    if args.verify_url:
+        check_mcp(args.verify_url)
+        print("MCP handshake and global tool discovery verified.")
+        return
     vault = args.vault.expanduser().resolve()
     if vault == config.GLOBAL_BRAIN.resolve():
         vault.mkdir(parents=True, exist_ok=True)
@@ -200,6 +222,7 @@ def main():
             time.sleep(1)
         else:
             raise RuntimeError(f'Startup failed. Check {service.state_dir() / "server.log"}')
+        check_mcp(url)
     print(json.dumps({'url': url, 'startup': str(path), 'shortcut': str(shortcut) if shortcut else None, 'python': sys.executable, 'vault': str(vault), 'claude_desktop_connector': url if 'claude-desktop' in clients else None}))
 
 

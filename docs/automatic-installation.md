@@ -19,11 +19,11 @@ curl -fL https://raw.githubusercontent.com/danilofacco/atlasbrain/main/scripts/i
 bash /tmp/atlasbrain-install.sh
 ```
 
-The installer obtains uv if absent, clones AtlasBrain into `~/.local/share/atlasbrain/app`, installs managed Python 3.12 and locked dependencies, registers the project, configures Codex and Claude Code, and starts a per-user LaunchAgent. It uses absolute executable paths, so startup does not depend on your terminal's PATH or virtual environment activation. If Apple's Git tools are missing, macOS opens their installer; finish that OS installation and rerun the command.
+The installer obtains uv if absent, uses the checkout containing the script (the standalone downloaded bootstrap clones into `~/.local/share/atlasbrain/app`), installs managed Python 3.12 and locked runtime dependencies, registers the project, configures Codex and Claude Code, and starts a per-user LaunchAgent. It uses absolute executable paths, so startup does not depend on your terminal's PATH or virtual environment activation. If Apple's Git tools are missing, macOS opens their installer; finish that OS installation and rerun the command.
 
 The LaunchAgent runs at login and restarts a failed service. Logs are in `~/.config/atlasbrain/server.log`. The embedding model downloads during the first index; tools can connect while indexing continues.
 
-For contributors testing an existing checkout, set `ATLASBRAIN_INSTALL_DIR` to that checkout before running the script. Existing installations are reused without deleting changes or switching branches.
+The checkout must remain at its installation path: the startup service uses it directly. Run the command again after moving it. `ATLASBRAIN_INSTALL_DIR` optionally selects another checkout. Existing installations are reused without deleting changes or switching branches.
 
 ## Windows
 
@@ -40,13 +40,13 @@ Invoke-WebRequest https://raw.githubusercontent.com/danilofacco/atlasbrain/main/
 powershell -NoProfile -ExecutionPolicy Bypass -File "$env:TEMP\atlasbrain-install.ps1"
 ```
 
-AtlasBrain runs inside Ubuntu WSL, with Windows applications connecting to `http://127.0.0.1:8765`. A per-user Task Scheduler task named `AtlasBrain` launches WSL at login, runs the server in the foreground, stays active while it runs, and retries failures. It runs on battery as well. No administrator rights are required for the startup task.
+The Windows installer uses the cloned checkout directly, with a separate `.venv-wsl` Linux environment; it does not download a different repository version. Keep the checkout at its installation path, or rerun the installer after moving it. AtlasBrain runs inside Ubuntu WSL, with Windows applications connecting to `http://127.0.0.1:8765`. A per-user Task Scheduler task named `AtlasBrain` launches WSL at login, runs the server in the foreground, stays active while it runs, and retries failures. It runs on battery as well. No administrator rights are required for the startup task.
 
 If WSL itself is unavailable, run `wsl --install` from an administrator terminal, restart Windows if requested, and complete Ubuntu's initial Linux user setup. If Ubuntu is absent, the script requests its installation. Those OS permissions, any restart and the initial user creation cannot be skipped by a normal user installer. Rerun the script afterward. Git, curl, Python and application dependencies are then installed automatically; Linux may request your sudo password for system packages.
 
 Use `-Distribution Ubuntu-24.04` for another installed Ubuntu distribution. The target project stays in its Windows folder, accessed through WSL's `/mnt/...` path. Client configurations are written globally using the Windows user profile. Windows workspace file URIs are translated to WSL `/mnt/<drive>/...` paths.
 
-The installer checks the health endpoint from Windows, not just from Linux. WSL must allow localhost forwarding ([Microsoft networking documentation](https://learn.microsoft.com/en-us/windows/wsl/networking)). A conflicting port or unreachable service produces an error instead of a success message.
+The installer checks the health endpoint from Windows, not just from Linux. WSL must allow localhost forwarding ([Microsoft networking documentation](https://learn.microsoft.com/en-us/windows/wsl/networking)). A conflicting port or unreachable service produces an error instead of a success message. Both installers also verify an MCP initialization handshake and discovery of the global tools before reporting success.
 
 `--vault` on macOS or `-Vault` on Windows optionally registers an initial folder for the interface; it does not bind the MCP connection to that folder.
 

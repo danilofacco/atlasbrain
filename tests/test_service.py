@@ -33,6 +33,8 @@ def test_shared_daemon_and_http_sessions(project, tmp_path, monkeypatch):
         with ThreadPoolExecutor(3) as pool:
             results = list(pool.map(lambda _: service.start(project, port, False), range(3)))
         assert len({r['pid'] for r in results}) == 1
+        from atlasbrain.desktop_install import check_mcp
+        check_mcp(f'http://127.0.0.1:{port}/mcp')
         with urlopen(f'http://127.0.0.1:{port}/') as r:
             assert b'<html' in r.read().lower()
         original_health = service.owned_health

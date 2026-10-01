@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Download this file first, inspect it, then run with your project folder.
+# Run from a checkout, or download this standalone bootstrap first.
 set -euo pipefail
 vault=''
 clients='codex,claude-code'
@@ -7,9 +7,17 @@ port=8765
 platform=macos
 prepare=()
 extra=()
+script_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 repo="${ATLASBRAIN_INSTALL_DIR:-$HOME/.local/share/atlasbrain/app}"
+if [[ -z "${ATLASBRAIN_INSTALL_DIR:-}" && -f "$script_root/pyproject.toml" && -f "$script_root/atlasbrain/desktop_install.py" ]]; then
+    repo="$script_root"
+fi
 source_url='https://github.com/danilofacco/atlasbrain.git'
 while (($#)); do
+    case "$1" in
+        --vault|--clients|--port|--platform|--desktop-config|--bridge-command-json|--client-home)
+            [[ $# -ge 2 ]] || { echo "Missing value for $1" >&2; exit 2; } ;;
+    esac
     case "$1" in
         --vault) vault="$2"; shift 2 ;;
         --clients) clients="$2"; shift 2 ;;
@@ -20,6 +28,8 @@ while (($#)); do
         *) echo "Unknown argument: $1" >&2; exit 2 ;;
     esac
 done
+[[ "$port" =~ ^[0-9]+$ && ${#port} -le 5 ]] && ((10#$port >= 1 && 10#$port <= 65535)) || { echo 'Port must be between 1 and 65535.' >&2; exit 2; }
+[[ "$platform" == macos || "$platform" == wsl ]] || { echo 'Platform must be macos or wsl.' >&2; exit 2; }
 if [[ -z "$vault" ]]; then
     vault="${ATLASBRAIN_GLOBAL:-$HOME/AtlasBrain}"
     if [[ -z "${ATLASBRAIN_GLOBAL:-}" && -d "$HOME/SegundoCerebro" ]]; then vault="$HOME/SegundoCerebro"; fi
@@ -55,5 +65,7 @@ else
     # Reuse it without discarding local work or changing branches.
 fi
 cd "$repo"
-"$uv_bin" sync --locked --python 3.12
-exec "$repo/.venv/bin/python" -m atlasbrain.desktop_install --vault "$vault" --clients "$clients" --port "$port" --platform "$platform" ${prepare[@]+"${prepare[@]}"} ${extra[@]+"${extra[@]}"}
+environment="${UV_PROJECT_ENVIRONMENT:-$repo/.venv}"
+[[ "$environment" == /* ]] || environment="$repo/$environment"
+"$uv_bin" sync --locked --no-dev --python 3.12
+exec "$environment/bin/python" -m atlasbrain.desktop_install --vault "$vault" --clients "$clients" --port "$port" --platform "$platform" ${prepare[@]+"${prepare[@]}"} ${extra[@]+"${extra[@]}"}
