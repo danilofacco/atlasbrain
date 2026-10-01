@@ -94,6 +94,8 @@ Invoke-RestMethod http://127.0.0.1:8765/health
 
 ## Remove automatic startup
 
+For complete removal, including client entries and optional cleanup, follow the [macOS and Windows uninstall guide](uninstall.md).
+
 macOS, from the checkout:
 
 ```bash

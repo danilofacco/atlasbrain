@@ -169,6 +169,29 @@ explains service controls, automatic updates, optional hooks, and language cover
 Claude Desktop can use its HTTP connector route; the optional command-based
 compatibility bridge also reaches the same shared service.
 
+## Uninstall
+
+From the AtlasBrain checkout, disable automatic startup and stop the service before removing installation files.
+
+### macOS
+
+```bash
+bash scripts/uninstall-startup.sh
+.venv/bin/python -m atlasbrain.cli stop
+```
+
+### Windows (PowerShell)
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -UninstallStartup
+```
+
+If you installed with another WSL distribution, append `-Distribution Ubuntu-24.04` (replace it with your distribution's name).
+
+These commands remove automatic startup and preserve client settings, installation files, and project memory. To finish uninstalling, remove only the `atlasbrain` entry from each configured MCP client, remove the AtlasBrain Desktop shortcut, and delete the installation checkout if you no longer need it. Remove the Claude Desktop connector through its Connectors settings.
+
+See the [macOS and Windows uninstall guide](docs/uninstall.md) for configuration locations, optional cleanup, and instructions for preserving your notes. Uninstalling AtlasBrain does not require removing WSL, Python, or uv.
+
 ## Try it with your assistant
 
 - “Find where authentication is implemented and explain who depends on it.”
@@ -247,6 +270,7 @@ See the [performance report](docs/search-performance-evaluation.md),
 
 ## Further documentation
 
+- [Uninstall on macOS and Windows](docs/uninstall.md)
 - [Features, language coverage, hooks, and service operation](docs/features-and-operation.md)
 - [Claude Desktop connection](docs/claude-desktop.md)
 - [Claude Code CLI installation and connection](docs/claude-code.md)
