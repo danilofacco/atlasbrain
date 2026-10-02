@@ -83,6 +83,10 @@ This merges entries into `~/.claude/settings.json` and `~/.codex/hooks.json`, pr
 
 `PreToolUse` adds a reminder to consult AtlasBrain before terminal searches or file reads, at most once every 20 minutes per project/session. It only runs in projects with `.atlasbrain/`, lets tools continue, and does not start an MCP server or load embedding models. Claude uses `Bash|Read|Grep|Glob`; Codex exposes shell execution as `Bash`. Normal tools remain available when MCP is unavailable. `SessionStart` supplies project context, and session completion captures relevant memory.
 
+MCP instructions, installed instruction blocks and the reminder ask the agent to start substantive tasks with `task_context`, then use `read` or `read_many` to review relevant active decisions and learnings before changing behavior. The agent should briefly name the notes it actually consulted and explain how they affected its work, distinguishing excerpts from section or full-note reads. Stored memory remains reference material; the user's current instructions take precedence.
+
+The session briefing includes indexed excerpts and exact note paths, with current-project memory first and historical decisions excluded. It stays within 4,000 characters and reports entries omitted by that budget. These excerpts help discover memory; they do not establish a full-note review. This workflow guides the agent without blocking tools or guaranteeing compliance by every client. After updating AtlasBrain, reconnect MCP clients to refresh server instructions and rerun `uv run atlasbrain hooks` to refresh existing global instruction blocks while preserving unrelated settings.
+
 Hook formats: [Claude Code](https://code.claude.com/docs/en/hooks), [Codex](https://developers.openai.com/codex/hooks).
 
 ## Connected Markdown editing

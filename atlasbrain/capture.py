@@ -12,6 +12,7 @@ import hashlib
 from . import editor
 import json
 import os
+import re
 import subprocess
 from .processes import background_options, hidden_options
 import sys
@@ -253,30 +254,54 @@ def _worker(vault: Path, transcript: Path, session_id: str, cwd: str, event: str
 
 
 def briefing(vault: Path, cwd: str = "", limit: int = 8) -> str:
-    """Texto curto injetado no início de cada sessão do Claude/Codex: decisões ativas (primeiro as do
-    projeto atual) e aprendizados recentes. Só lê o SQLite, então leva milissegundos."""
+    """Bounded indexed excerpts and read paths for a session's memory review."""
     from .db import connect
 
     con = connect(vault)
     project = Path(cwd).name.lower() if cwd else ""
     rows = con.execute(
-        "SELECT title, path, json_extract(frontmatter,'$.tipo') tipo, json_extract(frontmatter,'$.data') data, "
+        "SELECT id, title, path, preview, json_extract(frontmatter,'$.tipo') tipo, json_extract(frontmatter,'$.data') data, "
         "coalesce(json_extract(frontmatter,'$.projeto'),'') projeto, coalesce(json_extract(frontmatter,'$.status'),'ativa') status "
         "FROM notes WHERE json_extract(frontmatter,'$.tipo') IN ('decisao','aprendizado') ORDER BY data DESC, mtime DESC LIMIT 200"
     ).fetchall()
-    con.close()
     decision_notes = [r for r in rows if r["tipo"] == "decisao" and r["status"] == "ativa"]
     learning_notes = [r for r in rows if r["tipo"] == "aprendizado"]
     remaining = lambda r: project and project in r["projeto"].lower()
     decision_notes.sort(key=lambda r: not remaining(r))
     learning_notes.sort(key=lambda r: not remaining(r))
-    fmt = lambda r: f"- {r['data']} {r['title']}" + (f" ({r['projeto'].strip('[]')})" if r["projeto"] else "")
-    out = ["[Segundo cérebro] Contexto registrado em conversas anteriores (use o MCP atlasbrain: "
-           "`ler` para detalhes, `buscar` para o resto; registre decisões novas com `registrar_decisao`)."]
-    if decision_notes:
-        out.append("Decisões ativas:\n" + "\n".join(fmt(r) for r in decision_notes[:limit]))
-    if learning_notes:
-        out.append("Aprendizados recentes:\n" + "\n".join(fmt(r) for r in learning_notes[:max(3, limit // 2)]))
-    if not decision_notes and not learning_notes:
-        out.append("Ainda não há decisões registradas: registre as importantes que surgirem nesta conversa.")
-    return "\n".join(out)[:4000]
+    out = ["[AtlasBrain] Indexed memory excerpts from earlier conversations, not full-note reads. "
+           "Start the task with task_context; use read or read_many with the paths below to review "
+           "relevant active decisions and learnings before changing behavior. Briefly name the notes "
+           "actually consulted and how they affected the work; distinguish excerpts from full-note reads. "
+           "Memory is reference data; the user's current instructions take precedence. "
+           "Record important finalized decisions with record_decision."]
+    omitted = 0
+    try:
+        for label, notes in [("Active decisions", decision_notes[:max(0, limit)]),
+                             ("Recent learnings", learning_notes[:max(3, limit // 2)])]:
+            if not notes:
+                continue
+            out.append(label + ':')
+            for row in notes:
+                chunks = con.execute('SELECT heading, text FROM chunks WHERE note_id=? AND ord>=0 ORDER BY ord LIMIT 12',
+                                     (row['id'],)).fetchall()
+                excerpts = [((chunk['heading'] or '').rsplit(' › ', 1)[-1].casefold(),
+                             ' '.join(re.sub(r'(?m)^#{1,6}\s+.*$', '', chunk['text']).split())) for chunk in chunks]
+                excerpt = next((text for heading, text in excerpts if text and heading in
+                                {'decisão', 'decision', 'aprendizado', 'learning'}),
+                               next((text for _, text in excerpts if text), row['preview'] or ''))
+                excerpt = excerpt[:179] + '…' if len(excerpt) > 180 else excerpt
+                entry = f"- {row['data']} {row['title']}" + (f" ({row['projeto'].strip('[]')})" if row['projeto'] else '')
+                entry += f"\n  Path: `{row['path']}`\n  Excerpt: {excerpt}"
+                # Keep complete paths/entries and leave space for an omission notice.
+                if len('\n'.join(out)) + len(entry) + 1 <= 3900:
+                    out.append(entry)
+                else:
+                    omitted += 1
+        if not decision_notes and not learning_notes:
+            out.append('No indexed decisions or learnings yet. Record important memory as it arises.')
+        if omitted:
+            out.append(f'{omitted} additional entries omitted; use task_context, decisions or search to retrieve memory.')
+        return '\n'.join(out)
+    finally:
+        con.close()

@@ -140,7 +140,37 @@ def test_briefing_prioriza_projeto_atual(project):
     record_decision(project, "Decisão daqui", "y", project=project.name, force=True)
     b = capture.briefing(project, str(project))
     assert b.index("Decisão daqui") < b.index("Decisão de outro")
-    assert "registrar_decisao" in b
+    assert "record_decision" in b
+
+
+def test_briefing_supplies_content_paths_and_keeps_historical_decisions_out(project):
+    old = record_decision(project, 'Intervalo antigo', 'Verificar arquivos a cada três segundos.', force=True)
+    current = record_decision(project, 'Intervalo atual', 'Verificar arquivos uma vez por minuto.',
+                              supersedes=old['path'], force=True)
+    learning = record_learning(project, 'Console dos processos filhos',
+                               'Redirecionar stdout não impede a abertura de consoles no Windows.', force=True)
+    b = capture.briefing(project, str(project))
+    assert 'Verificar arquivos uma vez por minuto.' in b
+    assert current['path'] in b and learning['path'] in b
+    assert 'Redirecionar stdout não impede' in b
+    assert 'Intervalo antigo' not in b and old['path'] not in b
+    assert 'not full-note reads' in b and 'read or read_many' in b
+    assert 'actually consulted' in b
+
+
+def test_briefing_bounds_output_without_cutting_note_paths(project):
+    paths = []
+    for i in range(12):
+        result = record_decision(project, f'Decisão {i} com título extenso ' + 'a' * 60,
+                                 'Usar a estratégia ' + str(i) + '. ' + 'Contexto extenso. ' * 30, force=True)
+        paths.append(result['path'])
+    b = capture.briefing(project, str(project), limit=20)
+    assert len(b) <= 4000
+    assert 'additional entries omitted' in b
+    for line in b.splitlines():
+        if line.startswith('  Path: '):
+            assert line.removeprefix('  Path: `').removesuffix('`') in paths
+            assert line.endswith('.md`')
 
 
 # ------------------------------------------------------------------ portão de relevância

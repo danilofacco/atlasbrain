@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .config import resolve_vault
 from .processes import hidden_options
+from .instructions import MEMORY_WORKFLOW
 
 
 def _vault_arg(p):
@@ -195,7 +196,7 @@ def cmd_briefing(a):
         print(text)
 
 
-GUARD_TXT = ("This project has AtlasBrain (code graph and project memory). Before scanning files, "
+GUARD_TXT = ("This project has AtlasBrain (code graph and project memory). " + MEMORY_WORKFLOW + "\n\nBefore scanning files, "
              "prefer its MCP tools: find_files (names/symbols), symbol_location (definitions/usages), "
              "explain (dependencies) and search (content and meaning). "
              "If MCP is unavailable or finds nothing useful, use ordinary file tools.")
@@ -204,6 +205,8 @@ BLOCK_START, BLOCK_END = "<!-- atlasbrain:inicio -->", "<!-- atlasbrain:fim -->"
 INSTRUCTION_BLOCK = f"""{BLOCK_START}
 ## AtlasBrain — project second brain
 Each project has a local `.atlasbrain/` brain (code graph, decisions and learnings), exposed by the `atlasbrain` MCP.
+{MEMORY_WORKFLOW}
+
 - Before grep/glob, use `find_files` (names/symbols), `symbol_location` (definitions/usages),
   `explain` (dependencies and rationale), `graph_path` and `report`.
 - For task context and history: `task_context`, `search`, `decisions`, `read` and `related`.

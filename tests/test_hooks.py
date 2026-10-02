@@ -63,3 +63,26 @@ def test_installer_covers_both_clients(tmp_path, monkeypatch):
     for p in (home / '.claude/settings.json', home / '.codex/hooks.json'):
         guard = json.loads(p.read_text())['hooks']['PreToolUse'][0]
         assert 'Bash' in guard['matcher'] and guard['hooks'][0]['command'] == '"/installed/atlasbrain" guard'
+
+
+def test_memory_workflow_reaches_hooks_client_instructions_and_mcp(tmp_path, monkeypatch, capsys):
+    from pathlib import Path
+    from atlasbrain.instructions import MEMORY_WORKFLOW
+    from atlasbrain.mcp_server import INSTRUCTIONS
+    from atlasbrain.cli import GUARD_TXT
+    home = Path.home()
+    for directory, name in [('.claude', 'CLAUDE.md'), ('.codex', 'AGENTS.md')]:
+        path = home / directory
+        path.mkdir()
+        (path / name).write_text('Preserve existing user instructions.\n', encoding='utf-8')
+    monkeypatch.setattr('atlasbrain.cli.shutil.which', lambda _: '/installed/atlasbrain')
+    for _ in range(2):
+        cmd_hooks(SimpleNamespace(vault=None, remove=False))
+    for path in (home / '.claude/CLAUDE.md', home / '.codex/AGENTS.md'):
+        text = path.read_text(encoding='utf-8')
+        assert text.startswith('Preserve existing user instructions.')
+        assert text.count(MEMORY_WORKFLOW) == 1
+    assert MEMORY_WORKFLOW in GUARD_TXT and MEMORY_WORKFLOW in INSTRUCTIONS
+    cmd_hooks(SimpleNamespace(vault=None, remove=True))
+    for path in (home / '.claude/CLAUDE.md', home / '.codex/AGENTS.md'):
+        assert path.read_text(encoding='utf-8').strip() == 'Preserve existing user instructions.'
