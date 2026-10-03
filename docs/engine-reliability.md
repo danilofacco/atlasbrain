@@ -70,6 +70,8 @@ Graph similarity can still require global recomputation; this change reduces emb
 
 ## Automatic capture quality
 
+Separate transcript capture is disabled by default. The assistant records memory through MCP in the current conversation. See [optional assistant hooks](features-and-operation.md#optional-assistant-hooks) for explicit opt-in and history implications.
+
 A nonblocking per-project lock allows only one extraction worker at a time. Stable per-item receipts prevent duplicate writes on retry; state files are replaced atomically. Existing-note discovery includes project-brain decisions and learnings. Exact normalized duplicates are recognized even with embeddings disabled; semantic matching still uses local embeddings when enabled.
 
 `capture_quality()` returns counters for created, updated, duplicate, rejected and review-required items, plus the latest 100 review proposals. Automatic replacement proposals and detected numerical conflicts require explicit review; they no longer invalidate old decisions on their own. Review proposals remain in the local diagnostic queue; applying a manual decision does not automatically mark a proposal resolved. Counters cover capture after this upgrade, not all historical notes. Incomplete generic receipts still require inspection. The existing capture extractor may invoke the configured Claude/Codex CLI; these changes do not introduce another persistent daemon.

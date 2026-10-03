@@ -1,6 +1,8 @@
 import json
+import io
 import subprocess
 import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -133,6 +135,48 @@ def test_hook_nao_recursivo_e_nao_trava(project, monkeypatch):
     monkeypatch.setenv("ATLASBRAIN_CAPTURANDO", "1")
     r = subprocess.run([sys.executable, "-m", "atlasbrain.cli", "capturar"], input="{}", capture_output=True, text=True, timeout=30)
     assert r.returncode == 0 and r.stdout == ""
+
+
+@pytest.mark.parametrize('setting,opt_in,launch', [
+    (None, False, False), (None, True, True), ('1', False, True),
+    ('0', True, False), ('invalid', False, False),
+])
+def test_automatic_capture_requires_explicit_opt_in(project, tmp_path, monkeypatch, setting, opt_in, launch):
+    monkeypatch.delenv('ATLASBRAIN_CAPTURANDO', raising=False)
+    monkeypatch.delenv('ATLASBRAIN_CAPTURA', raising=False)
+    if setting is not None:
+        monkeypatch.setenv('ATLASBRAIN_CAPTURA', setting)
+    transcript = tmp_path / 'conversation.jsonl'
+    transcript.write_text('{}')
+    monkeypatch.setattr(sys, 'stdin', io.StringIO(json.dumps({
+        'cwd': str(project), 'transcript_path': str(transcript), 'session_id': 's1',
+    })))
+    launches = []
+    monkeypatch.setattr('atlasbrain.config.resolve_vault', lambda *args, **kwargs: project)
+    monkeypatch.setattr(subprocess, 'Popen', lambda args, **kwargs: launches.append((args, kwargs)))
+    capture.hook(opt_in=opt_in)
+    assert bool(launches) is launch
+    if launch:
+        args, options = launches[0]
+        assert '--auto' in args and '--worker' in args
+        assert options['env']['ATLASBRAIN_CAPTURANDO'] == '1'
+    else:
+        assert sys.stdin.tell() == 0
+        assert not (project / '.atlasbrain').exists()
+
+
+def test_old_queued_workers_stay_disabled_and_manual_capture_still_works(project, monkeypatch):
+    from atlasbrain.cli import cmd_capture
+    monkeypatch.delenv('ATLASBRAIN_CAPTURA', raising=False)
+    calls = []
+    monkeypatch.setattr(capture, 'worker', lambda *args: calls.append(args))
+    args = SimpleNamespace(worker=True, auto=False, transcript='conversation.jsonl',
+                           vault=str(project), event='Stop', session_id='s1', cwd=str(project))
+    cmd_capture(args)
+    assert calls == []
+    args.worker = False
+    cmd_capture(args)
+    assert len(calls) == 1 and calls[0][-1] == 'SessionEnd'
 
 
 def test_briefing_prioriza_projeto_atual(project):

@@ -1,7 +1,8 @@
 """Captura automática: hook do Claude Code / Codex que, ao fim de uma resposta ou sessão, lê o
 transcript e registra no cérebro as decisões importantes e aprendizados que passaram batido.
 
-O hook responde na hora (dispara um worker em segundo plano). O worker só age quando a conversa
+Desativada por padrão: o agente da conversa guarda memória pelo MCP, sem criar outra sessão.
+Com opt-in explícito, o hook responde na hora (dispara um worker em segundo plano). O worker só age quando a conversa
 cresceu o bastante desde a última captura e usa `claude -p` (Haiku) para decidir o que vale guardar.
 Desligar: ATLASBRAIN_CAPTURA=0.
 """
@@ -117,7 +118,7 @@ def _extract(prompt: str) -> dict:
     if engine in ("auto", "claude"):
         try:
             r = subprocess.run(["claude", "-p", "--model", os.environ.get("ATLASBRAIN_CAPTURA_MODELO_CLAUDE", "haiku"),
-                                "--strict-mcp-config", "--output-format", "text"],
+                                "--strict-mcp-config", "--no-session-persistence", "--output-format", "text"],
                                input=prompt, capture_output=True, text=True, timeout=90, env=env, **hidden_options())
             return _json_from_text(r.stdout)
         except Exception as e:
@@ -135,10 +136,16 @@ def _extract(prompt: str) -> dict:
     raise RuntimeError("; ".join(errors) or "nenhum motor disponível")
 
 
-def hook(vault_arg: str | None = None, event: str | None = None) -> None:
+def automatic_enabled(opt_in: bool = False) -> bool:
+    """Legacy hooks stay inert unless capture is explicitly enabled. 0 overrides opt-in."""
+    setting = os.environ.get("ATLASBRAIN_CAPTURA")
+    return setting == "1" if setting is not None else opt_in
+
+
+def hook(vault_arg: str | None = None, event: str | None = None, *, opt_in: bool = False) -> None:
     """Chamado pelo hook: lê o JSON do stdin e dispara o worker desacoplado. Nunca bloqueia nem falha.
     Sem --vault, o cérebro é o do projeto onde a sessão está (cwd do hook)."""
-    if os.environ.get("ATLASBRAIN_CAPTURA", "1") == "0" or os.environ.get("ATLASBRAIN_CAPTURANDO"):
+    if not automatic_enabled(opt_in) or os.environ.get("ATLASBRAIN_CAPTURANDO"):
         return
     try:
         data = json.load(sys.stdin)
@@ -150,7 +157,7 @@ def hook(vault_arg: str | None = None, event: str | None = None) -> None:
     if not transcript or not Path(transcript).exists():
         return
     event = event or data.get("hook_event_name") or "Stop"
-    args = [sys.executable, "-m", "atlasbrain.cli", "capturar", "--vault", str(vault), "--worker",
+    args = [sys.executable, "-m", "atlasbrain.cli", "capturar", "--vault", str(vault), "--worker", "--auto",
             "--transcript", transcript, "--sessao", str(data.get("session_id", transcript)),
             "--cwd", str(data.get("cwd", "")), "--evento", event]
     subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,

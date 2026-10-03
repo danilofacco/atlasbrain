@@ -65,6 +65,34 @@ def test_installer_covers_both_clients(tmp_path, monkeypatch):
         assert 'Bash' in guard['matcher'] and guard['hooks'][0]['command'] == '"/installed/atlasbrain" guard'
 
 
+def test_default_hooks_remove_legacy_capture_and_opt_in_is_reversible(monkeypatch):
+    from pathlib import Path
+    home = Path.home()
+    paths = (home / '.claude/settings.json', home / '.codex/hooks.json')
+    other = {'type': 'command', 'command': 'keep-other-hook'}
+    for path in paths:
+        path.parent.mkdir()
+        path.write_text(json.dumps({'unrelated': True, 'hooks': {
+            event: [{'matcher': '*', 'hooks': [other, {'type': 'command', 'command': command}]}]
+            for event, command in [('Stop', '"/old/atlasbrain" capturar'),
+                                   ('SessionEnd', '"/old/atlasbrain" capture')]
+        }}))
+    monkeypatch.setattr('atlasbrain.cli.shutil.which', lambda _: '/installed/atlasbrain')
+    for enabled in (False, True, True, False):
+        cmd_hooks(SimpleNamespace(vault=None, remove=False, capture=enabled))
+        for path in paths:
+            data = json.loads(path.read_text())
+            assert data['unrelated']
+            for event in ('Stop', 'SessionEnd'):
+                entries = data['hooks'][event]
+                assert entries[0] == {'matcher': '*', 'hooks': [other]}
+                assert len(entries) == (2 if enabled else 1)
+                if enabled:
+                    assert entries[1]['hooks'][0]['command'] == '"/installed/atlasbrain" capturar --auto'
+            assert len(data['hooks']['SessionStart']) == 1
+            assert len(data['hooks']['PreToolUse']) == 1
+
+
 def test_memory_workflow_reaches_hooks_client_instructions_and_mcp(tmp_path, monkeypatch, capsys):
     from pathlib import Path
     from atlasbrain.instructions import MEMORY_WORKFLOW

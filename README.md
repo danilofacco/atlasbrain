@@ -76,8 +76,9 @@ These screenshots and GIFs use a demo made from public code and sample notes.
 - **Bring references into the project.** Import public web pages and text-based
   PDFs as Markdown snapshots with their source URL and retrieval metadata.
 - **Keep the index current.** The shared service watches external file changes and
-  updates the index incrementally. Optional assistant hooks can capture useful
-  conversation memory; version updates run when the service finds a newer release
+  updates the index incrementally. Assistants record conversation memory through
+  MCP in the current conversation; separate transcript extraction is off by default.
+  Version updates run when the service finds a newer release
   in a clean clone.
 
 Code relationships extracted from source are distinguished from inferred

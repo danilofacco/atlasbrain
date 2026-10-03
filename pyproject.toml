@@ -1,6 +1,6 @@
 [project]
 name = "atlasbrain"
-version = "0.2.1"
+version = "0.2.2"
 description = "A local, open-source second brain that maps your code, connects your knowledge, and preserves project memory through MCP."
 readme = "README.md"
 license = "MIT"

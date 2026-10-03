@@ -46,6 +46,7 @@ def test_automatic_capture_hides_ai_cli_console(monkeypatch, windows_options, en
     monkeypatch.setenv('ATLASBRAIN_CAPTURA_MOTOR', engine)
     def run(command, **options):
         assert command[0] == engine
+        assert ('--no-session-persistence' if engine == 'claude' else '--ephemeral') in command
         assert options['creationflags'] & 0x08000000
         assert options['input'] == 'Extract notes'
         return SimpleNamespace(stdout='{"notes": []}')

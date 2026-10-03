@@ -170,8 +170,10 @@ def cmd_capture(a):
     from . import capture
 
     if not a.worker and not a.transcript:
-        capture.hook(a.vault, a.event)  # o projeto sai do cwd que vem no JSON do hook
+        capture.hook(a.vault, a.event, opt_in=a.auto)  # o projeto sai do cwd que vem no JSON do hook
         return
+    if a.worker and not capture.automatic_enabled(a.auto):
+        return  # old queued automatic workers must not launch an AI session
     vault = resolve_vault(a.vault, cwd=a.cwd or None)
     if a.worker:
         capture.worker(vault, Path(a.transcript), a.session_id, a.cwd, a.event)
@@ -325,7 +327,7 @@ def _remove_owned_hooks(hooks):
     for entry in hooks:
         handlers = [h for h in entry.get("hooks", []) if not (
             "atlasbrain" in h.get("command", "") and
-            any(k in h.get("command", "") for k in ("capturar", "briefing", " guard")))]
+            any(k in h.get("command", "") for k in ("capturar", " capture", "briefing", " guard")))]
         if handlers:
             kept.append({**entry, "hooks": handlers})
     return kept
@@ -346,24 +348,25 @@ def _merge_hook(settings: Path, event: str, command: str) -> bool:
 def cmd_hooks(a):
     exe = shutil.which("atlasbrain") or str(Path(sys.argv[0]).resolve())
     fixed = f' --vault "{resolve_vault(a.vault)}"' if a.vault else ""  # sem --vault: cérebro do projeto da sessão
-    cmd = f'"{exe}" capturar{fixed}'
+    cmd = f'"{exe}" capturar{fixed} --auto'
     brief = f'"{exe}" briefing{fixed}'
     guard = f'"{exe}" guard'
     targets = [(Path.home() / ".claude" / "settings.json", ["Stop", "SessionEnd", "SessionStart", "PreToolUse"]),
-               (Path.home() / ".codex" / "hooks.json", ["Stop", "SessionStart", "PreToolUse"])]
+               (Path.home() / ".codex" / "hooks.json", ["Stop", "SessionEnd", "SessionStart", "PreToolUse"])]
     for f, events in targets:
         if not f.parent.exists():
             continue
         for ev in events:
             c = brief if ev == "SessionStart" else guard if ev == "PreToolUse" else cmd
-            if a.remove:
+            if a.remove or (ev in ("Stop", "SessionEnd") and not getattr(a, "capture", False)):
                 data = json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
                 lst = data.get("hooks", {}).get(ev, [])
                 lst[:] = _remove_owned_hooks(lst)
                 f.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
             else:
                 _merge_hook(f, ev, c)
-        print(f"{'removido de' if a.remove else '✓ hook em'} {f} ({', '.join(events)})")
+        active = events if a.remove or getattr(a, "capture", False) else ["SessionStart", "PreToolUse"]
+        print(f"{'removido de' if a.remove else '✓ hook em'} {f} ({', '.join(active)})")
     for f in (Path.home() / ".claude" / "CLAUDE.md", Path.home() / ".codex" / "AGENTS.md"):
         if f.parent.exists():
             _instruction_block(f, a.remove)
@@ -464,6 +467,7 @@ def main():
     p = sub.add_parser('capture', aliases=['capturar'], help="captura decisões/aprendizados de um transcript (usado pelos hooks)")
     _vault_arg(p)
     p.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
+    p.add_argument("--auto", action="store_true", help=argparse.SUPPRESS)
     p.add_argument("--transcript")
     p.add_argument('--session-id', '--sessao', dest='session_id', default="")
     p.add_argument("--cwd", default="")
@@ -490,9 +494,10 @@ def main():
     p.add_argument("--cwd", default="")
     p.set_defaults(fn=cmd_briefing)
 
-    p = sub.add_parser("hooks", help="instala (ou --remove) a captura automática no Claude Code e no Codex")
+    p = sub.add_parser("hooks", help="instala lembretes de memória no Claude Code e no Codex")
     _vault_arg(p)
     p.add_argument("--remove", "--remover", action="store_true")
+    p.add_argument("--capture", action="store_true", help="ativa captura opcional por outro CLI de IA (pode criar sessões no histórico)")
     p.set_defaults(fn=cmd_hooks)
 
     a = ap.parse_args()
